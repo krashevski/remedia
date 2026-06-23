@@ -1,0 +1,7 @@
+git
+curl
+wget
+htop
+ncdu
+tree
+pv

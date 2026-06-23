@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# /usr/bin/remedia — main entrypoint
+
+set -euo pipefail
+
+# --- UI ---
+
+BOLD=$'\033[1m'
+CYAN=$'\033[36m'
+GREEN=$'\033[32m'
+YELLOW=$'\033[33m'
+RED=$'\033[31m'
+NC=$'\033[0m'
+
+# 🔥 SINGLE SOURCE OF TRUTH
+export REMEDIA_ROOT="/usr/lib/remedia"
+export REMEDIA_LIB="$REMEDIA_ROOT"
+
+# safety
+[[ -d "$REMEDIA_LIB" ]] || {
+    echo "[FATAL] REMEDIA_LIB not found: $REMEDIA_LIB"
+    exit 1
+}
+
+CONFIG="/etc/remedia/remedia.env"
+
+line() {
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+header() {
+clear
+line
+echo -e "        ${BOLD}🎬 REMEDIA${NC}"
+line
+echo
+}
+
+# FLAG
+QUIET=0
+
+for arg in "$@"; do
+    if [[ "$arg" == "--quiet" ]]; then
+        QUIET=1
+        export REMEDIA_QUIET=1
+    fi
+done
+
+# -------------------------
+# COMMAND
+# -------------------------
+
+cmd="${1:-}"
+
+# -------------------------
+# FIRST RUN CHECK
+# -------------------------
+
+if [[ ! -f "$CONFIG" ]]; then
+    header
+    echo -e "${YELLOW}Remedia is not configured yet.${NC}"
+    echo
+    echo "Run:"
+    echo "  remedia setup"
+    echo
+    echo "This will configure your storage and initialize the system."
+    echo
+    exit 0
+fi
+
+# -------------------------
+# LOAD CORE
+# -------------------------
+# безопасный source
+
+set -a
+. "$CONFIG"
+set +a
+
+source "$REMEDIA_LIB/core/runtime_init.sh"
+source "$REMEDIA_LIB/core/router.sh"
+source "$REMEDIA_LIB/core/help.sh"
+
+# -------------------------
+# COMMANDS
+# -------------------------
+
+case "$cmd" in
+    setup)
+        exec /usr/bin/remedia-setup
+        ;;
+
+    doctor)
+        exec /usr/bin/remedia-doctor
+        ;;
+        
+    help)
+        remedia_help
+        ;;
+
+    "" )
+        header
+        remedia_help
+        ;;
+    *)
+        # 🔥 ВСЕ остальные команды → router
+        remedia_dispatch "$@"
+        exit_code=$?
+
+        if [[ $exit_code -eq 127 ]]; then
+            echo
+            echo -e "${RED}Unknown command: $cmd${NC}"
+            echo
+            echo "Run 'remedia help' to see available commands."
+            exit 127
+        fi
+
+        exit $exit_code
+        ;;
+esac
+

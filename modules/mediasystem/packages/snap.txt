@@ -1,0 +1,3 @@
+# Snap packages
+telegram-desktop
+gimp-plugins-gmic

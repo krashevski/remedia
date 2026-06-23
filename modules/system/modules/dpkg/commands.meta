@@ -1,0 +1,5 @@
+doctor=diagnose dpkg state|safe
+fix=repair dpkg safely|safe
+upgrade=upgrade packages safely|safe
+full-upgrade=full system upgrade (dependencies)|dangerous
+heal=force recovery (locks, apt)|dangerous

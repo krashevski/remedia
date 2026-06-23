@@ -1,0 +1,4 @@
+NAME=backupkit
+DESC=backup and recovery tools
+CATEGORY=backup
+LONG_DESC=reliable backup system for user data and applications

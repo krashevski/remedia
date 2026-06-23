@@ -1,0 +1,6 @@
+run=run pipeline for setup and GPU optimization tools
+help=show help for this module
+safe=minimal safe setup for media tasks
+standard=recommended setup with Shotcut editor
+full=complete setup with GPU optimization and full toolchain
+

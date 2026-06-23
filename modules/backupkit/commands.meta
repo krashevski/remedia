@@ -1,0 +1,6 @@
+firefox=backup and restore Firefox profile
+home=backup and restore user home directory with verification
+init=initialize backupkit storage
+status=show backupkit status overview
+user=initialize user environment
+help=show help for this module

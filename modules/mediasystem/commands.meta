@@ -1,0 +1,4 @@
+run=run pipeline for setup and GPU optimization tools
+status=show mediasystem status overview
+doctor=check mediasystem health|safe
+help=show help for this module

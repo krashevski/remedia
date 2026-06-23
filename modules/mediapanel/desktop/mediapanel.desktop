@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=PRODUCTION MEDIA PANEL
+Comment=Launch PRODUCTION MEDIA PANEL
+Icon=mediapanel
+Terminal=true
+Exec=remedia mediapanel ui
+Type=Application
+Categories=AudioVideo;Video;Utility;
+StartupNotify=true
+
+

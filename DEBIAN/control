@@ -1,0 +1,23 @@
+Package: remedia
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: all
+Maintainer: Vladislav <v.krashevski@gmail.com>
+Depends: bash (>= 5.0), coreutils
+Recommends: util-linux, findutils
+Description: Remedia - media-oriented system extension
+ Remedia is a modular system designed to extend Debian/Ubuntu-based environments
+ for media production, user data archiving, and system recovery.
+ Remedia CLI system - modular CLI framework with runtime, registry and module system.
+ Provides mediasystem, mediapanel, backupkit, and system tooling.
+ It provides both CLI and UI interfaces. The UI can be launched with:
+  remedia system center
+ Key components include:
+  * MediaSystem: configurable pipeline for media workflows
+  * MediaPanel: media production
+  * Backupkit: user recovery system
+ System configuration is stored in:
+  /etc/remedia/remedia.env
+ Remedia introduces a manifest-driven system state model.
+ The Manifest module acts as a trust anchor when system becomes unreliable.

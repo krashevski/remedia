@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# DEBIAN/postrm - ONLY if purge
+
+if [[ "$1" == "purge" ]]; then
+    rm -rf /var/lib/remedia
+    rm -rf /var/log/remedia
+    rm -rf /etc/remedia
+fi
+
+exit 0

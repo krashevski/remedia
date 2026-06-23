@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# DEBIAN/postinst
+
+set -euo pipefail
+
+echo "[REMEDIA] postinst"
+
+# runtime dirs
+install -d -m 755 /var/lib/remedia
+install -d -m 755 /var/log/remedia
+install -d -m 755 /etc/remedia
+
+# config default (ONLY if missing)
+CONFIG="/etc/remedia/remedia.env"
+
+if [[ ! -f "$CONFIG" ]]; then
+    echo "[INFO] First install detected"
+
+    echo "[INFO] Writing default config"
+    cat > "$CONFIG" <<EOF
+FAST_STORAGE=/mnt/shotcut
+SLOW_STORAGE=/mnt/storage
+BACKUP_STORAGE=/mnt/backups
+EOF
+
+    chmod 644 "$CONFIG"
+fi
+
+# optional desktop cache updates (safe ignore)
+command -v update-desktop-database >/dev/null 2>&1 && \
+    update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+
+command -v gtk-update-icon-cache >/dev/null 2>&1 && \
+    gtk-update-icon-cache /usr/share/icons/hicolor >/dev/null 2>&1 || true
+
+echo "[REMEDIA] postinst done"
+echo
+echo "[REMEDIA] Installed successfully"
+echo
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🎬 REMEDIA INSTALLED"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo
+echo "Next step:"
+echo
+echo "  remedia setup"
+echo
+echo "This will configure your storage and prepare the system."
+echo
+exit 0

@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+# /usr/bin/remedia-setup
+# remedia-setup - interactive configuration wizard for Remedia
+
+set -euo pipefail
+
+CONFIG_FILE="/etc/remedia/remedia.env"
+
+# --- UI ---
+
+BOLD=$'\033[1m'
+CYAN="\e[36m"
+GREEN=$'\033[32m'
+YELLOW=$'\033[33m'
+RED=$'\033[31m'
+NC=$'\033[0m'
+
+ok()   { printf "%b\n" "${GREEN}✔ $*${NC}"; }
+fail() { printf "%b\n" "${RED}✖ $*${NC}"; }
+warn() { printf "%b\n" "${YELLOW}! $*${NC}"; }
+
+line() {
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+header() {
+clear
+line
+echo -e "       ${BOLD}${CYAN}REMEDIA SETUP${NC}"
+line
+echo
+}
+
+# -----------------------------
+# defaults
+#-----------------------------
+
+DEFAULT_FAST="/mnt/shotcut"
+DEFAULT_SLOW="/mnt/storage"
+DEFAULT_BACKUP="/mnt/backups"
+
+# -----------------------------
+# load existing config (if exists)
+# -----------------------------
+
+if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE" || true
+fi
+
+FAST="${FAST_STORAGE:-$DEFAULT_FAST}"
+SLOW="${SLOW_STORAGE:-$DEFAULT_SLOW}"
+BACKUP="${BACKUP_STORAGE:-$DEFAULT_BACKUP}"
+
+list_mounts() {
+lsblk -o NAME,SIZE,MOUNTPOINT,TYPE -nr | awk '
+$3 != "" && $4 == "part" {
+mp=$3
+if (mp ~ "^/snap") next
+if (mp == "/") next
+if (mp ~ "^/boot") next
+if (mp ~ "^/run") next
+if (mp ~ "^/proc") next
+if (mp ~ "^/sys") next
+
+        if (mp ~ "^/mnt" || mp ~ "^/media" || mp ~ "^/home") {
+            print mp " (" $2 ")"
+        }
+    }
+'
+
+}
+
+ask_path() {
+    echo
+    local label="$1"
+    local default="$2"
+
+    local value
+    local mounts mp choice
+
+    mapfile -t mounts < <(list_mounts)
+
+    echo "${YELLOW}${label}${NC}"
+    printf "%b\n" "${CYAN}[Enter] default → ${default}${NC}"
+    printf "%b\n" "${CYAN}[0] manual input${NC}"
+
+    local i=1
+    for opt in "${mounts[@]}"; do
+        mp="$(awk '{print $1}' <<< "$opt")"
+        echo "  $i) $opt"
+        ((i++))
+    done
+
+    printf "Select option: "
+    read -r choice </dev/tty || true
+
+    if [[ -z "$choice" ]]; then
+        value="$default"
+
+    elif [[ "$choice" == "0" ]]; then
+        printf "Enter path: "
+        read -r value </dev/tty || true
+
+    elif [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#mounts[@]} )); then
+        value="$(awk '{print $1}' <<< "${mounts[$((choice-1))]}")"
+
+    else
+        echo "${RED}[FATAL] invalid selection${NC}"
+        exit 1
+    fi
+
+    # validation
+    [[ "$value" == /* ]] || { echo "${RED}[FATAL] path must be absolute${NC}"; exit 1; }
+
+    [[ -d "$value" ]] || {
+        echo "[INFO] creating $value"
+        mkdir -p "$value"
+    }
+
+    [[ -w "$value" ]] || {
+        echo "${RED}[FATAL] no write permission: $value${NC}"
+        exit 1
+    }
+
+    ASK_RESULT="$value"
+    echo "[SELECTED] $value"
+}
+
+confirm() {
+echo -ne "${YELLOW}Proceed with these settings? (Y/n): ${NC}"
+read -r ans </dev/tty || true
+[[ "$ans" == "n" || "$ans" == "N" ]] && return 1
+return 0
+}
+
+system_check() {
+    echo
+    echo "[CHECK] verifying system..."
+
+    [[ -f "$CONFIG_FILE" ]] || {
+        echo "[ERROR] config missing"
+        return 1
+    }
+
+    source "$CONFIG_FILE"
+
+    for path in "$FAST_STORAGE" "$SLOW_STORAGE" "$BACKUP_STORAGE"; do
+        if [[ ! -d "$path" ]]; then
+            echo "[ERROR] missing: $path"
+            return 1
+        fi
+
+        if [[ ! -w "$path" ]]; then
+            echo "[ERROR] not writable: $path"
+            return 1
+        fi
+    done
+
+    echo "[CHECK] OK"
+    return 0
+}
+
+# --- START ---
+
+header
+
+if [[ $EUID -ne 0 ]]; then
+    echo "[REMEDIA] Elevating privileges..."
+    exec sudo -E /usr/bin/remedia-setup "$@"
+fi
+
+# -----------------------------
+# config input
+# -----------------------------
+
+echo "Configure storage locations:"
+
+ask_path "FAST storage (proxy/media cache)" "$FAST"
+FAST="$ASK_RESULT"
+
+ask_path "SLOW storage (user data)" "$SLOW"
+SLOW="$ASK_RESULT"
+
+ask_path "BACKUP storage (archives)" "$BACKUP"
+BACKUP="$ASK_RESULT"
+
+# -----------------------------
+# validation
+# -----------------------------
+
+    if [[ "$FAST" == "$SLOW" || "$FAST" == "$BACKUP" || "$SLOW" == "$BACKUP" ]]; then
+        echo "${RED}[ERROR] storage paths must be different${NC}"
+        exit 1
+    fi
+
+
+
+# --- SUMMARY ---
+
+line
+echo -e "${BOLD}Summary:${NC}"
+echo
+echo "FAST_STORAGE=$FAST"
+echo "SLOW_STORAGE=$SLOW"
+echo "BACKUP_STORAGE=$BACKUP"
+echo
+line
+
+if ! confirm; then
+echo
+echo -e "${RED}Setup aborted${NC}"
+exit 1
+fi
+
+echo
+echo -e "${CYAN}[SETUP] Writing config...${NC}"
+
+mkdir -p /etc/remedia
+
+cat > "$CONFIG_FILE" <<EOF
+FAST_STORAGE="$FAST"
+SLOW_STORAGE="$SLOW"
+BACKUP_STORAGE="$BACKUP"
+EOF
+
+chmod 644 "$CONFIG_FILE"
+
+echo -e "${GREEN}[SETUP] Config saved: $CONFIG_FILE${NC}"
+
+# --- OPTIONAL: WAL LOGGING ---
+
+if command -v txn_append >/dev/null 2>&1; then
+txn_append "$(date +%s)|SETUP|CONFIG|WRITTEN"
+fi
+
+echo
+echo -e "${GREEN}✔ Setup complete${NC}"
+echo
+if system_check; then
+    echo
+    line
+    ok "${GREEN}System ready${NC}"
+    line
+else
+    echo
+    line
+    warn "${RED}System NOT ready${NC}"
+    line
+    exit 1
+fi
+
+

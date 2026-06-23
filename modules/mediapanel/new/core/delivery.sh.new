@@ -1,0 +1,217 @@
+#!/usr/bin/env bash
+# modules/mediapanel/core/delivery.sh.new
+
+# =========================================================
+# 🧠 DELIVERY LAYER v2 — ARCHITECTURAL PATTERN
+# =========================================================
+
+# “Policy-driven media delivery engine”
+# PATTERN: staged delivery pipeline (prepare → metadata → dispatch → queue)
+# PATTERN: human-in-the-loop export system (manual-first, API-second)
+# PATTERN: filesystem-based job queue (no external broker required)
+
+# IDEA:
+# Delivery layer is responsible for transitioning exported media
+# into external systems (YouTube / archive / manual workflow)
+# WITHOUT coupling to system desktop tools or UI runtime.
+
+# WHY:
+# - export ≠ upload (strict separation of concerns)
+# - avoid OS dependency (xdg-open / vlc / gtk issues)
+# - allow future automation (YouTube API, cloud sync, CI uploads)
+# - keep manual fallback as first-class citizen
+
+# CORE PRINCIPLES:
+
+# 1. PREPARE STAGE
+#    - scan export/
+#    - validate available media files
+#    - isolate selection logic from execution
+
+# 2. METADATA STAGE
+#    - attach human-readable context (title, description, tags)
+#    - store structured JSON alongside pipeline state
+#    - ensure reproducibility of delivery decisions
+
+# 3. DISPATCH STAGE
+#    - choose delivery backend:
+#        * YouTube API (future automation layer)
+#        * Manual Studio upload (current safe mode)
+#        * Local archive (cold storage)
+#    - NEVER assume OS-level media handling
+
+# 4. QUEUE STAGE (optional scaling layer)
+#    - filesystem-based queue system
+#    - enables retry / async processing / batch uploads
+#    - avoids external dependencies (no Redis / DB required)
+
+# PATTERNS USED:
+
+# PATTERN: systemd-style execution control
+# - units = delivery actions
+# - conditions = policy checks before execution
+# - runtime gating = SAFE_MODE / PIPELINE_MODE
+
+# PATTERN: CI/CD pipeline analogy
+# - export stage = build artifact
+# - delivery stage = deployment step
+# - archive stage = release snapshot
+
+# PATTERN: human-in-the-loop automation
+# - manual upload is default safe path
+# - automation is optional extension layer
+
+# PATTERN: filesystem-as-queue
+# - JSON files represent jobs
+# - no external message broker required
+
+# INSPIRED BY:
+# - systemd (unit lifecycle + condition gating)
+# - CI/CD pipelines (artifact → deploy flow)
+# - YouTube Studio workflow (manual upload reality constraint)
+# - modern media pipelines (Resolve / Premiere export workflows)
+
+# DESIGN GOAL:
+# “A deterministic media delivery engine that can run
+# fully offline, but scale to full automation later”
+
+# 1) Render Export
+# 2) Delivery (YouTube / Studio / Archive)
+# 3) Metadata editor
+# 4) Queue status
+# 5) Back
+
+delivery_prepare() {
+    local project
+    project="$(require_active_project)" || return 1
+
+    local export_dir="$PROJECT_DIR/$project/export"
+    local delivery_dir="$PROJECT_DIR/$project/delivery"
+
+    mkdir -p "$delivery_dir/queue"
+
+    mapfile -t files < <(
+        find "$export_dir" -type f -iname "*.mp4"
+    )
+
+    if (( ${#files[@]} == 0 )); then
+        log_warn "No export files found"
+        return 1
+    fi
+
+    printf '%s\n' "${files[@]}"
+}
+
+delivery_metadata_create() {
+    local project file title description tags
+
+    project="$(require_active_project)" || return 1
+
+    read -rp "Title: " title
+    read -rp "Description: " description
+    read -rp "Tags (comma): " tags
+
+    local meta_file="$PROJECT_DIR/$project/delivery/metadata/$(date +%s).json"
+
+    mkdir -p "$(dirname "$meta_file")"
+
+    cat > "$meta_file" <<EOF
+{
+  "project": "$project",
+  "title": "$title",
+  "description": "$description",
+  "tags": "$tags",
+  "created_at": "$(date -Iseconds)"
+}
+EOF
+
+    log_info "Metadata saved: $meta_file"
+}
+
+delivery_dispatch() {
+    local project file mode
+
+    project="$(require_active_project)" || return 1
+
+    local delivery_dir="$PROJECT_DIR/$project/delivery"
+
+    file="$(delivery_prepare)" || return 1
+
+    echo "1) YouTube API"
+    echo "2) Manual upload (Studio)"
+    echo "3) Local archive only"
+
+    read -rp "Select delivery mode: " mode
+
+    case "$mode" in
+        1)
+            youtube_upload "$file"
+            ;;
+        2)
+            delivery_studio_open "$file"
+            ;;
+        3)
+            log_info "Saved locally only"
+            ;;
+    esac
+}
+
+youtube_upload() {
+    local file="$1"
+
+    log_info "Uploading to YouTube API..."
+
+    # placeholder for OAuth token
+    local token="${YOUTUBE_TOKEN:-}"
+
+    if [[ -z "$token" ]]; then
+        log_error "Missing YouTube OAuth token"
+        return 1
+    fi
+
+    curl -X POST \
+        -H "Authorization: Bearer $token" \
+        -F "file=@$file" \
+        "https://www.googleapis.com/upload/youtube/v3/videos"
+}
+
+delivery_studio_open() {
+    local file="$1"
+
+    log_info "Opening YouTube Studio..."
+
+    xdg-open "https://studio.youtube.com/upload"
+    xdg-open "$file"
+}
+
+queue_add() {
+    local file="$1"
+    local project
+    project="$(require_active_project)" || return 1
+
+    local q="$PROJECT_DIR/$project/delivery/queue"
+
+    mkdir -p "$q"
+
+    echo "{\"file\":\"$file\",\"status\":\"pending\"}" \
+        > "$q/job_$(date +%s).json"
+
+    log_info "Added to delivery queue"
+}
+
+queue_worker() {
+    local project
+    project="$(require_active_project)" || return 1
+
+    local q="$PROJECT_DIR/$project/delivery/queue"
+
+    for job in "$q"/*.json; do
+        [[ -f "$job" ]] || continue
+
+        log_info "Processing $job"
+
+        # later: parse JSON + dispatch
+    done
+}
+
+

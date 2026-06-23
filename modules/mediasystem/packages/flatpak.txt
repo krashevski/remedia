@@ -1,0 +1,7 @@
+# format: remote app
+
+flathub org.shotcut.Shotcut
+# flathub org.gimp.GIMP
+# flathub org.gimp.GIMP.Plugin.GMic//3
+# flathub org.kde.krita
+flathub org.audacityteam.Audacity

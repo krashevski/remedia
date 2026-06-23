@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# DEBIAN/prerm
+
+set -euo pipefail
+
+echo "[REMEDIA] prerm"
+
+# only runtime cleanup (NO config deletion)
+rm -rf /var/lib/remedia/runtime 2>/dev/null || true
+
+exit 0

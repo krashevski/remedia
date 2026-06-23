@@ -1,0 +1,317 @@
+#!/usr/bin/env bash
+# =============================================================
+# Reincarnation Backup Kit — MIT License
+# Copyright (c) 2025 Vladislav Krashevsky
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, subject to the following:
+# The above copyright notice and this permission notice shall
+# be included in all copies or substantial portions of the Software.
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+# =============================================================
+# messages_ru.sh
+# Reincarnation Backup Kit — Messages Library
+# Unified messages for all scripts in russian
+# MIT License — Copyright (c) 2025 Vladislav Krashevsky support ChatGPT
+# ==============================================================
+
+MSG[hello]="Привет, мир!"
+MSG[start]="Запуск"
+
+# common library
+# logging.sh
+MSG[man_not_installed_hint]="Man-страницы не установлены. Установите их из меню «Настройки»."
+# privileges.sh
+MSG[run_sudo]="Скрипт нужно запускать с правами root (sudo)"
+MSG[exec_via_sudo]="Попытка выполнить через sudo..."
+# cleanup.sh
+MSG[cleanup_tmp]="Очистка временных файлов..."
+MSG[cleanup_ok]="Временные файлы удалены."
+MSG[cleanup_invalid_dir]="Некорректный каталог: %s"
+MSG[cleanup_removing]="Удаление"
+MSG[cleanup_unsafe_path]="Небезопасный путь, операция отменена"
+MSG[msg_workdir_cleaning]="Очистка рабочего каталога: %s..."
+MSG[msg_workdir_cleaned]="Рабочий каталог %s успешно очищен."
+# guards-firefox.sh
+MSG[firefox_closing]="Firefox закрывается, пожалуйста, подождите..."
+MSG[firefox_stop]="Firefox все еще работает → принудительная остановка"
+# guards-inhibit.sh
+MSG[inhibit_not_found]="systemd-inhibit не найден, пропускаем блокировку"
+MSG[inhibit_failed]="Не удалось выполнить блокировку, продолжаем в любом случае"
+# select_user.sh
+MSG[user_no_home]="Нет пользователей в /home"
+MSG[user_available]="Доступные пользователи:"
+MSG[user_select]="Выберите пользователя(ей) для операции "%s" (например: 1 или 1 3): "
+MSG[user_invalid_select]="Игнорируется недопустимый выбор: %s"
+MSG[user_no_selected]="Пользователи не выбраны"
+# system_detect.sh
+MSG[detect_system]="Определение системы: %s %s"
+MSG[not_system]="Не удается определить систему (нет /etc/os-release)"
+# deps.sh
+MSG[deps_ok]="Все зависимости установлены"
+MSG[deps_install_try]="Попытка автоматической установки…"
+MSG[deps_unknown_manager]="Неизвестный менеджер пакетов. Установите вручную: %s"
+MSG[deps_missing_list]="Отсутствуют зависимости: %s"
+MSG[deps_missing]="Пакет не установлен. Установите его"
+# run-step
+MSG[step_ok]="%s — успешно выполнено"
+MSG[step_fail]="%s — ошибка (см. %s)"
+MSG[step_not_function]="'%s' не является функцией"
+MSG[step_extract]="Распаковка архива"
+MSG[step_repos]="Восстановление репозиториев и ключей"
+MSG[step_packages]="Восстановление пакетов"
+MSG[step_logs]="Восстановление логов"
+MSG[step_archive]="Архив"
+MSG[step_system_packages]="Системные пакеты"
+MSG[step_repos_and_keys]="Источники APT и ключи"
+MSG[step_logs]="Логи"
+MSG[step_user_packages]="Пакеты установленные пользователем"
+MSG[step_archive]="Архив"
+MSG[step_backup_fail]="Резервное копирование не удалось"
+# init.sh
+MSG[init_start]="Инициализация каталогов"
+MSG[dir_created]="Каталог создан"
+MSG[dir_exists]="Каталог уже существует"
+MSG[dir_create_failed]="Не удалось создать каталог"
+MSG[dir_empty]="Пустой путь каталога"
+MSG[msg_init_user_dirs]="Инициализация пользовательских каталогов"
+MSG[msg_init_system_dirs]="Инициализация системных каталогов"
+MSG[msg_unsafe_path]="Небезопасный путь"
+MSG[msg_run_sudo]="Требуются права root (запустите с sudo)"
+# install-man.sh
+MSG[man_not_found]="man-страницы не найдены, выполняем установку..."
+MSG[man_installed]="man-страницы успешно установлены"
+MSG[man_install_sudo]="Для установки man-страниц требуется root. Используйте sudo."
+MSG[error_run_root]="Ошибка: скрипт должен быть запущен с правами root."
+MSG[man_install_start]="==== man installation started: %s ===="
+MSG[directory_not_found]="Каталог %s не найден. Пропуск."
+MSG[man_installed]="Установлена man-страница [%s]: %s.gz"
+MSG[updating_mandb]="Обновление базы mandb..."
+MSG[install_completed]="==== man installation completed: %s ===="
+
+# install.sh
+
+# menu.sh, backupkit.sh
+MSG[menu_running]="Выполняется: %s"
+MSG[enu_exited]="Команда завершилась с кодом: %s"
+MSG[menu_success]="Успешно завершено"
+MSG[menu_continue]="Нажмите Enter, чтобы продолжить..."
+MSG[menu_lang]="          Выберите язык:"
+MSG[menu_invalid_choice]="Неверный выбор, попробуйте еще раз."
+MSG[menu_language_set]="Язык успешно установлен: %s"
+MSG[menu_main]="Главное меню"
+MSG[menu_backup]="Резервное копирование"
+MSG[menu_restore]="Восстановление"
+MSG[menu_cron_jobs]="Управление заданиями cron"
+MSG[menu_media]="Медиа"
+MSG[menu_tools]="Инструменты"
+MSG[menu_logs]="Просмотр логов"
+MSG[menu_settings]="Настройки"
+MSG[menu_exit]="Выход"
+MSG[menu_sel_opt]=" Выберите вариант: "
+MSG[menu_backup_options]="    ПАРАМЕТРЫ РЕЗЕРВНОГО КОПИРОВАНИЯ"
+MSG[menu_system_info]="Система (%s %s):"
+MSG[menu_backup_system_full]="   1) Инкрементальное резервное копирование системных пакетов, репозиториев и связок ключей"
+MSG[menu_backup_system_manual]="   2) Инкрементальное резервное копирование пакетов установленных пользователем"
+MSG[menu_userdata]=" Данные пользователя:"
+MSG[menu_backup_firefox]="   3) Резервное копирование профиля Firefox"
+MSG[menu_firefox_script_not_found]="%s не найден"
+MSG[menu_backup_userdata]="   4) Инкрементальное резервное копирование данных пользователя"
+MSG[menu_backup_full]="   5) Полное резервное копирование данных пользователя (--fresh)"
+MSG[menu_back_main]=" 0) Вернуться в главное меню"
+MSG[menu_press_return]="Нажмите Enter, чтобы вернуться..."
+MSG[menu_restore_options]="      ПАРАМЕТРЫ ВОССТАНОВЛЕНИЯ"
+MSG[menu_recover_acconts]="   1) Восстановление учётных записей пользователей"
+MSG[menu_restore_system_full]="   2) Инкрементальное восстановления системных пакетов"
+MSG[menu_restore_system_manual]="   3) Инкрементальное восстановление пакетов установленных пользователем"
+MSG[menu_restore_firefox]="   4) Восстановить профиль Firefox"
+MSG[menu_restore_userdata]="   5) Инкрементальное восстановление данных пользователя"
+MSG[menu_manage_cron]=" УПРАВЛЕНИЕ ЗАДАНИЯМИ РЕЗЕРВНОГО КОПИРОВАНИЯ CRON"
+MSG[menu_cron]=" 1) Инкрементальное резервное копирование данных пользователя через cron (расписание)"
+MSG[menu_clean_backup_logs]="Очистите журналы резервного копирования"
+MSG[menu_remove_cron_task]=" 3) Удалить cron-задачу"
+MSG[menu_enter_time]="Введите время (ЧЧ:ММ): "
+MSG[menu_cron_shedule]="Запланировать резервное копирование"
+MSG[menu_adding_cron]="Добавление cron-задачи: %s для %s"
+MSG[menu_cron_job_installed]="Cron-задача установлена."
+MSG[menu_empty_entered]="Введены пустые параметры!"
+MSG[menu_media_title]="                МЕДИА"
+MSG[menu_install_flatpak]=" 1) Установить медиа-инструменты через Flatpak"
+MSG[menu_install_nvidia]=" 2) Установить драйверы NVIDIA и CUDA"
+MSG[menu_checks_gpu]=" 3) Проверить доступность графического процессора для Shotcut"
+MSG[menu_install_apt]=" 4) Установить медиа-инструменты через APT"
+MSG[menu_apt_installed]="Media Tools (APT) установлены успешно."
+MSG[menu_apt_busy]="apt сейчас занят другим процессом."
+MSG[menu_returned_main_menu]="Вернулись в главное меню."
+MSG[menu_installation_error]="Ошибка установки (код %s)."
+MSG[menu_returned_menu]="Вернулись в меню."
+MSG[menu_archive]=" АРХИВ:"
+MSG[menu_last_archive]="Проверить последний архив"
+MSG[menu_return_menu]="Возврат в меню..."
+MSG[menu_settings_title]="НАСТРОЙКИ"
+MSG[menu_change_language]=" 1) Сменить язык"
+MSG[menu_manage_cuda]=" 2) Управление набором инструментов CUDA"
+MSG[menu_install_man]=" 3) Установите/обновите страницы руководства man"
+MSG[menu_press_continue]="Нажмите Enter для продолжения..."
+MSG[menu_backupdir_not]="Настройка каталогов бэкапов пока не реализована"
+MSG[menu_checkcuda_not]="Скрипт check-cuda-tools.sh не найден или не исполняемый."
+MSG[menu_cuda_choice]="ВЫБОР CUDA"
+MSG[menu_cuda_check]=" 1) Проверить CUDA tools"
+MSG[menu_cuda_install]=" 2) Установить CUDA tools"
+MSG[menu_cuda_uninstall]=" 3) Удалить CUDA tools"
+MSG[menu_return]=" 0) Вернуться"
+MSG[menu_choose_option]="Выберите вариант: "
+
+# backup-system.sh
+MSG[bap_no_script]="%s %s — скрипт %s не найден или не является исполняемым"
+
+# backup-ubuntu-24.04.sh, backup-ubuntu-22.04.sh, backup-debian-12.sh
+MSG[backup_start]="Запуск резервного копирования системы"
+MSG[backup_started]="Резервное копирование началось"
+MSG[backup_change_owner]="Меняю владельца каталога на"
+MSG[backup_no_dir]="Каталог не существует, проверьте монтирование."
+MSG[backup_system_pkgs]="Резервное копирование системных пакетов и репозиториев..."
+MSG[backup_user_pkgs]="Резервное копирование пакетов установленных пользователем..."
+MSG[backup_create_archive]="Создание архива"
+MSG[backup_archive_exists]="Архив уже существует. Переименовываю в .old"
+MSG[backup_archive_done]="Архив создан: %s"
+MSG[backup_archive_fail]="Ошибка при создании архива"
+MSG[backup_sucess]="Резервное копирование завершено успешно!"
+MSG[backup_log_file]="Файл лога: %s"
+MSG[backup_finished]="Резервное копирование успешно завершено"
+
+# backup-restore-firefox.sh
+MSG[msg_firefox_running]="❌ Firefox запущен. Закройте Firefox перед операцией."
+MSG[msg_firefox_not_ini]="❌ Не найден profiles.ini"
+MSG[msg_firefox_not_profile]="❌ Профиль не найден: %s"
+MSG[msg_firefox_archiving]="📦 Архивирование профиля:"
+MSG[msg_firefox_done]="✅ Готово:"
+MSG[msg_firefox_profile_archive]="%s"
+MSG[msg_firefox_available]="📂 Доступные архивы:"
+MSG[msg_firefox_enter_name]="Введите имя архива для восстановления: "
+MSG[msg_firefox_not_found]="❌ Архив не найден"
+MSG[msg_firefox_recovering]="♻️ Восстановление профиля…"
+MSG[msg_firefox_recovered]="✅ Профиль восстановлен."
+MSG[msg_firefox_open]="👉 Откройте Firefox → about:profiles → Сделать профиль по умолчанию"
+MSG[menu_firefox_backres]=" Резервное копирование/восстановление Firefox (REBK)"
+MSG[menu_firefox_return]="Нажмите Enter, чтобы вернуться в меню Firefox..."
+MSG[menu_firefox_backup]="1) Резервное копирование профиля Firefox"
+MSG[menu_firefox_restore]="2) Восстановление профиля Firefox"
+MSG[menu_firefox_exit]="0) Выход"
+MSG[menu_firefox_options]=" Выберите вариант: "
+MSG[menu_invalid_choice]="Неверный выбор"
+
+# backup-restore-userdata.sh
+MSG[baresud_unknown_arg]="Неизвестный аргумент %s"
+MSG[baresud_usage]="Использование: sudo %s [backup|restore]"
+MSG[baresud_example_backup]="Пример: sudo %s backup — для резервного копирования"
+MSG[baresud_xample_restore]="Пример: sudo %s restore — для восстановления"
+MSG[baresud_warn_time]="Операция может занять длительное время."
+MSG[baresud_rsync_backup]="Rsync бэкап: %s -> %s"
+MSG[baresud_fresh_remove]="--fresh: удаляю старый архив %s"
+MSG[baresud_changed_files]="Архивирование измененных файлов из %s -> %s"
+MSG[baresud_no_new_files]="Нет новых файлов для архивации в %s"
+MSG[baresud_archive_created]="Архив создан: %s"
+MSG[baresud_dir_missing]="Каталог %s не существует, пропускаем."
+MSG[baresud_fresh_backup_dir]="Каталог для архивации --fresh %s"
+MSG[baresud_backup_done]="Резервное копирование завершёно для %s"
+MSG[baresud_user_not]="Пользователь %s не найден, пропуск восстановления."
+MSG[baresud_rsync_restore]="Rsync восстановление: %s -> %s"
+MSG[baresud_no_backup]="Rsync бэкап не найден для %s"
+MSG[baresud_extracting_archive]="Распаковка последнего архива %s"
+MSG[baresud_restore_done]="Восстановление завершено для %s"
+MSG[baresud_not_mounted]="/mnt/backups не смонтирован! Подключите диск и повторите."
+MSG[baresud_not_storage]="/mnt/storage не смонтирован! Подключите диск и повторите."
+MSG[baresud_no_users]="Не найдено пользователей в /home"
+MSG[baresud_user_list]="Доступные пользователи:"
+MSG[baresud_invalid_choice]="Неверный выбор: %s"
+MSG[baresud_select_user]="Введите номер(а) пользователя для %s (через пробел): "
+MSG[baresud_done]="Все операции %s завершены успешно"
+MSG[baresud_some_failed]="Некоторые операции %s не были выполнены. См. лог: %s"
+
+# restore-sytem.sh
+MSG[restore_dispatcher_started]="Диспетчер запущен"
+MSG[restore_not_found_dir]="❌ Каталог BACKUP_DIR не найден. Подключите или смонтируйте диск!"
+MSG[restore_not_supported]="❌ Система %s %s пока не поддерживается"
+MSG[restore_not_found_script]="❌ Скрипт %s не найден или не исполняемый!"
+MSG[restore_help]="Если АРХИВ не указан, будут использоваться значения по умолчанию в зависимости от системы."
+MSG[restore_not_found_archive]="❌ Архив %s не найден!"
+MSG[restore_running]="Запуск восстановления: %s %s"
+MSG[restore_dispatcher_finished]="Диспетчер завершил работу."
+MSG[restore_log_file]="Файл лога: %s"
+
+# restore-ubuntu-24.04.sh
+MSG[res_start]="Запуск восстановления"
+MSG[res_started]="Восстановление началось"
+MSG[res_archive_not]="Файл архива не найден: %s"
+MSG[res_extracting]="Распаковка архива..."
+MSG[res_extracting_ok]="Архив успешно распакован."
+MSG[res_extracting_fail]="Ошибка при распаковке архива."
+MSG[res_apt_sources]="Восстановление источников APT и ключей..."
+MSG[res_apt_fail]="Обновление apt не удалось"
+MSG[res_apt_ok]="Источники APT и ключи восстановлены."
+MSG[res_packages_manual]="Восстановление вручную установленных пакетов..."
+MSG[res_manual_ok]="Ручные пакеты восстановлены."
+MSG[res_manual_fail]="Ошибка восстановления ручных пакетов."
+MSG[res_packages_full]="Восстановление полного списка пакетов..."
+MSG[res_full_ok]="Полный список пакетов восстановлен."
+MSG[res_full_fail]="Ошибка восстановления полного списка пакетов."
+MSG[res_packages_skip]="Пропуск восстановления пакетов (RESTORE_PACKAGES=none)."
+MSG[res_invalid_mode]="Некорректный режим RESTORE_PACKAGES: %s"
+MSG[res_logs]="Восстановление логов..."
+MSG[res_logs_ok]="Логи восстановлены."
+MSG[res_logs_skip]="Пропуск восстановления логов."
+MSG[res_done]="Восстановление успешно завершено!"
+MSG[res_log_file]="Файл журнала: %s"
+
+# restore-userdata.sh
+MSG[resud_no_script]="Не найден restore-скрипт: %s"
+MSG[resud_no_dir]="Ошибка: каталог резервных копий не найден: %s"
+MSG[resud_recovery_info]="Запуск безопасного восстановление (без удаления лишних файлов)..."
+MSG[resud_recovery_finished]="Все операции восстановления завершены успешно."
+MSG[resud_recovery_warnings]="Восстановление завершилось с предупреждениями, проверьте лог. Лог: %s"
+
+# add-cron-backup.sh
+MSG[cron_usage]="Использование: %s ЧЧ:ММ [имя пользователя]"
+MSG[cron_invalid_format]="Неверный формат времени. HH:MM (например 10:30)"
+MSG[cron_error]="Скрипт cron-backup-userdata.sh не найден или не имеет права на выполнение."
+MSG[cron_task]="Cron-задача для %s обновлена/добавлена успешно."
+MSG[cron_current_jobs]="Текущие cron-задания:"
+MSG[cron_test_run]="Выполняем тестовый бэкап прямо сейчас..."
+MSG[cron_test_done]="Тестовый бэкап завершён."
+MSG[cron_test_fail]="Тестиовый бэкап не удался. Лог: %s"
+
+# cron-backup-userdata.sh
+MSG[cronud_free_space]="На %S мало места: %s"
+MSG[cronud_not_script]="Скрипт очистки логов не найден: %s"
+MSG[cronud_not_space]="Недостаточно места после очистки"
+MSG[cronud_dir_skip]="Пользовательский каталог %s не найден, пропускается."
+MSG[cronud_backup]="Резервное копирование Rsync: %s %s"
+MSG[cronud_archiving_changed]="Архивирование изменённых файлов из %s -> %s"
+MSG[cronud_no_files]="Нет новых файлов для архивирования в %s"
+MSG[cronud_done]="Резервное копирование завершено для %s"
+
+# clean-backup-logs.sh 
+MSG[clean_logs_removing]="Удаляем логи старше %s дней..."
+MSG[clean_logs_done]="Очистка логов завершена."
+
+# remove-cron-backup.sh
+MSG[rmcron_before]="Crontab ДО удаления:"
+MSG[rmcron_after]="Crontab ПОСЛЕ удаления:"
+MSG[rmcron_user]="Cron-задачи удалены из crontab пользователя %s."
+MSG[rmcron_fail]="Не удалось прочитать crontab пользователя %s (недостаточно прав?)"
+MSG[rmcron_root]="Cron-задачи удалены из crontab root."
+MSG[rmcron_none]="Задания cron не найдены."
+
+# check-last-archive.sh 
+MSG[last_usage]="Использование: check-last-archive.sh <имя_пользователя>"
+MSG[last_no_archives]="❌ Нет архивов для пользователя: %s"
+MSG[last_all_archives]="📂 Все архивы для пользователя (новые сверху):"
+MSG[last_archive]="✅ Последний архив для пользователя: %s"
+MSG[last_file]="   Файл : %s"
+MSG[last_date]="   Дата : %s"
+MSG[last_size]="   Размер: %s"
+

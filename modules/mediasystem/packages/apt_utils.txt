@@ -1,0 +1,7 @@
+# Utils
+flatpak
+keepassxc
+mc
+ranger
+cpu-x
+libxcb-cursor0

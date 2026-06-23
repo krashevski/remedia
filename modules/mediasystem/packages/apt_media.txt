@@ -1,0 +1,7 @@
+# Media tools
+digikam
+darktable
+krita
+gimp 
+# gimp-gmic
+gimp-help-ru

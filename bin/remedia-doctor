@@ -1,0 +1,217 @@
+#!/usr/bin/env bash
+# /usr/bin/remedia-doctor
+
+set -euo pipefail
+
+# 🔥 SINGLE SOURCE OF TRUTH
+export REMEDIA_ROOT="/usr/lib/remedia"
+export REMEDIA_LIB="$REMEDIA_ROOT"
+
+# load core
+[[ -f "$REMEDIA_LIB/core/utils/colors.sh" ]] && \
+    source "$REMEDIA_LIB/core/utils/colors.sh"
+
+# source modules
+source "$REMEDIA_LIB/modules/system/modules/doctor/doctor.sh"
+source "$REMEDIA_LIB/modules/mediasystem/modules/doctor/doctor.sh"
+
+CONFIG="/etc/remedia/remedia.env"
+
+# USER
+ORIG_USER="${SUDO_USER:-$USER}"
+ORIG_HOME=$(eval echo "~$ORIG_USER")
+
+export RUN_USER="$ORIG_USER"
+export HOME="$ORIG_HOME"
+
+GREEN=$'\033[32m'
+RED=$'\033[31m'
+YELLOW=$'\033[33m'
+CYAN=$'\033[36m'
+BOLD=$'\033[1m'
+NC=$'\033[0m'
+
+ok()   { printf "%b\n" "${GREEN}✔ $*${NC}"; }
+fail() { printf "%b\n" "${RED}✖ $*${NC}"; }
+warn() { printf "%b\n" "${YELLOW}! $*${NC}"; }
+
+line() {
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+header() {
+    echo
+    echo -e "     ${BOLD}🔎 REMEDIA DOCTOR${NC}"
+    line
+    echo
+}
+
+require_root() {
+    if [[ "$EUID" -ne 0 ]]; then
+        exec sudo "$0" "$@"
+    fi
+}
+
+fix=0
+if [[ "${1:-}" == "--fix" ]]; then
+fix=1
+fi
+
+require_root "$@"
+header
+
+issues=0
+
+run_check_cmd() {
+    local name="$1"
+    local cmd="$2"
+    
+    REMEDIA_FAIL=0
+    REMEDIA_WARN=0
+
+    set +e
+    output=$(script -q -c "sudo -u $RUN_USER $cmd" /dev/null)
+    rc=$?
+    set -e
+    
+    TOTAL_FAIL=$((TOTAL_FAIL + REMEDIA_FAIL))
+    TOTAL_WARN=$((TOTAL_WARN + REMEDIA_WARN))
+
+    echo "$output"
+
+    if [[ $rc -eq 0 ]]; then
+        echo -e "$name → ${COLOR_GREEN}OK${COLOR_RESET}"
+    else
+        echo -e "$name → ${COLOR_RED}FAIL${COLOR_RESET}"
+    fi
+    echo
+}
+
+# -------------------------
+# CONFIG
+# -------------------------
+
+if [[ -f "$CONFIG" ]]; then
+    ok "config exists"
+    set -a
+    . "$CONFIG"
+    set +a
+else
+    fail "config missing: $CONFIG"
+    ((issues++))
+fi
+
+# -------------------------
+# TEST CONFIG
+# -------------------------
+if [[ -f /etc/remedia/remedia.env ]]; then
+    echo "Run:"
+    echo "  remedia doctor"
+else
+    echo "Run:"
+    echo "  remedia setup"
+fi
+
+# -------------------------
+# PATH CHECK
+# -------------------------
+
+check_path() {
+local label="$1"
+local path="$2"
+
+if [[ -z "$path" ]]; then
+    fail "$label not set"
+    ((issues++))
+    return
+fi
+
+if [[ ! -d "$path" ]]; then
+    fail "$label missing: $path"
+    ((issues++))
+
+    if [[ "$fix" -eq 1 ]]; then
+        mkdir -p "$path" && ok "created $path"
+    fi
+    return
+fi
+
+if [[ ! -w "$path" ]]; then
+    fail "$label not writable: $path"
+    ((issues++))
+
+    if [[ "$fix" -eq 1 ]]; then
+        chmod u+w "$path" 2>/dev/null && ok "fixed permissions"
+    fi
+    return
+fi
+
+ok "$label OK → $path"
+}
+
+# -------------------------
+# STORAGE
+# -------------------------
+
+check_path "FAST storage" "${FAST_STORAGE:-}"
+check_path "SLOW storage" "${SLOW_STORAGE:-}"
+check_path "BACKUP storage" "${BACKUP_STORAGE:-}"
+
+
+# -------------------------
+# AGREGATOR
+# -------------------------
+TOTAL_FAIL=0
+TOTAL_WARN=0
+
+echo
+line
+echo "        MODULE CHECKS"
+line
+
+run_check_cmd "system" "remedia system doctor --quiet"
+run_check_cmd "mediasystem" "remedia mediasystem doctor --quiet"
+
+# -------------------------
+# SUMMARY
+# -------------------------
+line
+
+TOTAL=$((TOTAL_FAIL + TOTAL_WARN))
+SCORE=100
+
+if (( TOTAL > 0 )); then
+    SCORE=$((100 - TOTAL_FAIL*30 - TOTAL_WARN*10))
+    (( SCORE < 0 )) && SCORE=0
+fi
+
+# статус системы
+if (( TOTAL_FAIL == 0 && TOTAL_WARN == 0 )); then
+    ok "System healthy"
+elif (( TOTAL_FAIL == 0 )); then
+    warn "System degraded"
+else
+    fail "System issues detected"
+fi
+
+echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET} FAIL: $TOTAL_FAIL  WARN: $TOTAL_WARN"
+echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET} REMEDIA HEALTH: ${SCORE}%"
+
+line
+
+# fix hint
+if (( TOTAL_FAIL > 0 || TOTAL_WARN > 0 )) && [[ "$fix" -eq 0 ]]; then
+    echo
+    echo "Run:"
+    echo "  sudo remedia doctor --fix"
+    echo
+fi
+
+# exit code
+if (( TOTAL_FAIL > 0 )); then
+    exit 1
+else
+    exit 0
+fi
+
+

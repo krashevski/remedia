@@ -1,0 +1,10 @@
+center=show system UI
+cuda-tools=manage CUDA toolkit|dangerous
+doctor=check system health|safe
+dpkg=check dpkg health|safe
+help=about commads for this module
+home=diagnosing and healing user home directory state
+man=managing man system lifecycle with diagnostics and recovery tools
+manifest=acts as a trust anchor when the system becomes unreliable
+status=show system status overview
+symlinks=create symlinks for user big directories
