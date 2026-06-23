@@ -1,0 +1,21 @@
+# build artifacts
+build/
+*.deb
+
+# logs
+*.log
+
+# temp
+tmp/
+*.tmp
+
+# system/runtime (НЕ коммитим)
+etc/
+var/
+
+# editor
+*.swp
+*~
+
+# env
+.env
