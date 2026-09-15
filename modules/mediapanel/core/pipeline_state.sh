@@ -7,6 +7,7 @@ PIPELINE_STEPS=(
   audio
   sync
   split
+  mlt
 )
 
 pipeline_state_file() {
@@ -29,6 +30,7 @@ proxy=pending
 audio=pending
 sync=pending
 split=pending
+mlt=pending
 status=active
 EOF
     fi
@@ -91,11 +93,28 @@ run_step() {
         audio) audio_cleanup ;;
         sync) auto_sync_audio ;;
         split) batch_scene_split ;;
+        mlt)
+            create_mlt_from_edit \
+            "$project" \
+            "$PROJECT_DIR/$project"
+            ;;
         ingest) echo "[STEP] ingest external" ;;
-        *) echo "[ERROR] unknown step: $step"; return 1 ;;
+        *)
+            echo "[ERROR] unknown step: $step"
+            pipeline_set "$project" "$step" failed
+            return 1
+            ;;
     esac
 
-    pipeline_set "$project" "$step" done
+    local rc=$?
+
+    if (( rc == 0 )); then
+        pipeline_set "$project" "$step" done
+        return 0
+    fi
+
+    pipeline_set "$project" "$step" failed
+    return "$rc"
 }
 
 resume_pipeline() {
@@ -104,7 +123,7 @@ resume_pipeline() {
 
     pipeline_load "$project"
 
-    for step in proxy audio sync split; do
+    for step in proxy audio sync split mlt; do
         local state
         state="$(pipeline_get "$project" "$step" || echo pending)"
 
@@ -125,10 +144,17 @@ full_pipeline() {
     pipeline_load "$project"
     pipeline_lock "$project" || return 1
 
-    require_ingest_done || return 1
+    require_ingest_done || {
+        pipeline_unlock "$project"
+        return 1
+    }
 
-    for step in proxy audio sync split; do
-        run_step "$project" "$step"
+    for step in proxy audio sync split mlt; do
+        run_step "$project" "$step" || {
+        pipeline_set "$project" "$step" failed
+        pipeline_unlock "$project"
+        return 1
+    }
     done
 
     pipeline_set "$project" status done
@@ -153,13 +179,28 @@ skip_step() {
     pipeline_set "$project" "$step" skipped
 }
 
-pipeline_status() {   
+pipeline_status() {
     local project="$1"
+    local project_path="$PROJECT_DIR/$project"
+    local mlt_file="$project_path/${project}.mlt"
     local out=""
+
     echo -e "${COLOR_BOLD}Pipeline status:${COLOR_RESET}"
+
     for step in "${PIPELINE_STEPS[@]}"; do
         local state
-        state="$(pipeline_get "$project" "$step" || echo missing)"
+        state="$(pipeline_get "$project" "$step")"
+        [[ -n "$state" ]] || state="missing"
+
+        # Для этапа mlt реальный файл важнее старого статуса.
+        if [[ "$step" == "mlt" && -s "$mlt_file" ]]; then
+            if [[ "$state" != "done" ]]; then
+                pipeline_set "$project" mlt done
+            fi
+
+            out+="${COLOR_GREEN}✔ mlt (exists)${COLOR_RESET}\n"
+            continue
+        fi
 
         case "$state" in
             done)
@@ -177,12 +218,15 @@ pipeline_status() {
             failed)
                 out+="${COLOR_RED}✖ $step (failed)${COLOR_RESET}\n"
                 ;;
+            missing)
+                out+="${COLOR_MAGENTA}⚠ $step (state missing)${COLOR_RESET}\n"
+                ;;
             *)
-                out+="${COLOR_MAGENTA}⚠ $step (unknown)${COLOR_RESET}\n"
+                out+="${COLOR_MAGENTA}⚠ $step (unknown: $state)${COLOR_RESET}\n"
                 ;;
         esac
     done
-    echo -e "${COLOR_CYAN}----------------------------------${COLOR_RESET}" 
-    echo -e "$out" 
-}
 
+    echo -e "${COLOR_CYAN}----------------------------------${COLOR_RESET}"
+    echo -e "$out"
+}

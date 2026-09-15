@@ -7,6 +7,7 @@
 next_project_number() {
 
     local max=0
+    local name num
 
     [[ -d "$PROJECT_DIR" ]] || {
         printf "%03d" 1
@@ -17,13 +18,19 @@ next_project_number() {
         name=$(basename "$dir")
 
         if [[ "$name" =~ ^([0-9]{3})_ ]]; then
-            num=${BASH_REMATCH[1]}
+            num="${BASH_REMATCH[1]}"
             num=$((10#$num))
 
             (( num > max )) && max=$num
         fi
 
-    done < <(find "$PROJECT_DIR" -mindepth 1 -maxdepth 1 -type d -print0)
+    done < <(
+        find "$PROJECT_DIR" \
+            -mindepth 1 \
+            -maxdepth 1 \
+            -type d \
+            -print0
+    )
 
     printf "%03d" $((max + 1))
 }
@@ -33,29 +40,42 @@ next_project_number() {
 # PROJECT LIST
 # =========================
 project_list_raw() {
+
     mapfile -t projects < <(
-        find "$PROJECT_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' |
+        find "$PROJECT_DIR" \
+            -mindepth 1 \
+            -maxdepth 1 \
+            -type d \
+            -printf '%f\n' |
         sort -t '_' -k1,1n
     )
 
     printf '%s\n' "${projects[@]}"
 }
 
+
 # =========================
 # PROJECT PATHS
 # =========================
 project_paths() {
+
     local name="$1"
+
     printf '%s/%s\n' "$PROJECT_DIR" "$name"
 }
+
 
 # =========================
 # PROJECT EXISTS
 # =========================
 project_exists() {
+
     [[ -d "$(project_paths "$1")" ]]
 }
 
+# =========================
+# PROJECT CREATE
+# =========================
 project_core_create() {
 
     local NAME="${CLI_NAME:-}"
@@ -65,6 +85,7 @@ project_core_create() {
             echo "[ERROR] name required"
             return 1
         fi
+
         read -r -p "Enter project name: " NAME
     fi
 
@@ -81,7 +102,18 @@ project_core_create() {
     local project_name="${number}_${NAME}"
     local path="$PROJECT_DIR/$project_name"
 
-    mkdir -p "$path"/{media,edit,scenes,audio,edit} || {
+    # --------------------------------------------------------
+    # PROJECT DIRECTORIES
+    # --------------------------------------------------------
+        
+    mkdir -p \
+        "$path/media" \
+        "$path/audio" \
+        "$path/scenes" \
+        "$path/edit" \
+        "$path/short" \
+        "$path/export" || {
+
         echo "[ERROR] failed to create project dirs"
         return 1
     }
@@ -89,7 +121,11 @@ project_core_create() {
     echo "$project_name"
 }
 
+# =========================
+# TRASH LIST
+# =========================
 trash_list() {
+
     [[ -d "$TRASH_DIR" ]] || {
         echo "[INFO] trash empty"
         return 0
@@ -97,13 +133,23 @@ trash_list() {
 
     echo "=== TRASH ==="
 
-    find "$TRASH_DIR" -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | sort
+    find "$TRASH_DIR" \
+        -mindepth 1 \
+        -maxdepth 1 \
+        -type d \
+        -printf "%f\n" |
+    sort
 }
 
+
+# =========================
+# PROJECT DELETE
+# =========================
 project_core_delete() {
 
     local PROJECT="${CLI_PROJECT:-}"
     local YES="${CLI_YES:-0}"
+
     : "${STATE_DIR:?STATE_DIR not set}"
 
     [[ -z "$PROJECT" ]] && {
@@ -121,11 +167,18 @@ project_core_delete() {
         return 1
     }
 
-    # 🧠 clear active project if it is being deleted
+    # --------------------------------------------------------
+    # CLEAR ACTIVE PROJECT
+    # --------------------------------------------------------
+
     if [[ "$(get_active_project)" == "$PROJECT" ]]; then
         state_save "active_project" ""
         echo "[INFO] active project cleared"
     fi
+
+    # --------------------------------------------------------
+    # CONFIRM
+    # --------------------------------------------------------
 
     if [[ "${YES:-0}" != "1" ]]; then
         read -rp "Type DELETE to confirm: " confirm
@@ -142,7 +195,12 @@ project_core_delete() {
     echo "[OK] moved to trash: $PROJECT"
 }
 
+
+# =========================
+# PROJECT RESTORE
+# =========================
 project_core_restore() {
+
     local entry="${1:-}"
 
     [[ -z "$entry" ]] && {

@@ -50,7 +50,7 @@ remedia
 ## 🚀 Installation
 
 ```bash
-sudo dpkg -i remedia_1.0.0_all.deb
+sudo apt install remedia_1.1.0_all.deb
 ```
 
 Dependencies:
@@ -149,7 +149,7 @@ Support: ChatGPT
 
 ## 📌 Status
 
-Version: **1.0.0**
+Version: **1.1.0**
 The project is in active development:
 * contract stabilization
 * runtime improvements

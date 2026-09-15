@@ -96,6 +96,102 @@ ensure_log_file() {
     echo "$file"
 }
 
+install_shotcut_filter_sets() {
+    local source_dir="/usr/share/remedia/filter-sets"
+    local target_dir="$HOME/.var/app/org.shotcut.Shotcut/data/Meltytech/Shotcut/filter-sets"
+    local copied=0
+    local skipped=0
+    local file
+    local filename
+
+    [[ -d "$source_dir" ]] || {
+        echo "[ERROR] Remedia filter sets not found: $source_dir"
+        return 1
+    }
+
+    mkdir -p "$target_dir" || {
+        echo "[ERROR] Cannot create Shotcut filter-set directory:"
+        echo "        $target_dir"
+        return 1
+    }
+
+    for file in "$source_dir"/*; do
+        [[ -f "$file" ]] || continue
+
+        filename="${file##*/}"
+
+        if [[ -e "$target_dir/$filename" ]]; then
+            echo "[SKIP] $filename already exists"
+            ((skipped++))
+            continue
+        fi
+
+        if cp -- "$file" "$target_dir/$filename"; then
+            echo "[OK] imported: $filename"
+            ((copied++))
+        else
+            echo "[ERROR] failed to import: $filename"
+            return 1
+        fi
+    done
+
+    echo
+    echo "[OK] Filter-set import completed"
+    echo "     Imported: $copied"
+    echo "     Existing: $skipped"
+    echo
+    echo "[INFO] Restart Shotcut to load the filter sets."
+}
+
+show_shotcut_config_status() {
+    local shotcut_app="org.shotcut.Shotcut"
+    local filter_dir="$HOME/.var/app/$shotcut_app/data/Meltytech/Shotcut/filter-sets"
+    local filter_count=0
+
+    echo "Shotcut:"
+
+    # Проверка установки Shotcut Flatpak
+    if ! command -v flatpak >/dev/null 2>&1; then
+        echo -e "   Flatpak: ${COLOR_RED}not installed${COLOR_RESET}"
+        echo -e "   Subtitles module (Whisper): ${COLOR_RED}unavailable${COLOR_RESET}"
+    elif ! flatpak info "$shotcut_app" >/dev/null 2>&1; then
+        echo -e "   Flatpak: ${COLOR_RED}Shotcut not installed${COLOR_RESET}"
+        echo -e "   Subtitles module (Whisper): ${COLOR_RED}unavailable${COLOR_RESET}"
+    else
+        echo -e "   Flatpak: ${COLOR_GREEN}installed${COLOR_RESET}"
+
+        # Проверка установленного в Shotcut модуля Whisper
+        if timeout 10 \
+            flatpak run \
+                --command=whisper-cli \
+                "$shotcut_app" \
+                --help >/dev/null 2>&1
+        then
+            echo -e "   Subtitles module (Whisper): ${COLOR_GREEN}installed${COLOR_RESET}"
+        else
+            echo -e "   Subtitles module (Whisper): ${COLOR_YELLOW}not installed${COLOR_RESET}"
+        fi
+    fi
+
+    # Количество импортированных наборов фильтров
+    if [[ -d "$filter_dir" ]]; then
+        filter_count="$(
+            find "$filter_dir" \
+                -mindepth 1 \
+                -maxdepth 1 \
+                -type f \
+                -printf '.' 2>/dev/null |
+            wc -c
+        )"
+    fi
+
+    if (( filter_count > 0 )); then
+        echo -e "   Filter sets: ${COLOR_GREEN}$filter_count installed${COLOR_RESET}"
+    else
+        echo -e "   Filter sets: ${COLOR_YELLOW}not installed${COLOR_RESET}"
+    fi
+}
+
 system_status() {
     while true; do
         active="$(get_active_project)"
@@ -147,12 +243,16 @@ system_status() {
         echo
         phone_status
         echo
+        echo
+        show_shotcut_config_status
+        echo
         echo -e "${COLOR_BOLD}MENU:${COLOR_RESET}"
         echo
         echo " 1) Refresh"
         echo " 2) Show system log"
         echo " 3) Show disk usage"
         echo " 4) Show GPU info"
+        echo " 5) Import Shotcut filter sets"
         echo
         echo -e " ${COLOR_YELLOW}0) Back${COLOR_RESET}"
         echo
@@ -248,6 +348,10 @@ system_status() {
                 ffmpeg -encoders 2>/dev/null | grep nvenc || echo "NVENC not available"
                 echo
                 read -rp "Press Enter..."
+                ;;
+            5)
+                install_shotcut_filter_sets
+                read -rp "Press Enter to continue..."
                 ;;
             0)
                 echo "Back..."

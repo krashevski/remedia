@@ -9,7 +9,7 @@ Focus is not on features, but on:
 * condition monitoring
 * reproducibility
 
-## 📍 Current State (v1.0.0)
+## 📍 Current State (v1.1.0)
 
 The system already implements:
 ✔ CLI router
@@ -70,65 +70,21 @@ It ensures that the system does not rely on theoretical GPU availability, but on
 
 ## 📦 MediaPanel Delivery Layer
 
-### Overview
-The Delivery Layer is a **policy-driven media delivery engine** responsible for transitioning exported media into external systems.
-It enforces strict separation:
-> **Export ≠ Delivery ≠ Upload**
-The system is designed to operate:
-* fully offline (manual-first)
-* without OS/UI dependencies
-* with future support for full automation (YouTube API, CI pipelines)
+### The Next Stage of Automation
 
-### Execution Pipeline
-**Stage 1 — Artifact Discovery**
-* Scan `export/` directory
-* Collect media files (`.mp4`)
-* Validate availability of deliverables
-**Stage 2 — Metadata Injection**
-* Collect title, description, tags
-* Store metadata as structured JSON
-* Ensure reproducibility of delivery decisions
-**Stage 3 — Delivery Routing**
-* Select delivery backend:
-  * YouTube API
-  * Manual Studio upload
-  * Local archive
-* Decouple execution from UI/runtime
-**Stage 4 — Backend Execution**
-* Execute selected backend:
-  * API upload (future automation)
-  * Manual upload (safe mode)
-  * Archive-only mode
-**Stage 5 — Queue Processing (Async Layer)**
-* Filesystem-based job queue
-* JSON jobs represent delivery tasks
-* Enables retry, batching, and background processing
+To ensure the queue actually publishes videos, you need to implement a YouTube API backend:
 
-### Policy Layer (Critical Design Component)
-**Runtime Gating**
-* SAFE_MODE / PIPELINE_MODE control execution permissions
-**Capability Detection**
-* Detect available integrations (e.g. YouTube OAuth token)
-**Backend Selection Policy (Future)**
-* Rule-based backend selection:
-  * No token → manual mode
-  * CI environment → API upload
-  * Offline → archive-only
+Create a project in Google Cloud.
+Enable the YouTube Data API v3.
+Create a "Desktop" type OAuth client.
+Authorize MediaPanel to access your YouTube channel once.
+Securely store the OAuth token.
+Add a Python uploader that supports resumable uploads.
+Configure the worker to sequentially upload both the full video and the Short from a single queue job.
 
-### Architectural Patterns
-* **systemd-style execution model**
-  * delivery actions = units
-  * conditions = policy checks
-* **CI/CD pipeline analogy**
-  * export = build artifact
-  * delivery = deployment
-  * archive = release snapshot
-* **human-in-the-loop automation**
-  * manual upload is default
-  * automation is optional extension
-* **filesystem-as-queue**
-  * JSON = job descriptor
-  * no external broker required
+The official API accepts the title, description, tags, and visibility settings—meaning our JSON data already contains the necessary fields. Authorization requires OAuth 2.0. [Official YouTube Data API guide](https://developers.google.com/youtube/v3/guides/uploading_a_video?utm_source=chatgpt.com&hl=ru).
+
+For now, choose "Manual YouTube upload" for actual publishing. The queue provides the foundation for the next stage, but it won't send anything until the worker and OAuth are in place. The next logical step is to set up secure YouTube OAuth and then connect a real uploader to the queue.
 
 ### Future Roadmap
 * Non-interactive metadata injection (CLI / templates)

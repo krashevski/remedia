@@ -107,6 +107,158 @@ pause() {
     read -rp "Press Enter to continue..."
 }
 
+# =========================
+#  GUIDE
+# =========================
+show_stabilization_guide() {
+    clear || true
+
+    cat <<'EOF'
+
+====================================================
+                   Stabilization
+====================================================
+1.  Stabilization (Stabilize filter) use only for clips or segments where it is truly necessary.    
+    Stabilization alters the frame geometry: it compensates for camera shake and may involve zooming in and cropping the edges.
+    It is best performed before final image processing.
+    
+    IMPORTANT:
+    If you intend to stabilize specific segments, do not merge them back together after cutting.
+ 
+2. Navigate the MediaPanel UI menu:
+
+    1) System status 
+        -> 5) Import Shotcut filter sets
+
+3. Open the following in Shotcut:
+
+    Filters → + → Sets
+
+    You should see an entry appear there, for example:
+
+    Stabilizer_Gimbal
+
+====================================================
+EOF
+
+    echo
+    read -r -p "Press Enter to continue..."
+}
+
+# =========================
+# SET FILTERS GUIDE
+# =========================
+show_set_filters_guide() {
+    clear || true
+
+    cat <<'EOF'
+====================================================
+                   SET FILTERS
+====================================================
+
+1. Navigate the MediaPanel UI menu:
+
+    1) System status 
+        -> 5) Import Shotcut filter sets
+
+2. Open the following in Shotcut:
+
+    Filters → + → Sets
+
+    You should see an entry appear there, for example:
+
+    Oppo_Reno_11F_Concert
+
+3. Apply the filter set to the entire video track.
+
+====================================================
+EOF
+
+    echo
+    read -r -p "Press Enter to continue..."
+}
+
+# =========================
+# CREATE SHORT VIDEO GUIDE
+# =========================
+show_create_short_video_guide() {
+    clear || true
+
+    cat <<'EOF'
+====================================================
+              CREATING A SHORT VIDEO
+====================================================
+
+1. Open Shotcut via the MediaPanel UI:
+
+   6) Tools
+      -> 1) Video tools
+         -> 1) Shotcut
+
+2. Create a new project:
+
+   Project folder: 001_Current_Project
+   Project name:   short
+   Video mode:     4K UHD 2160p
+
+   Select a frame rate matching the source scene.
+
+   Click: Start
+
+3. Select a video file from the project's scenes/ directory:
+
+   File -> Open File
+
+4. Drag the selected file onto the Timeline.
+
+5. Repeat steps 3 and 4 if additional scenes are required.
+
+6. Perform the necessary clip processing:
+
+   - cutting
+   - stabilization, if required
+   - noise reduction
+   - color correction
+   - sharpening
+   - subtitles
+
+7. Convert the horizontal video to vertical for the Timeline
+   Output element:
+
+   Timeline -> Output -> Export -> Advanced -> Reframe
+
+   Recommended export settings:
+
+   Resolution:  1080x1920 or higher
+   Frame rate:  Match the source video
+   Codec:       H.264 NVENC
+   Quality:     CQ 18-20
+   Audio:       AAC 192-256 kbit/s
+
+   IMPORTANT:
+   Reframe crops the horizontal image and reduces the available
+   resolution. Use the original source file and export from a
+   4K project using the source video's frame rate.
+
+8. Save the finished Shotcut project in the short/ directory:
+
+   File -> Save As...
+
+   File name: 001_Video_short.mlt
+
+9. Export the finished short video to the short/ directory:
+
+   File -> Export -> Video/Audio
+
+   File name: 001_Video_short.mp4
+
+====================================================
+EOF
+
+    echo
+    read -r -p "Press Enter to continue..."
+}
+
 main_menu() {
     while true; do
         active="$(get_active_project 2>/dev/null || true)"
@@ -308,9 +460,14 @@ production_menu() {
         echo "2) Audio cleanup"
         echo "3) Auto sync audio"
         echo "4) Batch scene split"
-        echo "5) Full pipeline"
-        echo "6) Resume pipeline"
-        echo "7) Launch Shotcut"
+        echo "5) Create Shotcut project file (.mlt)"
+        echo "6) Full pipeline"
+        echo "7) Resume pipeline"
+        echo "8) Launch Shotcut"
+        echo "9) Stabilization"
+        echo "10) Set filters"
+        echo "11) Generate subtitles"
+        echo "12) Create short video"
         echo
         echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
         echo
@@ -326,9 +483,26 @@ production_menu() {
                ui_run_step "$active" sync ;;
             4)
                ui_run_step "$active" split ;;
-            5) full_pipeline || true ;;
-            6) resume_pipeline || true ;;
-            7) launch_shotcut || true ;;
+            5)  
+               ui_run_step "$active" mlt ;;
+            6) full_pipeline || true ;;
+            7) resume_pipeline || true ;;
+            8) launch_shotcut || true ;;
+            9)
+               show_stabilization_guide
+               ;;
+
+            10)
+               show_set_filters_guide
+               ;;
+
+            11)
+               generate_subtitles
+               read -rp "Press Enter to continue..."
+               ;;
+            12)
+               show_create_short_video_guide
+               ;;
             0) return ;;
             *) echo "Invalid option" ;;
         esac
@@ -352,8 +526,7 @@ export_menu() {
         fi
         echo
         echo "1) Render Export (generate videos)"
-        echo "2) Export → YouTube (upload/select)"
-        echo "3) Archive project"
+        echo "2) Prepare delivery queue job"
         echo
         echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
         echo
@@ -367,10 +540,6 @@ export_menu() {
                 ;;           
             2)
                 export_youtube || log_error "Export failed"
-                pause
-                ;;
-            3)
-                archive_project || log_error "Archive failed"
                 pause
                 ;;
             0)
