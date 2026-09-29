@@ -29,15 +29,48 @@ if ! flatpak override --user \
     exit 1
 fi
 
-# --- NVENC check ---
-if command -v ffmpeg &>/dev/null; then
-    if ffmpeg -encoders 2>/dev/null | grep -qi nvenc; then
-        log_info "[GPU] NVENC available (system ffmpeg)"
-    else
-        log_warn "[GPU] NVENC not detected (system ffmpeg)"
-    fi
+# --- NVIDIA driver extension for Flatpak + real NVENC check ---
+if ! command -v nvidia-smi >/dev/null 2>&1; then
+    log_info "[GPU] NVIDIA driver not detected; Shotcut can use CPU export"
 else
-    log_warn "ffmpeg not available for NVENC check"
+    driver_version="$(nvidia-smi --query-gpu=driver_version \
+        --format=csv,noheader 2>/dev/null | sed -n '1p')"
+
+    if [[ ! "$driver_version" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
+        log_warn "[GPU] Cannot determine NVIDIA driver version"
+    else
+        driver_ref="org.freedesktop.Platform.GL.nvidia-${driver_version//./-}//1.4"
+        log_info "[GPU] NVIDIA driver: $driver_version"
+        log_info "[GPU] Required Flatpak extension: $driver_ref"
+
+        if ! flatpak info "$driver_ref" >/dev/null 2>&1; then
+            if flatpak remote-info flathub "$driver_ref" \
+                >/dev/null 2>&1; then
+                log_info "[GPU] Installing matching Flatpak NVIDIA extension"
+
+                if flatpak install -y flathub "$driver_ref" \
+                    >> "${LOG_FILE:-/dev/null}" 2>&1; then
+                    log_info "[GPU] NVIDIA extension installed"
+                else
+                    log_warn "[GPU] Failed to install $driver_ref"
+                fi
+            else
+                log_warn "[GPU] $driver_ref is not available in Flathub"
+            fi
+        else
+            log_info "[GPU] Matching NVIDIA extension is installed"
+        fi
+    fi
+
+    if flatpak run --command=ffmpeg org.shotcut.Shotcut \
+        -hide_banner -loglevel error \
+        -f lavfi -i testsrc2=size=640x360:rate=30 \
+        -t 1 -c:v h264_nvenc -f null - \
+        >> "${LOG_FILE:-/dev/null}" 2>&1; then
+        log_info "[GPU] Shotcut Flatpak NVENC OK"
+    else
+        log_warn "[GPU] Shotcut Flatpak NVENC failed; use CPU export"
+    fi
 fi
 
 log_info "=== Completed $MODULE_NAME ==="

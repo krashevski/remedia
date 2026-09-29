@@ -34,7 +34,7 @@ system_man_run() {
             echo "Commands:"
             echo "  install" 
             echo "  doctor"
-            echo "  open"
+            echo "  open [page]    Open a page or choose from a list"
             return 0
             ;;
     esac

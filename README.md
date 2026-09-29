@@ -47,10 +47,27 @@ remedia
 └── Config (/etc/remedia)
 ```
 
+## Before Installation
+
+Remedia is designed to separate working data (requiring high access speeds), source media files, and backups across multiple drives.
+Create and mount the necessary disk partitions or, for a minimal installation, the directories/mount points—before installing Remedia.
+
+### Recommended Layout:
+
+| Mount Point        | Purpose                          | Recommended Drive        |
+|--------------------|----------------------------------|--------------------------|
+| /mnt/shotcut       | Proxy files and temporary projects | Fast SSD                 |
+| /mnt/storage       | Source media files and projects  | Large HDD or SSD         |
+| /mnt/backups       | Archives and backups             | Separate HDD             |
+
+### Minimal Layout:
+
+Remedia can also operate on a single drive, provided the user creates the appropriate directories or mount points beforehand. However, performance and backup reliability will be lower in this configuration.
+
 ## 🚀 Installation
 
 ```bash
-sudo apt install remedia_1.1.0_all.deb
+sudo apt install remedia_1.2.0_all.deb
 ```
 
 Dependencies:
@@ -61,6 +78,7 @@ Recommended:
 * findutils
 
 ## 🖥 Usage
+
 ### CLI
 ```bash
 remedia
@@ -70,6 +88,15 @@ remedia
 ```bash
 remedia system center
 ```
+
+### After launching Remedia
+
+In the REMEDIA SYSTEM CENTER, open the `3) System` menu and run:
+```text
+3) Create symlinks for user big directories
+```
+
+This function will automatically create symbolic links in the user's home directory pointing to the Remedia data directories located on the mounted drives.
 
 ## 🧩 Key Components
 
@@ -149,7 +176,7 @@ Support: ChatGPT
 
 ## 📌 Status
 
-Version: **1.1.0**
+Version: **1.2.0**
 The project is in active development:
 * contract stabilization
 * runtime improvements

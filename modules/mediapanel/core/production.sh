@@ -183,21 +183,28 @@ audio_cleanup() {
 # =========================
 # CREATE MLT FROM EDIT
 # =========================
-create_mlt_from_edit() {
+ create_mlt_from_edit() {
 
     local project_name="$1"
     local project_path="$2"
-    local mlt="$project_path/${project_name}.mlt"
-    
+    local video_dir="$project_path/video"
+    local mlt="$video_dir/${project_name}_video.mlt"
+
+    mkdir -p "$video_dir" || {
+        echo "[ERROR] failed to create video directory:"
+        echo "        $video_dir"
+        return 1
+    }
+
     # -------------------------------------------------
     # Protect existing MLT project from overwrite
     # -------------------------------------------------
 
     if [[ -e "$mlt" || -L "$mlt" ]]; then
-        echo "[ERROR] MLT project already exists:"
-        echo "        $mlt"
-        echo "[ERROR] Refusing to overwrite existing MLT."
-        return 1
+        echo "[INFO] video MLT project already exists:"
+        echo "       $mlt"
+        echo "[INFO] creation skipped to protect the existing project"
+        return 2
     fi
 
     [[ -d "$project_path/edit" ]] || {
@@ -238,7 +245,7 @@ create_mlt_from_edit() {
     echo "[Production] creating MLT from edit"
     echo "[Production] project: $project_name"
     echo "[Production] files:   $n"
-    
+
     # -------------------------------------------------
     # Detect project profile from first edit clip
     # -------------------------------------------------
@@ -258,8 +265,6 @@ create_mlt_from_edit() {
     local mlt_dar_num
     local mlt_dar_den
 
-    local profile_info       
-        
     mlt_width="$(
         ffprobe -v error \
             -select_streams v:0 \
@@ -298,7 +303,7 @@ create_mlt_from_edit() {
         -show_entries stream=display_aspect_ratio \
         -of default=noprint_wrappers=1:nokey=1 \
         "$first_file"
-    )"      
+    )"
 
     [[ "$mlt_width" =~ ^[0-9]+$ ]] || {
         echo "[ERROR] invalid width detected: $mlt_width"
@@ -446,7 +451,7 @@ create_mlt_from_edit() {
      version="7.37.0"
      title="Shotcut version 26.2.26"
      producer="main_bin">
-    
+
   <profile
     description="automatic"
     width="$mlt_width"
@@ -497,7 +502,7 @@ EOF
   <chain id="chain$i" out="$duration_tc">
     <property name="length">$duration_tc</property>
     <property name="eof">pause</property>
-    <property name="resource">edit/$basename</property>
+    <property name="resource">../edit/$basename</property>
     <property name="mlt_service">avformat-novalidate</property>
     <property name="audio_index">1</property>
     <property name="video_index">0</property>
@@ -603,7 +608,7 @@ EOF
   <chain id="chain$timeline_chain" out="$duration_tc">
     <property name="length">$duration_tc</property>
     <property name="eof">pause</property>
-    <property name="resource">edit/$basename</property>
+    <property name="resource">../edit/$basename</property>
     <property name="mlt_service">avformat-novalidate</property>
     <property name="audio_index">1</property>
     <property name="video_index">0</property>
@@ -696,9 +701,385 @@ EOF
         return 1
     }
 
-    echo "[OK] MLT project created: $mlt"
+    echo "[OK] video MLT project created: $mlt"
     echo "[OK] timeline clips: $n"
     echo "[OK] timeline duration: $total_tc"
+
+    return 0
+}
+
+# =========================
+# CREATE MLT FROM SCENES
+# =========================
+create_mlt_from_scenes() {
+
+    local project_name="$1"
+    local project_path="$2"
+    local short_dir="$project_path/short"
+    local mlt="$short_dir/${project_name}_short.mlt"
+
+    mkdir -p "$short_dir" || {
+        echo "[ERROR] failed to create short directory:"
+        echo "        $short_dir"
+        return 1
+    }
+
+    # -------------------------------------------------
+    # Protect existing MLT project from overwrite
+    # -------------------------------------------------
+
+    if [[ -e "$mlt" || -L "$mlt" ]]; then
+        echo "[INFO] short MLT project already exists:"
+        echo "       $mlt"
+        echo "[INFO] creation skipped to protect the existing project"
+        return 2
+    fi
+
+    [[ -d "$project_path/scenes" ]] || {
+        echo "[ERROR] scenes directory not found: $project_path/scenes"
+        return 1
+    }
+
+    command -v ffprobe >/dev/null 2>&1 || {
+        echo "[ERROR] ffprobe not found"
+        return 1
+    }
+
+    local files=()
+    local file
+    local basename
+    local relative_path
+    local resource
+    local duration
+    local duration_tc
+    local total_seconds="0"
+    local total_tc
+    local i
+    local n
+
+    while IFS= read -r -d '' file; do
+        files+=("$file")
+    done < <(
+        find "$project_path/scenes" -type f \
+            -iname '*.mp4' \
+            -print0 | sort -z
+    )
+
+    n="${#files[@]}"
+
+    (( n > 0 )) || {
+        echo "[ERROR] no MP4 files found in $project_path/scenes"
+        return 1
+    }
+
+    echo "[Production] creating MLT from scenes"
+    echo "[Production] project: $project_name"
+    echo "[Production] files:   $n"
+
+    # -------------------------------------------------
+    # Create UHD 4K profile using FPS from first scene
+    # -------------------------------------------------
+
+    local first_file="${files[0]}"
+
+    # Fixed UHD 4K landscape profile.
+    # Shotcut Output Reframe will later convert it to 9:16.
+    local mlt_width=3840
+    local mlt_height=2160
+
+    local mlt_sar_num=1
+    local mlt_sar_den=1
+
+    local mlt_dar_num=16
+    local mlt_dar_den=9
+
+    local first_fps
+    local mlt_fps_num
+    local mlt_fps_den
+
+    first_fps="$(
+        ffprobe -v error \
+            -select_streams v:0 \
+            -show_entries stream=r_frame_rate \
+            -of default=noprint_wrappers=1:nokey=1 \
+            "$first_file"
+    )"
+
+    [[ "$first_fps" =~ ^[0-9]+/[0-9]+$ ]] || {
+        echo "[ERROR] invalid frame rate detected:"
+        echo "        $first_fps"
+        echo "[ERROR] first scene: $first_file"
+        return 1
+    }
+
+    IFS='/' read -r \
+        mlt_fps_num \
+        mlt_fps_den <<< "$first_fps"
+
+    [[ "$mlt_fps_num" =~ ^[0-9]+$ ]] || {
+        echo "[ERROR] invalid FPS numerator: $mlt_fps_num"
+        return 1
+    }
+
+    [[ "$mlt_fps_den" =~ ^[0-9]+$ ]] || {
+        echo "[ERROR] invalid FPS denominator: $mlt_fps_den"
+        return 1
+    }
+
+    (( mlt_fps_num > 0 )) || {
+        echo "[ERROR] FPS numerator must be greater than zero"
+        return 1
+    }
+
+    (( mlt_fps_den > 0 )) || {
+        echo "[ERROR] FPS denominator must be greater than zero"
+        return 1
+    }
+
+    echo "[Production] Short project profile:"
+    echo "  resolution:    ${mlt_width}x${mlt_height}"
+    echo "  frame rate:    ${mlt_fps_num}/${mlt_fps_den}"
+    echo "  sample aspect: ${mlt_sar_num}:${mlt_sar_den}"
+    echo "  display aspect: ${mlt_dar_num}:${mlt_dar_den}"
+    echo "  FPS source:    $(basename "$first_file")"
+
+    # -------------------------------------------------
+    # Calculate total duration
+    # -------------------------------------------------
+
+    local durations=()
+
+    for file in "${files[@]}"; do
+
+        duration="$(
+            ffprobe -v error \
+                -show_entries format=duration \
+                -of default=noprint_wrappers=1:nokey=1 \
+                "$file"
+        )" || {
+            echo "[ERROR] ffprobe failed: $file"
+            return 1
+        }
+
+        [[ "$duration" =~ ^[0-9]+([.][0-9]+)?$ ]] || {
+            echo "[ERROR] invalid duration: $file"
+            return 1
+        }
+
+        durations+=("$duration")
+
+        total_seconds="$(
+            awk -v a="$total_seconds" -v b="$duration" \
+                'BEGIN { printf "%.6f", a + b }'
+        )"
+
+    done
+
+    total_tc="$(
+        awk -v d="$total_seconds" '
+        BEGIN {
+            h = int(d / 3600)
+            d -= h * 3600
+
+            m = int(d / 60)
+            d -= m * 60
+
+            s = int(d)
+            ms = int((d - s) * 1000 + 0.5)
+
+            if (ms >= 1000) {
+                ms = 0
+                s++
+            }
+
+            printf "%02d:%02d:%02d.%03d", h, m, s, ms
+        }'
+    )"
+
+    echo "[Production] total duration: $total_tc"
+
+    # -------------------------------------------------
+    # Create MLT
+    # -------------------------------------------------
+
+    cat > "$mlt" <<EOF
+<?xml version="1.0" standalone="no"?>
+<mlt LC_NUMERIC="C"
+     version="7.37.0"
+     title="Shotcut version 26.2.26"
+     producer="main_bin">
+
+  <profile
+    description="automatic"
+    width="$mlt_width"
+    height="$mlt_height"
+    progressive="1"
+    sample_aspect_num="$mlt_sar_num"
+    sample_aspect_den="$mlt_sar_den"
+    display_aspect_num="$mlt_dar_num"
+    display_aspect_den="$mlt_dar_den"
+    frame_rate_num="$mlt_fps_num"
+    frame_rate_den="$mlt_fps_den"
+    colorspace="709"/>
+
+EOF
+
+    # -------------------------------------------------
+    # MAIN BIN CHAINS
+    # -------------------------------------------------
+
+    for i in "${!files[@]}"; do
+
+    file="${files[$i]}"
+    basename="$(basename "$file")"
+    relative_path="${file#"$project_path/scenes/"}"
+    resource="../scenes/$relative_path"
+    duration="${durations[$i]}"
+
+    duration_tc="$(
+        awk -v d="$duration" '
+        BEGIN {
+            h = int(d / 3600)
+            d -= h * 3600
+
+            m = int(d / 60)
+            d -= m * 60
+
+            s = int(d)
+            ms = int((d - s) * 1000 + 0.5)
+
+            if (ms >= 1000) {
+                ms = 0
+                s++
+            }
+
+            printf "%02d:%02d:%02d.%03d", h, m, s, ms
+        }'
+    )"
+
+    cat >> "$mlt" <<EOF
+  <chain id="chain$i" out="$duration_tc">
+    <property name="length">$duration_tc</property>
+    <property name="eof">pause</property>
+    <property name="resource">$resource</property>
+    <property name="mlt_service">avformat-novalidate</property>
+    <property name="audio_index">1</property>
+    <property name="video_index">0</property>
+  </chain>
+
+EOF
+
+    done
+
+    # -------------------------------------------------
+    # MAIN BIN
+    # -------------------------------------------------
+
+    cat >> "$mlt" <<EOF
+  <playlist id="main_bin">
+    <property name="xml_retain">1</property>
+EOF
+
+    for i in "${!files[@]}"; do
+
+        file="${files[$i]}"
+        duration="${durations[$i]}"
+
+        duration_tc="$(
+            awk -v d="$duration" '
+            BEGIN {
+                h = int(d / 3600)
+                d -= h * 3600
+                m = int(d / 60)
+                d -= m * 60
+                s = int(d)
+                ms = int((d - s) * 1000 + 0.5)
+
+                if (ms >= 1000) {
+                    ms = 0
+                    s++
+                }
+
+                printf "%02d:%02d:%02d.%03d", h, m, s, ms
+            }'
+        )"
+
+        echo "    <entry producer=\"chain$i\" in=\"00:00:00.000\" out=\"$duration_tc\"/>" >> "$mlt"
+
+    done
+
+    cat >> "$mlt" <<EOF
+  </playlist>
+
+  <producer id="black"
+            in="00:00:00.000"
+            out="$total_tc">
+    <property name="length">$total_tc</property>
+    <property name="eof">pause</property>
+    <property name="resource">0</property>
+    <property name="aspect_ratio">1</property>
+    <property name="mlt_service">color</property>
+    <property name="mlt_image_format">rgba</property>
+    <property name="set.test_audio">0</property>
+  </producer>
+
+  <playlist id="background">
+    <entry producer="black"
+           in="00:00:00.000"
+           out="$total_tc"/>
+  </playlist>
+
+  <!-- Empty Shotcut timeline -->
+  <playlist id="playlist0">
+    <property name="shotcut:video">1</property>
+    <property name="shotcut:name">V1</property>
+  </playlist>
+
+  <tractor id="tractor0"
+           title="Shotcut version 26.2.26"
+           in="00:00:00.000"
+           out="$total_tc">
+
+    <property name="shotcut">1</property>
+    <property name="shotcut:projectAudioChannels">2</property>
+    <property name="shotcut:projectFolder">1</property>
+    <property name="shotcut:processingMode">Native8Cpu</property>
+
+    <track producer="background"/>
+    <track producer="playlist0"/>
+
+    <transition id="transition0">
+      <property name="a_track">0</property>
+      <property name="b_track">1</property>
+      <property name="mlt_service">mix</property>
+      <property name="always_active">1</property>
+      <property name="sum">1</property>
+    </transition>
+
+    <transition id="transition1">
+      <property name="a_track">0</property>
+      <property name="b_track">1</property>
+      <property name="compositing">0</property>
+      <property name="distort">0</property>
+      <property name="rotate_center">0</property>
+      <property name="mlt_service">qtblend</property>
+      <property name="threads">0</property>
+      <property name="disable">1</property>
+    </transition>
+
+  </tractor>
+
+</mlt>
+EOF
+
+    [[ -s "$mlt" ]] || {
+        echo "[ERROR] failed to create MLT project"
+        return 1
+    }
+
+    echo "[OK] short MLT project created: $mlt"
+    echo "[OK] playlist clips: $n"
+    echo "[OK] timeline is empty"
 
     return 0
 }
@@ -771,7 +1152,80 @@ auto_sync_audio() {
     done
 
     log_project "$project" "Audio sync completed"
-    
+
+    echo
+    echo "[OK] audio synced"
+}
+
+# =========================
+# AUTO SYNC AUDIO
+# =========================
+auto_sync_audio() {
+#    require_ingest_done || return 1
+    local project
+    project="$(require_active_project)" || return 1
+
+    echo "[Production] syncing audio for $project"
+    log_project "$project" "Audio sync started"
+
+    local project_path="$PROJECT_DIR/$project"
+    local video_dir="$project_path/media"
+    local audio_dir="$project_path/audio"
+    local output_dir="$project_path/edit"
+
+    mkdir -p "$output_dir"
+
+    mapfile -d '' videos < <(
+        find "$video_dir" -type f \( \
+            -iname "*.mp4" -o \
+            -iname "*.mov" -o \
+            -iname "*.mkv" \
+        \) -print0
+    )
+
+    local total=${#videos[@]}
+
+    (( total == 0 )) && {
+        echo "[WARN] no videos"
+        log_error "$project" "No videos for sync"
+        return 1
+    }
+
+    local count=1
+
+    for video in "${videos[@]}"; do
+
+        local name base clean_audio output
+        name=$(basename "$video")
+        base="${name%.*}"
+
+        clean_audio="$audio_dir/${base}_clean.wav"
+        output="$output_dir/${base}_sync.mp4"
+
+        echo "[$count/$total] $name"
+
+        if [[ ! -f "$clean_audio" ]]; then
+            echo "[SKIP] no cleaned audio"
+            log_error "$project" "Missing cleaned audio for $base"
+            ((count++))
+            continue
+        fi
+
+        ffmpeg -y \
+            -i "$video" \
+            -i "$clean_audio" \
+            -map 0:v:0 \
+            -map 1:a:0 \
+            -c:v copy \
+            -c:a aac -b:a 192k \
+            "$output"
+
+        ((count++))
+        log_project "$project" "Sync: $name"
+    done
+
+    log_project "$project" "Audio sync completed"
+
     echo
     echo "[OK] audio synced"
 }
@@ -843,30 +1297,45 @@ batch_scene_split() {
 # Build initial MLT project from prepared edit videos
 # =========================
 create_mlt() {
+
     local project
+    local project_path
+    local rc_video=0
+    local rc_short=0
+
     project="$(require_active_project)" || return 1
+    project_path="$PROJECT_DIR/$project"
 
-    local project_path="$PROJECT_DIR/$project"
+    mkdir -p \
+        "$project_path/video" \
+        "$project_path/short" || {
 
-    echo "[Production] creating MLT for $project"
+        echo "[ERROR] failed to create Shotcut project directories"
+        return 1
+    }
+
+    echo "[Production] creating Shotcut projects for $project"
     log_project "$project" "MLT creation started"
 
     create_mlt_from_edit "$project" "$project_path"
-    local rc=$?
+    rc_video=$?
 
-    if (( rc == 2 )); then
-        echo
-        echo "[INFO] MLT already exists."
-        echo "[INFO] Creation skipped to protect the existing project."
-        return 0
+    create_mlt_from_scenes "$project" "$project_path"
+    rc_short=$?
+
+    # Код 2 означает: MLT уже существует и защищён.
+    if (( rc_video != 0 && rc_video != 2 )); then
+        echo "[ERROR] failed to create video MLT project"
+        return 1
     fi
 
-    (( rc == 0 )) || return "$rc"
+    if (( rc_short != 0 && rc_short != 2 )); then
+        echo "[ERROR] failed to create short MLT project"
+        return 1
+    fi
 
-    log_project "$project" "MLT project created"
-
-    echo
-    echo "[OK] MLT project created"
+    log_project "$project" "Shotcut projects ready"
+    echo "[OK] Shotcut projects are ready"
 }
 
 # =========================
@@ -875,39 +1344,118 @@ create_mlt() {
 launch_shotcut() {
 
     local project
+    local project_dir
+    local video_mlt
+    local short_mlt
+    local project_mlt
+    local shotcut_dir
+    local project_type
+    local choice
+    local rc
+
     project="$(require_active_project)" || return 1
 
-    echo "[Production] launching Shotcut for $project"
-    log_project "$project" "Shotcut launch preparation started"
-    
-    # Rebuild MLT from prepared edit videos  
-    # create_mlt_from_edit "$project" "$PROJECT_DIR/$project" || return 1
+    project_dir="$PROJECT_DIR/$project"
 
-    local project_dir="$PROJECT_DIR/$project"
-    local project_mlt="$project_dir/$project.mlt"
+    video_mlt="$project_dir/video/${project}_video.mlt"
+    short_mlt="$project_dir/short/${project}_short.mlt"
+
+    echo
+    echo "===================================================="
+    echo "               LAUNCH SHOTCUT"
+    echo "===================================================="
+    echo
+    echo "Project: $project"
+    echo
+    echo "Select Shotcut project:"
+    echo
+
+    if [[ -f "$video_mlt" ]]; then
+        echo " 1) Video project"
+        echo "    $video_mlt"
+    else
+        echo " 1) Video project [not found]"
+    fi
+
+    echo
+
+    if [[ -f "$short_mlt" ]]; then
+        echo " 2) Short project"
+        echo "    $short_mlt"
+    else
+        echo " 2) Short project [not found]"
+    fi
+
+    echo
+    echo " 0) Back"
+    echo
+
+    read -r -p "Select: " choice
+
+    case "$choice" in
+        1)
+            project_mlt="$video_mlt"
+            shotcut_dir="$project_dir/video"
+            project_type="video"
+            ;;
+        2)
+            project_mlt="$short_mlt"
+            shotcut_dir="$project_dir/short"
+            project_type="short"
+            ;;
+        0)
+            return 0
+            ;;
+        *)
+            echo "[ERROR] invalid selection"
+            return 1
+            ;;
+    esac
 
     [[ -f "$project_mlt" ]] || {
-        echo "[ERROR] MLT project not found: $project_mlt"
-        log_error "$project" "MLT project not found"
+        echo "[ERROR] MLT project not found:"
+        echo "        $project_mlt"
+        log_error "$project" "$project_type MLT project not found"
         return 1
     }
 
+    echo
+    echo "[Production] launching Shotcut for $project"
+    echo "[Production] project type: $project_type"
     echo "[Production] opening MLT project:"
     echo "  $project_mlt"
 
-    log_project "$project" "Opening MLT project: $project_mlt"
+    log_project \
+        "$project" \
+        "Opening $project_type MLT project: $project_mlt"
 
-    if command -v flatpak &>/dev/null; then
+    if command -v flatpak >/dev/null 2>&1; then
         (
-            cd "$project_dir" || exit 1
+            cd "$shotcut_dir" || exit 1
             flatpak run org.shotcut.Shotcut "$project_mlt"
         )
-    else
+        rc=$?
+    elif command -v shotcut >/dev/null 2>&1; then
         (
-            cd "$project_dir" || exit 1
+            cd "$shotcut_dir" || exit 1
             shotcut "$project_mlt"
         )
+        rc=$?
+    else
+        echo "[ERROR] Shotcut not found"
+        log_error "$project" "Shotcut not found"
+        return 1
     fi
 
-    log_project "$project" "Shotcut closed"
+    if (( rc != 0 )); then
+        echo "[ERROR] Shotcut exited with code: $rc"
+        log_error "$project" \
+            "Shotcut failed for $project_type project: exit $rc"
+        return "$rc"
+    fi
+
+    log_project "$project" \
+        "Shotcut closed: $project_type project"
+
+    return 0
 }

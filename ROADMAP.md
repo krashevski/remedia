@@ -9,16 +9,20 @@ Focus is not on features, but on:
 * condition monitoring
 * reproducibility
 
-## 📍 Current State (v1.1.0)
+## 📍 Current State (v1.2.0)
 
 The system already implements:
-✔ CLI router
-✔ Runtime environment
-✔ Module system
-✔ Media pipeline (ingest → production)
-✔ Media Panel (CLI UI)
-✔ Filesystem awareness
-✔ Basic logging
+✔ CLI router and runtime environment
+✔ Module system and MediaSystem pipeline
+✔ MediaPanel ingest, production, and export workflows
+✔ Shotcut MLT creation and Flatpak melt rendering
+✔ Subtitle generation and reusable Shotcut filter sets
+✔ MediaPanel Delivery Layer foundation: YouTube metadata, manual delivery,
+  filesystem queue jobs, and deliverables archives
+✔ Filesystem awareness and basic logging
+
+The delivery queue does not yet publish videos automatically.
+YouTube OAuth, the uploader, and the queue worker remain future work.
 
 ## 🎬 GPU Autotest Module (45_gpu_autotest.sh)
 
@@ -67,6 +71,26 @@ It ensures that the system does not rely on theoretical GPU availability, but on
 * AV1 capability detection
 * Hardware-specific tuning (NVIDIA / AMD / Intel)
 * Integration with `remedia doctor`
+
+## 🩺 NVIDIA Doctor Recovery
+
+### Goal
+Diagnose NVIDIA failures at the layer where they occur and offer a targeted repair.
+
+### Planned checks
+* Host driver and kernel module: use `nvidia-display-restore(8)` when
+  `nvidia-smi` cannot communicate with the driver.
+* Shotcut Flatpak NVENC: use `nvidia-flatpak-nvenc(8)` when the host driver
+  works but an actual encode inside Shotcut Flatpak fails.
+* Derive the required Flatpak NVIDIA extension from the loaded driver
+  version; never hard-code a driver release.
+* Verify recovery with a real 640×360 NVENC encode.
+
+### Repair policy
+* Default Doctor mode audits and reports without changing packages.
+* A separately selected repair may install the exact available Flatpak
+  extension or a confirmed kernel module package for the running kernel.
+* If NVENC remains unavailable, MediaPanel uses CPU encoding and reports why.
 
 ## 📦 MediaPanel Delivery Layer
 

@@ -118,16 +118,16 @@ show_stabilization_guide() {
 ====================================================
                    Stabilization
 ====================================================
-1.  Stabilization (Stabilize filter) use only for clips or segments where it is truly necessary.    
+1.  Stabilization (Stabilize filter) use only for clips or segments where it is truly necessary.
     Stabilization alters the frame geometry: it compensates for camera shake and may involve zooming in and cropping the edges.
     It is best performed before final image processing.
-    
+
     IMPORTANT:
     If you intend to stabilize specific segments, do not merge them back together after cutting.
- 
+
 2. Navigate the MediaPanel UI menu:
 
-    1) System status 
+    1) System status
         -> 5) Import Shotcut filter sets
 
 3. Open the following in Shotcut:
@@ -158,7 +158,7 @@ show_set_filters_guide() {
 
 1. Navigate the MediaPanel UI menu:
 
-    1) System status 
+    1) System status
         -> 5) Import Shotcut filter sets
 
 2. Open the following in Shotcut:
@@ -170,87 +170,6 @@ show_set_filters_guide() {
     Oppo_Reno_11F_Concert
 
 3. Apply the filter set to the entire video track.
-
-====================================================
-EOF
-
-    echo
-    read -r -p "Press Enter to continue..."
-}
-
-# =========================
-# CREATE SHORT VIDEO GUIDE
-# =========================
-show_create_short_video_guide() {
-    clear || true
-
-    cat <<'EOF'
-====================================================
-              CREATING A SHORT VIDEO
-====================================================
-
-1. Open Shotcut via the MediaPanel UI:
-
-   6) Tools
-      -> 1) Video tools
-         -> 1) Shotcut
-
-2. Create a new project:
-
-   Project folder: 001_Current_Project
-   Project name:   short
-   Video mode:     4K UHD 2160p
-
-   Select a frame rate matching the source scene.
-
-   Click: Start
-
-3. Select a video file from the project's scenes/ directory:
-
-   File -> Open File
-
-4. Drag the selected file onto the Timeline.
-
-5. Repeat steps 3 and 4 if additional scenes are required.
-
-6. Perform the necessary clip processing:
-
-   - cutting
-   - stabilization, if required
-   - noise reduction
-   - color correction
-   - sharpening
-   - subtitles
-
-7. Convert the horizontal video to vertical for the Timeline
-   Output element:
-
-   Timeline -> Output -> Export -> Advanced -> Reframe
-
-   Recommended export settings:
-
-   Resolution:  1080x1920 or higher
-   Frame rate:  Match the source video
-   Codec:       H.264 NVENC
-   Quality:     CQ 18-20
-   Audio:       AAC 192-256 kbit/s
-
-   IMPORTANT:
-   Reframe crops the horizontal image and reduces the available
-   resolution. Use the original source file and export from a
-   4K project using the source video's frame rate.
-
-8. Save the finished Shotcut project in the short/ directory:
-
-   File -> Save As...
-
-   File name: 001_Video_short.mlt
-
-9. Export the finished short video to the short/ directory:
-
-   File -> Export -> Video/Audio
-
-   File name: 001_Video_short.mp4
 
 ====================================================
 EOF
@@ -338,11 +257,11 @@ projects_menu() {
                     echo "[INFO] no projects"
                     continue
                 fi
-                
+
                 for i in "${!projects[@]}"; do
                     printf "%2d) %s\n" "$((i+1))" "${projects[$i]}"
                 done
-                
+
                 read -rp "choice #)> " idx
                 if ! [[ "$idx" =~ ^[0-9]+$ ]]; then
                     echo "[ERROR] invalid number"
@@ -354,8 +273,8 @@ projects_menu() {
                 if (( idx < 0 || idx >= ${#projects[@]} )); then
                     echo "[ERROR] out of range"
                     continue
-                fi  
-                
+                fi
+
                 activate_project_full "${projects[$idx]}"
                 ;;
             2)
@@ -396,7 +315,7 @@ projects_menu() {
 
                 if (( ${#trash[@]} == 0 )); then
                     echo "[INFO] trash empty"
-                    read -rp "Press Enter..." 
+                    read -rp "Press Enter..."
                     continue
                 fi
 
@@ -454,8 +373,8 @@ production_menu() {
         else
             echo -e "${COLOR_BOLD}Project: ${COLOR_RED}none${COLOR_RESET}"
         fi
-        echo       
-        pipeline_status "$active"      
+        echo
+        pipeline_status "$active"
         echo "1) Generate proxy"
         echo "2) Audio cleanup"
         echo "3) Auto sync audio"
@@ -467,7 +386,7 @@ production_menu() {
         echo "9) Stabilization"
         echo "10) Set filters"
         echo "11) Generate subtitles"
-        echo "12) Create short video"
+        echo "12) Render Export (generate videos)"
         echo
         echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
         echo
@@ -483,10 +402,14 @@ production_menu() {
                ui_run_step "$active" sync ;;
             4)
                ui_run_step "$active" split ;;
-            5)  
+            5)
                ui_run_step "$active" mlt ;;
             6) full_pipeline || true ;;
-            7) resume_pipeline || true ;;
+            7)
+               if ! resume_pipeline; then
+                   echo "[ERROR] pipeline resume failed"
+               fi
+               ;;
             8) launch_shotcut || true ;;
             9)
                show_stabilization_guide
@@ -501,8 +424,9 @@ production_menu() {
                read -rp "Press Enter to continue..."
                ;;
             12)
-               show_create_short_video_guide
-               ;;
+                export_render || log_error "Render export failed"
+                pause
+                ;;
             0) return ;;
             *) echo "Invalid option" ;;
         esac
@@ -525,8 +449,7 @@ export_menu() {
             echo -e "${COLOR_BOLD}Active project: ${COLOR_RED}none${COLOR_RESET}"
         fi
         echo
-        echo "1) Render Export (generate videos)"
-        echo "2) Prepare delivery queue job"
+        echo "1) Prepare delivery queue job"
         echo
         echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
         echo
@@ -534,11 +457,8 @@ export_menu() {
         read -rp "Choice [1-#]> " choice
 
         case "$choice" in
-            1) 
-                export_render || log_error "Render export failed"
-                pause
-                ;;           
-            2)
+
+            1)
                 export_youtube || log_error "Export failed"
                 pause
                 ;;
@@ -591,7 +511,7 @@ tools_menu() {
         echo "1) Video tools"
         echo "2) Graphics tools"
         echo "3) Audio tools"
-        echo 
+        echo
         echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
         echo
 
@@ -639,7 +559,7 @@ build_menu() {
                     continue
                 fi
             fi
-            
+
             if [[ "$cmd" == func:* ]]; then
                 local fn="${cmd#func:}"
 

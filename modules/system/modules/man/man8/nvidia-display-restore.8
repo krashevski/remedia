@@ -1,0 +1,130 @@
+.TH NVIDIA-DISPLAY-RESTORE 8 "September 2026" "Remedia" "System Administration"
+.SH NAME
+nvidia-display-restore \- diagnose missing display resolutions after an Ubuntu kernel update
+.SH DESCRIPTION
+After a kernel update, Ubuntu may start with a kernel for which the NVIDIA
+kernel module is not installed. The NVIDIA driver packages may still be
+present, but the module cannot load for the running kernel. One possible
+symptom is that 1920x1080 (Full HD) is no longer offered.
+.PP
+This page describes a manual, diagnostic procedure. It applies to systems
+using the Ubuntu-packaged NVIDIA driver and its prebuilt kernel modules.
+It does not imply that every missing display mode is caused by NVIDIA.
+.SH SYMPTOMS
+.IP \(bu 2
+The expected 1920x1080 display mode is missing after a kernel update.
+.IP \(bu 2
+.B nvidia-smi
+reports that it could not communicate with the NVIDIA driver.
+.IP \(bu 2
+The NVIDIA module is absent from the list of loaded modules.
+.SH DIAGNOSTICS
+.SS "Identify the running kernel and installed driver"
+.RS
+.nf
+uname -r
+dpkg-query -W 'nvidia-driver-*' 'linux-modules-nvidia-*' 2>/dev/null
+.fi
+.RE
+.PP
+Look for an installed NVIDIA driver series and variant (for example,
+.BR 595-open ).
+Compare the kernel suffix on installed
+.B linux-modules-nvidia-*
+packages with the output of
+.BR "uname -r" .
+Packages for older kernels do not supply a module for the running kernel.
+.SS "Check module availability and loading"
+.RS
+.nf
+modinfo nvidia
+lsmod | grep '^nvidia'
+nvidia-smi
+.fi
+.RE
+.PP
+An unsuccessful
+.B modinfo
+or
+.B nvidia-smi
+supports further investigation; neither result alone proves that a missing
+kernel-module package is the cause. Check the package and kernel versions
+before making changes.
+.SH RECOVERY
+.SS "Confirm the matching package"
+For the recorded Ubuntu 26.04 incident, the running kernel was
+.B 7.0.0-30-generic
+and the installed driver series was
+.BR 595-open .
+The matching package was
+.BR linux-modules-nvidia-595-open-7.0.0-30-generic .
+For another kernel or driver series, substitute the actual values.
+.RS
+.nf
+apt-cache policy "linux-modules-nvidia-595-open-$(uname -r)"
+.fi
+.RE
+.PP
+Check that a candidate exists and that
+.B uname -r
+reports the intended running kernel. If the package is unavailable,
+investigate the configured Ubuntu repositories and installed driver
+before proceeding. Do not substitute a package for a different kernel
+or driver variant.
+.SS "Install and load the module"
+On a system that actually uses the Ubuntu
+.B 595-open
+driver and has a matching package candidate:
+.RS
+.nf
+sudo apt install "linux-modules-nvidia-595-open-$(uname -r)"
+sudo depmod -a
+sudo modprobe nvidia
+.fi
+.RE
+.PP
+These commands were used to restore Full HD in the recorded case.
+Installing a module package changes system packages and requires
+administrator privileges; diagnose first and execute deliberately.
+.SH VERIFICATION
+.RS
+.nf
+lsmod | grep '^nvidia'
+nvidia-smi
+.fi
+.RE
+.PP
+Check the display resolution in the desktop display settings. On GNOME
+with Wayland, do not rely on
+.B xrandr
+as the sole check of available modes. Restart the computer and verify
+that the expected resolution and NVIDIA driver still work without
+running
+.B modprobe
+manually.
+.SH WARNINGS
+.IP \(bu 2
+Do not assume that every loss of Full HD requires NVIDIA package changes.
+Check the connection, display settings, detected hardware, and driver state.
+.IP \(bu 2
+Do not hard-code the 595-open driver series in an automated repair. Derive
+the series and variant from the installed packages and confirm a package
+candidate for the running kernel.
+.IP \(bu 2
+If the module exists but fails to load, investigate the actual error,
+including Secure Boot state and kernel logs, before installing packages.
+.SH AUTOMATION POLICY
+The Remedia global doctor should report the running kernel, detected NVIDIA
+driver series and variant, availability and loaded state of the module, and
+the result of
+.BR nvidia-smi .
+Its default behavior is audit and report. It must not install packages or
+load kernel modules merely because a display mode is absent. A repair
+action requires a separate explicit request and confirmation.
+.SH SEE ALSO
+uname(1), dpkg-query(1), modinfo(8), lsmod(8), depmod(8), modprobe(8),
+nvidia-smi(1), apt(8), nvidia-flatpak-nvenc(8)
+.SH AUTHOR
+Remedia Project
+.SH STATUS
+Draft; manual recovery procedure for the NVIDIA kernel-module mismatch.

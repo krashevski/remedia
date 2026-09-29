@@ -476,36 +476,35 @@ export_youtube() {
     project="$(require_active_project)" || return 1
 
     local project_path="$PROJECT_DIR/$project"
-    local export_dir="$project_path/export"
+    local video_dir="$project_path/video"
     local short_dir="$project_path/short"
 
-    local -a search_dirs=()
     local -a files=()
     local -a selected_files=()
 
-    [[ -d "$export_dir" ]] &&
-        search_dirs+=("$export_dir")
-
-    [[ -d "$short_dir" ]] &&
-        search_dirs+=("$short_dir")
-
-    if (( ${#search_dirs[@]} == 0 )); then
-        log_warn "No delivery directories found"
-        return 1
-    fi
-
     mapfile -d '' -t files < <(
-        find "${search_dirs[@]}" \
-            -maxdepth 1 \
-            -type f \
-            -iname "*.mp4" \
-            -print0 |
-        sort -z
+        {
+            if [[ -d "$video_dir" ]]; then
+                find "$video_dir" \
+                    -maxdepth 1 \
+                    -type f \
+                    -iname "*.mp4" \
+                    -print0
+             fi
+
+            if [[ -d "$short_dir" ]]; then
+                find "$short_dir" \
+                    -maxdepth 1 \
+                    -type f \
+                    -iname "*.mp4" \
+                    -print0
+            fi
+        } | sort -z
     )
 
     if (( ${#files[@]} == 0 )); then
         log_warn \
-            "No publication-ready MP4 files found"
+             "No publication-ready MP4 files found in video/ or short/"
         return 1
     fi
 
@@ -519,11 +518,14 @@ export_youtube() {
 
     for file in "${files[@]}"; do
         case "$file" in
+            "$video_dir"/*)
+                label="VIDEO"
+                ;;
             "$short_dir"/*)
                 label="SHORT"
                 ;;
             *)
-                label="VIDEO"
+                label="UNKNOWN"
                 ;;
         esac
 
@@ -541,7 +543,17 @@ export_youtube() {
     echo
 
     local selection=""
-    read -rp "Selection: " selection
+    if ! IFS= read -r -p "Selection: " selection; then
+        log_info "Selection cancelled"
+        return 0
+    fi
+
+    selection="${selection//,/ }"
+
+    if [[ -z "${selection//[[:space:]]/}" ]]; then
+        log_info "Selection cancelled"
+        return 0
+    fi
 
     selection="${selection//,/ }"
 
@@ -587,7 +599,7 @@ export_youtube() {
     done
 
     echo "------------------------------------------------"
-    
+
     # Check existing metadata.
     local existing_metadata=0
     local missing_metadata=0
@@ -631,7 +643,7 @@ export_youtube() {
 
         log_info "Existing metadata will be recreated"
     fi
-    
+
     local overwrite_existing="Y"
 
     if (( existing_metadata > 0 &&
@@ -730,11 +742,16 @@ export_youtube() {
         fi
 
         case "$file" in
+            "$video_dir"/*)
+                content_type="video"
+                ;;
             "$short_dir"/*)
                 content_type="short"
                 ;;
             *)
-                content_type="video"
+                log_error "Unknown publication type: $file"
+                ((failed += 1))
+                continue
                 ;;
         esac
 
@@ -767,10 +784,6 @@ export_youtube() {
 
     pause
     return "$result"
-    
-    pause
-
-    (( failed == 0 ))
 }
 
 archive_project() {

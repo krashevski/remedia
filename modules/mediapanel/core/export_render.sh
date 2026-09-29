@@ -3,11 +3,14 @@
 
 # ============================================================
 # EXPORT RENDER
-# Основной MLT:
-#   $PROJECT_DIR/$project/$project.mlt
 #
-# Результат:
-#   $PROJECT_DIR/$project/export/${project}_final.mp4
+# Входные проекты:
+#   video/${project}_video.mlt
+#   short/${project}_short.mlt
+#
+# Результаты:
+#   export/${project}_video_final.mp4
+#   export/${project}_short_final.mp4
 #
 # CPU:
 #   libx264, CRF 18, preset slow
@@ -29,68 +32,177 @@ export_render() {
     # --------------------------------------------------------
 
     local project_dir="$PROJECT_DIR/$project"
-    local src="$project_dir/edit"
-    local dst="$project_dir/export"
+    local video_dir="$project_dir/video"
+    local short_dir="$project_dir/short"
 
-    # Основной MLT проекта:
-    local mlt="$project_dir/$project.mlt"
-
-    mkdir -p "$dst" || {
-        log_error "$project" "Cannot create export directory: $dst"
-        return 1
-    }
-
-    log_info "=== Export Render started ==="
-    log_project "$project" "Export render started"
-
-    # --------------------------------------------------------
-    # CHECK PROJECT
-    # --------------------------------------------------------
+    local -a files=()
+    local -a selected_files=()
 
     if [[ ! -d "$project_dir" ]]; then
-        log_error "$project" "Project directory not found: $project_dir"
+        log_error "$project" \
+            "Project directory not found: $project_dir"
+
         echo
         echo "[ERROR] Project directory not found:"
         echo "        $project_dir"
         echo
+
         return 1
     fi
 
-    if [[ ! -d "$src" ]]; then
-        log_error "$project" "Edit directory not found: $src"
+    mkdir -p "$video_dir" "$short_dir" || {
+        log_error "$project" \
+        "Cannot create video/short directories"
+        return 1
+    }
+
+    # --------------------------------------------------------
+    # FIND AVAILABLE MLT PROJECTS
+    # --------------------------------------------------------
+    mapfile -d '' -t files < <(
+    {
+        if [[ -d "$video_dir" ]]; then
+            find "$video_dir" \
+                -maxdepth 1 \
+                -type f \
+                -iname "*.mlt" \
+                -print0
+        fi
+
+        if [[ -d "$short_dir" ]]; then
+            find "$short_dir" \
+                -maxdepth 1 \
+                -type f \
+                -iname "*.mlt" \
+                -print0
+        fi
+    } | sort -z
+)
+
+    if (( ${#files[@]} == 0 )); then
+        log_error "$project" \
+            "No Shotcut MLT projects found"
+
         echo
-        echo "[ERROR] Edit directory not found:"
-        echo "        $src"
+        echo "[ERROR] No Shotcut projects found in:"
+        echo "        $video_dir"
+        echo "        $short_dir"
         echo
+
         return 1
     fi
 
-    if [[ ! -f "$mlt" ]]; then
-        log_error "$project" "Main MLT project not found: $mlt"
-        echo
-        echo "[ERROR] Main MLT project not found:"
-        echo "        $mlt"
-        echo
-        return 1
-    fi
+    if (( ${#files[@]} == 0 )); then
+        log_error "$project" \
+            "No Shotcut MLT projects found"
 
-    if [[ ! -r "$mlt" ]]; then
-        log_error "$project" "MLT project is not readable: $mlt"
         echo
-        echo "[ERROR] MLT project is not readable:"
-        echo "        $mlt"
+        echo "[ERROR] No Shotcut projects found."
         echo
+        echo "Expected:"
+        echo "  $video_mlt"
+        echo "  $short_mlt"
+        echo
+
         return 1
     fi
 
     # --------------------------------------------------------
-    # OUTPUT
+    # SELECT MLT PROJECTS
     # --------------------------------------------------------
 
-    local out="$dst/${project}_final.mp4"
+    echo
+    echo "Available Shotcut projects:"
+    echo "------------------------------------------------"
 
-    log_info "Main MLT project: $mlt"
-    log_info "Output: $out"
+    local i=1
+    local file
+    local label
+
+    for file in "${files[@]}"; do
+        case "$file" in
+            "$video_dir"/*)
+                label="VIDEO"
+                ;;
+            "$short_dir"/*)
+                label="SHORT"
+                ;;
+            *)
+                label="MLT"
+                ;;
+        esac
+
+        printf '%2d) [%-5s] %s\n' \
+            "$i" \
+            "$label" \
+            "$(basename "$file")"
+
+        ((i++))
+    done
+
+    echo "------------------------------------------------"
+    echo "Select one or several projects."
+    echo "Examples: 1   |   1 2   |   all"
+    echo "Enter 0 to return."
+    echo
+
+    local selection=""
+    read -rp "Selection: " selection
+
+    selection="${selection//,/ }"
+
+    if [[ "$selection" == "0" ]]; then
+        return 0
+    fi
+
+    if [[ "$selection" == "all" ||
+          "$selection" == "a" ]]; then
+
+        selected_files=("${files[@]}")
+    else
+        local choice
+        declare -A selected_numbers=()
+
+        for choice in $selection; do
+            if ! [[ "$choice" =~ ^[0-9]+$ ]] ||
+               (( choice < 1 ||
+                  choice > ${#files[@]} )); then
+
+                log_error "$project" \
+                    "Invalid export selection: $choice"
+
+                echo "[ERROR] Invalid selection: $choice"
+                return 1
+            fi
+
+            # Prevent duplicate selections.
+            if [[ -z "${selected_numbers[$choice]:-}" ]]; then
+                selected_files+=(
+                    "${files[$((choice - 1))]}"
+                )
+                selected_numbers["$choice"]=1
+            fi
+        done
+    fi
+
+    if (( ${#selected_files[@]} == 0 )); then
+        log_error "$project" \
+            "No MLT projects selected"
+        return 1
+    fi
+
+    echo
+    echo "Selected projects:"
+    echo "------------------------------------------------"
+
+    for file in "${selected_files[@]}"; do
+        echo "• $(basename "$file")"
+    done
+
+    echo "------------------------------------------------"
+
+    log_info "=== Export Render started ==="
+    log_project "$project" "Export render started"
 
     # --------------------------------------------------------
     # FIND MELT
@@ -173,29 +285,21 @@ export_render() {
             local nvenc_available=0
 
             if [[ "${MELT_CMD[0]}" == "flatpak" ]]; then
-
-                if flatpak run \
-                    --command=ffmpeg \
-                    org.shotcut.Shotcut \
-                    -hide_banner \
-                    -encoders 2>/dev/null |
-                    grep -q 'h264_nvenc'; then
-
+                if flatpak run --command=ffmpeg org.shotcut.Shotcut \
+                    -hide_banner -loglevel error \
+                    -f lavfi -i testsrc2=size=640x360:rate=30 \
+                    -t 1 -c:v h264_nvenc -f null - \
+                    >/dev/null 2>&1; then
                     nvenc_available=1
-
                 fi
-
             elif command -v ffmpeg >/dev/null 2>&1; then
-
                 if ffmpeg \
-                    -hide_banner \
-                    -encoders 2>/dev/null |
-                    grep -q 'h264_nvenc'; then
-
+                    -hide_banner -loglevel error \
+                    -f lavfi -i testsrc2=size=640x360:rate=30 \
+                    -t 1 -c:v h264_nvenc -f null - \
+                    >/dev/null 2>&1; then
                     nvenc_available=1
-
-                fi
-
+                 fi
             fi
 
             if (( nvenc_available == 1 )); then
@@ -225,158 +329,181 @@ export_render() {
     fi
 
     # --------------------------------------------------------
-    # BUILD MLT CONSUMER
+    # RENDER SELECTED PROJECTS
     # --------------------------------------------------------
 
-    local -a CONSUMER_ARGS
+    local mlt
+    local out
+    local render_type
+    local render_dir
+    local rc
+    local rendered=0
 
-    if [[ "$encoder" == "h264_nvenc" ]]; then
+    for mlt in "${selected_files[@]}"; do
 
-        CONSUMER_ARGS=(
-            -consumer
-            "avformat:$out"
-            vcodec=h264_nvenc
-            acodec=aac
-            ab=192k
-            movflags=+faststart
-            preset=p5
-            cq=19
-            pix_fmt=yuv420p
-        )
+        local base_name
 
-    else
+        base_name="$(basename "$mlt" .mlt)"
 
-        CONSUMER_ARGS=(
-            -consumer
-            "avformat:$out"
-            vcodec=libx264
-            acodec=aac
-            ab=192k
-            movflags=+faststart
-            crf=18
-            preset=slow
-            pix_fmt=yuv420p
-        )
+        case "$mlt" in
+            "$video_dir"/*)
+                 render_type="VIDEO"
+                 render_dir="$video_dir"
+                 out="$video_dir/${base_name}.mp4"
+                 ;;
 
-    fi
+             "$short_dir"/*)
+                  render_type="SHORT"
+                  render_dir="$short_dir"
+                  out="$short_dir/${base_name}.mp4"
+                  ;;
 
-    # --------------------------------------------------------
-    # REMOVE OLD OUTPUT
-    # --------------------------------------------------------
+              *)
+                  log_error "$project" \
+                  "Unknown MLT project type: $mlt"
+                  return 1
+                  ;;
+          esac
 
-    if [[ -f "$out" ]]; then
-
-        log_warn "Removing existing export: $out"
-
-        rm -f "$out" || {
-
+        [[ -r "$mlt" ]] || {
             log_error "$project" \
-                "Cannot remove existing output: $out"
-
-            echo
-            echo "[ERROR] Cannot remove existing output:"
-            echo "        $out"
-            echo
-
+                "MLT project is not readable: $mlt"
             return 1
         }
 
-    fi
+        # ----------------------------------------------------
+        # BUILD MLT CONSUMER
+        # ----------------------------------------------------
 
-    # --------------------------------------------------------
-    # RENDER INFORMATION
-    # --------------------------------------------------------
+        local -a CONSUMER_ARGS
 
-    echo
-    echo "=================================================="
-    echo " MEDIAPANEL EXPORT RENDER"
-    echo "=================================================="
-    echo "Project : $project"
-    echo "MLT     : $project.mlt"
-    echo "Encoder : $encoder_mode"
-    echo "Output  : $out"
-    echo "=================================================="
-    echo
+        if [[ "$encoder" == "h264_nvenc" ]]; then
+            CONSUMER_ARGS=(
+                -consumer
+                "avformat:$out"
+                vcodec=h264_nvenc
+                acodec=aac
+                ab=192k
+                movflags=+faststart
+                preset=p5
+                cq=19
+                pix_fmt=yuv420p
+            )
+        else
+            CONSUMER_ARGS=(
+                -consumer
+                "avformat:$out"
+                vcodec=libx264
+                acodec=aac
+                ab=192k
+                movflags=+faststart
+                crf=18
+                preset=slow
+                pix_fmt=yuv420p
+            )
+        fi
 
-    log_info "Rendering with $encoder_mode"
+        # ----------------------------------------------------
+        # REMOVE OLD OUTPUT
+        # ----------------------------------------------------
 
-    # --------------------------------------------------------
-    # RENDER
-    # --------------------------------------------------------
+        if [[ -f "$out" ]]; then
+            log_warn "Removing existing export: $out"
 
-    LC_ALL=C.UTF-8 \
-    "${MELT_CMD[@]}" \
-        -progress2 \
-        "$mlt" \
-        "${CONSUMER_ARGS[@]}"
+            rm -f "$out" || {
+                log_error "$project" \
+                    "Cannot remove existing output: $out"
+                return 1
+            }
+        fi
 
-    local rc=$?
-
-    # --------------------------------------------------------
-    # FAILURE
-    # --------------------------------------------------------
-
-    if (( rc != 0 )); then
-
-        log_error "$project" \
-            "MLT export failed (exit code $rc)"
-
-        rm -f "$out"
+        # ----------------------------------------------------
+        # RENDER INFORMATION
+        # ----------------------------------------------------
 
         echo
         echo "=================================================="
-        echo " [ERROR] EXPORT RENDER FAILED"
+        echo " MEDIAPANEL EXPORT RENDER"
         echo "=================================================="
         echo "Project : $project"
+        echo "Type    : $render_type"
+        echo "MLT     : $(basename "$mlt")"
         echo "Encoder : $encoder_mode"
-        echo "Exit    : $rc"
+        echo "Output  : $out"
         echo "=================================================="
         echo
 
-        return "$rc"
-    fi
+        log_project "$project" \
+            "$render_type export started: $(basename "$mlt")"
 
-    # --------------------------------------------------------
-    # CHECK OUTPUT
-    # --------------------------------------------------------
+        # Running from the MLT directory also keeps relative
+        # project resources associated with video/ or short/.
+        (
+            cd "$render_dir" || exit 1
 
-    if [[ ! -s "$out" ]]; then
+            LC_ALL=C.UTF-8 \
+            "${MELT_CMD[@]}" \
+                -progress2 \
+                "$mlt" \
+                "${CONSUMER_ARGS[@]}"
+        )
 
-        log_error "$project" \
-            "Export completed but output file is missing or empty"
+        rc=$?
 
-        rm -f "$out"
+        if (( rc != 0 )); then
+            log_error "$project" \
+                "$render_type export failed (exit code $rc)"
+
+            rm -f "$out"
+
+            echo
+            echo "=================================================="
+            echo " [ERROR] EXPORT RENDER FAILED"
+            echo "=================================================="
+            echo "Type    : $render_type"
+            echo "Encoder : $encoder_mode"
+            echo "Exit    : $rc"
+            echo "=================================================="
+            echo
+
+            return "$rc"
+        fi
+
+        if [[ ! -s "$out" ]]; then
+            log_error "$project" \
+                "$render_type export is missing or empty"
+
+            rm -f "$out"
+
+            echo "[ERROR] Export file is missing or empty:"
+            echo "        $out"
+
+            return 1
+        fi
+
+        ((rendered += 1))
+
+        log_project "$project" \
+            "$render_type export completed: $(basename "$out") [$encoder_mode]"
 
         echo
-        echo "[ERROR] Export finished but output file is"
-        echo "        missing or empty."
+        echo "=================================================="
+        echo " [OK] EXPORT RENDERED"
+        echo "=================================================="
+        echo "Type    : $render_type"
+        echo "Encoder : $encoder_mode"
+        echo "File    : $out"
+        echo "Size    : $(du -h "$out" | cut -f1)"
+        echo "=================================================="
         echo
-
-        return 1
-    fi
-
-    # --------------------------------------------------------
-    # SUCCESS
-    # --------------------------------------------------------
+    done
 
     pipeline_set "$project" "export" "done"
 
-    log_project "$project" \
-        "Export render completed: $(basename "$out") [$encoder_mode]"
-
     log_info "Export render completed"
-    log_info "Encoder: $encoder_mode"
-    log_info "Output: $out"
+    log_info "Rendered projects: $rendered"
 
-    echo
-    echo "=================================================="
-    echo " [OK] EXPORT RENDERED"
-    echo "=================================================="
-    echo "Encoder : $encoder_mode"
-    echo "File    : $out"
-    echo "Size    : $(du -h "$out" | cut -f1)"
-    echo "=================================================="
-    echo
+    echo "[OK] rendered projects: $rendered"
 
     return 0
 }

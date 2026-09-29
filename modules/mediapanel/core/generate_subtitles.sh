@@ -42,24 +42,124 @@ generate_subtitles() {
     project="$(require_active_project)" || return 1
 
     local project_path="$PROJECT_DIR/$project"
+    local video_dir="$project_path/video"
+    local short_dir="$project_path/short"
 
     # --------------------------------------------------------
-    # PATHS
+    # FIND AVAILABLE MLT PROJECTS
     # --------------------------------------------------------
 
-    local mlt="$project_path/$project.mlt"
+    local -a mlt_files=()
+    local mlt=""
 
-    local subtitles_dir="$project_path/subtitles"
+    mapfile -d '' -t mlt_files < <(
+        {
+            if [[ -d "$video_dir" ]]; then
+                find "$video_dir" \
+                    -maxdepth 1 \
+                    -type f \
+                    -iname "*.mlt" \
+                    -print0
+            fi
 
-    local wav="$subtitles_dir/${project}_subtitles.wav"
+            if [[ -d "$short_dir" ]]; then
+                find "$short_dir" \
+                    -maxdepth 1 \
+                    -type f \
+                    -iname "*.mlt" \
+                    -print0
+            fi
+        } | sort -z
+    )
+
+    if (( ${#mlt_files[@]} == 0 )); then
+        echo
+        echo "[ERROR] No Shotcut MLT projects found."
+        echo
+        echo "Searched:"
+        echo "  $video_dir"
+        echo "  $short_dir"
+        echo
+
+        log_error "$project" \
+            "No Shotcut MLT projects found for subtitle generation"
+
+        return 1
+    fi
+
+    echo
+    echo "Available Shotcut projects:"
+    echo "------------------------------------------------"
+
+    local i=1
+    local file
+    local label
+
+    for file in "${mlt_files[@]}"; do
+        case "$file" in
+            "$video_dir"/*)
+                label="VIDEO"
+                ;;
+            "$short_dir"/*)
+                label="SHORT"
+                ;;
+            *)
+                label="MLT"
+                ;;
+         esac
+
+         printf '%2d) [%-5s] %s\n' \
+             "$i" \
+             "$label" \
+             "$(basename "$file")"
+
+         ((i++))
+     done
+
+     echo "------------------------------------------------"
+     echo "Select ONE project for subtitle generation."
+     echo "Enter 0 to return."
+     echo
+
+     local choice=""
+     read -rp "Selection: " choice
+
+    if [[ "$choice" == "0" ]]; then
+        return 0
+    fi
+
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] ||
+        (( choice < 1 || choice > ${#mlt_files[@]} )); then
+
+        echo "[ERROR] Invalid selection: $choice"
+
+        log_error "$project" \
+             "Invalid subtitle MLT selection: $choice"
+
+        return 1
+    fi
+
+    mlt="${mlt_files[$((choice - 1))]}"
+
+    echo
+    echo "Selected:"
+    echo "  $(basename "$mlt")"
+    echo
+
+    local mlt_name
+    mlt_name="$(basename "$mlt" .mlt)"
+
+    local subtitles_dir="$project_path/subtitles/$mlt_name"
+
+    local wav="$subtitles_dir/${mlt_name}_subtitles.wav"
 
     local srt_new="$subtitles_dir/subtitles_new.srt"
     local srt_bak="$subtitles_dir/subtitles_new.srt.bak"
     local srt_final="$subtitles_dir/subtitles_final.srt"
 
     local model="$HOME/.var/app/org.shotcut.Shotcut/data/Meltytech/Shotcut/extensions/whispermodel/ggml-large-v3-q5_0.bin"
-    
-        # --------------------------------------------------------
+
+    # --------------------------------------------------------
     # SUBTITLE LANGUAGE
     #
     # CLI_LANGUAGE has the highest priority.

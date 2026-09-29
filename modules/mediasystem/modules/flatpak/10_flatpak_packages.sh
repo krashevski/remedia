@@ -46,7 +46,7 @@ for PKG in "${!FLATPAK_PACKAGES[@]}"; do
         cmd+=(--system)
     fi
 
-    if ! "${cmd[@]}" >> "$LOG_FILE" 2>&1; then
+    if ! "${cmd[@]}" >> "${LOG_FILE:-/dev/null}" 2>&1; then
         log_warn "Failed to install $PKG"
     else
         log_info "Installed $PKG"

@@ -112,7 +112,7 @@ project_core_create() {
         "$path/scenes" \
         "$path/edit" \
         "$path/short" \
-        "$path/export" || {
+        "$path/video" || {
 
         echo "[ERROR] failed to create project dirs"
         return 1

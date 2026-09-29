@@ -1,0 +1,136 @@
+.TH NVIDIA-FLATPAK-NVENC 8 "September 2026" "Remedia" "System Administration"
+.SH NAME
+nvidia-flatpak-nvenc \- diagnose and restore NVENC in Shotcut Flatpak
+.SH DESCRIPTION
+Shotcut Flatpak may list the
+.B h264_nvenc
+encoder but fail to use it with
+.BR "Cannot load libcuda.so.1" .
+This can happen after an NVIDIA driver update when the Flatpak NVIDIA GL
+extension for the loaded driver version is missing. A working
+.B nvidia-smi
+on the host does not prove that CUDA is available inside the Flatpak.
+.PP
+This procedure concerns NVENC in Shotcut Flatpak. If
+.B nvidia-smi
+cannot communicate with the driver, investigate the host driver first;
+see
+.BR nvidia-display-restore (8).
+.SH SYMPTOMS
+.IP \(bu 2
+MediaPanel export with NVENC fails and reports
+.BR "Cannot load libcuda.so.1" .
+.IP \(bu 2
+.B nvidia-smi
+works on the host, but a real NVENC encode in Shotcut Flatpak fails.
+.IP \(bu 2
+.B ffmpeg -encoders
+lists
+.B h264_nvenc
+inside the Flatpak even though the encoder cannot start.
+.SH DIAGNOSTICS
+.SS "Check the host driver and Shotcut installation"
+.RS
+.nf
+nvidia-smi
+flatpak info org.shotcut.Shotcut
+flatpak --gl-drivers
+.fi
+.RE
+.PP
+Read the driver version reported by
+.BR nvidia-smi .
+The NVIDIA GL extension must match the loaded driver's full version.
+For example, driver
+.B 595.91.07
+corresponds to
+.BR org.freedesktop.Platform.GL.nvidia-595-91-07//1.4 .
+Installed extensions for older versions do not satisfy this match.
+.SS "Derive and check the matching extension"
+.RS
+.nf
+driver_version=$(nvidia-smi --query-gpu=driver_version \
+  --format=csv,noheader | sed -n '1p')
+if [[ "$driver_version" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
+  driver_ref="org.freedesktop.Platform.GL.nvidia-${driver_version//./-}//1.4"
+  printf '%s\en' "$driver_ref"
+  flatpak info "$driver_ref"
+else
+  printf 'Invalid driver version\en' >&2
+fi
+.fi
+.RE
+.PP
+Run this in Bash. If
+.B flatpak info
+cannot find the exact reference, check its availability in the configured
+Flathub remote before considering an installation. Do not choose a nearby
+driver version or hard-code the example version in Doctor.
+.SS "Test actual NVENC encoding inside Shotcut Flatpak"
+.RS
+.nf
+flatpak run --command=ffmpeg org.shotcut.Shotcut \
+  -hide_banner -f lavfi -i testsrc2=size=640x360:rate=30 \
+  -t 1 -c:v h264_nvenc -f null -
+printf 'Exit status: %s\en' "$?"
+.fi
+.RE
+.PP
+Exit status zero and 30 encoded frames confirm this short test succeeded.
+The null output writes no video file. A 128x128 test frame is too small for
+some NVIDIA encoders and can produce a misleading failure. Listing encoders
+is not an adequate substitute for the encode test.
+.SH RECOVERY
+.SS "Install the matching extension when available"
+If the host driver works, the matching extension is absent, and the user
+explicitly requested repair, check the configured Flathub remote:
+.RS
+.nf
+flatpak remote-info flathub "$driver_ref"
+.fi
+.RE
+.PP
+If that exact reference is available, install it:
+.RS
+.nf
+flatpak install flathub "$driver_ref"
+.fi
+.RE
+.PP
+Use the appropriate Flatpak installation scope and configured remote.
+Flatpak can have user and system installations; Doctor must identify the
+Shotcut installation and avoid treating an extension installed in an
+unavailable scope as sufficient. Installation can download a large runtime
+and may require authorization. It must not be attempted during audit mode.
+.PP
+If the exact extension is unavailable or installation fails, report the
+reason. Do not install an extension for a different driver version and do
+not change the host driver merely to make this Flatpak extension match.
+.SH VERIFICATION
+Repeat the short 640x360 encode test after installation. If it succeeds,
+retry MediaPanel export with NVENC. If it fails, retain the diagnostic output
+and let MediaPanel export with
+.B libx264
+on the CPU. A successful test does not establish that every MLT project or
+filter will render successfully; inspect the result of the actual export.
+.SH AUTOMATION POLICY
+The Remedia Doctor should report the host driver state, loaded driver
+version, required and installed Flatpak extension, and the result of a
+real NVENC encode. Its default mode is audit and report. It must not infer
+NVENC readiness from
+.B ffmpeg -encoders
+or from
+.B nvidia-smi
+alone.
+.PP
+Repair is a separate user-selected action. Before installation, Doctor
+must show the exact extension reference and confirm its availability. It
+must never install a different driver series, alter the host NVIDIA driver,
+or remove older Flatpak extensions as part of this repair. If repair is
+unavailable or verification fails, report CPU export as the fallback.
+.SH SEE ALSO
+nvidia-display-restore(8), nvidia-smi(1), flatpak(1), ffmpeg(1)
+.SH AUTHOR
+Remedia Project
+.SH STATUS
+Draft; diagnostic and repair policy for the Flatpak NVIDIA extension mismatch.

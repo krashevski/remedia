@@ -7,7 +7,8 @@ PIPELINE_STEPS=(
   audio
   sync
   split
-  mlt
+  video_mlt
+  short_mlt
 )
 
 pipeline_state_file() {
@@ -24,16 +25,24 @@ pipeline_load() {
     mkdir -p "$(dirname "$file")"
 
     if [[ ! -f "$file" ]]; then
-        cat > "$file" <<EOF
+    cat > "$file" <<EOF
 ingest=pending
 proxy=pending
 audio=pending
 sync=pending
 split=pending
-mlt=pending
+video_mlt=pending
+short_mlt=pending
 status=active
 EOF
     fi
+
+    # Add new states to existing project state files.
+    grep -q '^video_mlt=' "$file" ||
+        echo "video_mlt=pending" >> "$file"
+
+    grep -q '^short_mlt=' "$file" ||
+        echo "short_mlt=pending" >> "$file"
 }
 
 pipeline_get() {
@@ -93,10 +102,15 @@ run_step() {
         audio) audio_cleanup ;;
         sync) auto_sync_audio ;;
         split) batch_scene_split ;;
-        mlt)
+        video_mlt)
             create_mlt_from_edit \
-            "$project" \
-            "$PROJECT_DIR/$project"
+                "$project" \
+                "$PROJECT_DIR/$project"
+            ;;
+        short_mlt)
+            create_mlt_from_scenes \
+                "$project" \
+                "$PROJECT_DIR/$project"
             ;;
         ingest) echo "[STEP] ingest external" ;;
         *)
@@ -108,7 +122,7 @@ run_step() {
 
     local rc=$?
 
-    if (( rc == 0 )); then
+    if (( rc == 0 || rc == 2 )); then
         pipeline_set "$project" "$step" done
         return 0
     fi
@@ -123,14 +137,19 @@ resume_pipeline() {
 
     pipeline_load "$project"
 
-    for step in proxy audio sync split mlt; do
+    for step in proxy audio sync split video_mlt short_mlt; do
         local state
         state="$(pipeline_get "$project" "$step" || echo pending)"
 
         if [[ "$state" != "done" ]]; then
             echo "[RESUME] $step"
-            run_step "$project" "$step"
-            return 0
+            if run_step "$project" "$step"; then
+                return 0
+            else
+                local rc=$?
+                echo "[ERROR] resume step failed: $step (code $rc)"
+                return "$rc"
+            fi
         fi
     done
 
@@ -149,7 +168,7 @@ full_pipeline() {
         return 1
     }
 
-    for step in proxy audio sync split mlt; do
+    for step in proxy audio sync split video_mlt short_mlt; do
         run_step "$project" "$step" || {
         pipeline_set "$project" "$step" failed
         pipeline_unlock "$project"
@@ -182,47 +201,66 @@ skip_step() {
 pipeline_status() {
     local project="$1"
     local project_path="$PROJECT_DIR/$project"
-    local mlt_file="$project_path/${project}.mlt"
+
+    local video_mlt_file
+    local short_mlt_file
     local out=""
+
+    video_mlt_file="$project_path/video/${project}_video.mlt"
+    short_mlt_file="$project_path/short/${project}_short.mlt"
 
     echo -e "${COLOR_BOLD}Pipeline status:${COLOR_RESET}"
 
     for step in "${PIPELINE_STEPS[@]}"; do
         local state
+        local label="$step"
+        local real_file=""
+
         state="$(pipeline_get "$project" "$step")"
         [[ -n "$state" ]] || state="missing"
 
-        # Для этапа mlt реальный файл важнее старого статуса.
-        if [[ "$step" == "mlt" && -s "$mlt_file" ]]; then
+        case "$step" in
+            video_mlt)
+                label="video mlt"
+                real_file="$video_mlt_file"
+                ;;
+            short_mlt)
+                label="short mlt"
+                real_file="$short_mlt_file"
+                ;;
+        esac
+
+        # For MLT steps, the real file takes priority.
+        if [[ -n "$real_file" && -s "$real_file" ]]; then
             if [[ "$state" != "done" ]]; then
-                pipeline_set "$project" mlt done
+                pipeline_set "$project" "$step" done
             fi
 
-            out+="${COLOR_GREEN}✔ mlt (exists)${COLOR_RESET}\n"
+            out+="${COLOR_GREEN}✔ $label (exists)${COLOR_RESET}\n"
             continue
         fi
 
         case "$state" in
             done)
-                out+="${COLOR_GREEN}✔ $step${COLOR_RESET}\n"
+                out+="${COLOR_GREEN}✔ $label${COLOR_RESET}\n"
                 ;;
             pending)
-                out+="${COLOR_YELLOW}⟳ $step${COLOR_RESET}\n"
+                out+="${COLOR_YELLOW}⟳ $label${COLOR_RESET}\n"
                 ;;
             running)
-                out+="${COLOR_CYAN}▶ $step (running)${COLOR_RESET}\n"
+                out+="${COLOR_CYAN}▶ $label (running)${COLOR_RESET}\n"
                 ;;
             skipped)
-                out+="${COLOR_BLUE}— $step (skipped)${COLOR_RESET}\n"
+                out+="${COLOR_BLUE}— $label (skipped)${COLOR_RESET}\n"
                 ;;
             failed)
-                out+="${COLOR_RED}✖ $step (failed)${COLOR_RESET}\n"
+                out+="${COLOR_RED}✖ $label (failed)${COLOR_RESET}\n"
                 ;;
             missing)
-                out+="${COLOR_MAGENTA}⚠ $step (state missing)${COLOR_RESET}\n"
+                out+="${COLOR_MAGENTA}⚠ $label (state missing)${COLOR_RESET}\n"
                 ;;
             *)
-                out+="${COLOR_MAGENTA}⚠ $step (unknown: $state)${COLOR_RESET}\n"
+                out+="${COLOR_MAGENTA}⚠ $label (unknown: $state)${COLOR_RESET}\n"
                 ;;
         esac
     done

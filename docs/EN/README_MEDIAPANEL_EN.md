@@ -55,21 +55,21 @@ Designed for documentary and creative projects.
 
 ## Installing PRODUCTION MEDIA PANEL (mediaoanel)
 
-Installation:
-1. Clone this repository:
+1. Installation
 ```bash
-git clone https://github.com/krashevski/remedia.git
-cd remedia
+sudo apt install remedia_1.2.0_all.deb
 ```
 
-2. Run the installation:
-```bash
-sudo ./install.sh
-```
+Dependencies:
+* bash >= 5.0
+* coreutils
+Recommended:
+* util-linux
+* findutils
 
-3. Run:
+2. Launch UI
 ```bash
-remedia
+remedia system center
 ```
 
 4. In the menu, select: **Media system (installing and configuring programs)** and select: **Full (standard + all additional modules)**.

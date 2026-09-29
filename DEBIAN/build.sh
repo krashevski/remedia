@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PKG="remedia"
-VERSION="1.1.0"
+VERSION="1.2.0"
 ARCH="all"
 
 STAGE="build/${PKG}_${VERSION}_${ARCH}"
@@ -44,11 +44,31 @@ cp -a \
     "$FILTERSET_DEST/"
 
 cp -a \
+    docs/filter-sets/Open_Camera/Open_Camera_Deband \
+    "$FILTERSET_DEST/"
+
+cp -a \
+    docs/filter-sets/Open_Camera/Open_Camera_Deband_studio \
+    "$FILTERSET_DEST/"
+
+cp -a \
+    docs/filter-sets/Open_Camera/Open_Camera_Deband_studio_bright \
+    "$FILTERSET_DEST/"
+
+cp -a \
     docs/filter-sets/OPPO_RENO/Oppo_Reno_11F_Concert \
     "$FILTERSET_DEST/"
 
 cp -a \
+    docs/filter-sets/OPPO_RENO/OPPO_RENO_Pub \
+    "$FILTERSET_DEST/"
+
+cp -a \
     docs/filter-sets/Stabilization/Stabilizer_Gimbal \
+    "$FILTERSET_DEST/"
+
+cp -a \
+    docs/filter-sets/Stabilization/Stabilizer_Smooth_manual_panorama \
     "$FILTERSET_DEST/"
 
 echo "[BUILD] permissions..."
