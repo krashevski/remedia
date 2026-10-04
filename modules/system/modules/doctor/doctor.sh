@@ -4,9 +4,9 @@
 system_diagnostics() {
     echo
     echo -e "   ${COLOR_BOLD} REMEDIA SYSTEM DOCTOR ${COLOR_RESET}"
-    echo 
+    echo
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
+
     local FAIL=0
     local WARN=0
 
@@ -25,13 +25,33 @@ system_diagnostics() {
     [[ -n "${BACKUP_STORAGE:-}" && -d "$BACKUP_STORAGE" ]] \
         && echo -e "${COLOR_GREEN}[OK]${COLOR_RESET} BACKUP_STORAGE: $BACKUP_STORAGE" \
         || { echo -e "${COLOR_YELLOW}[WARN]${COLOR_RESET} BACKUP_STORAGE missing"; ((WARN++)); }
-        
+
    if ! command -v ffmpeg >/dev/null; then
         echo "${COLOR_YELLOW}[WARN]${COLOR_RESET} ffmpeg not installed"
     else
         echo "${COLOR_GREEN}[OK]${COLOR_RESET} ffmpeg"
     fi
-    
+
+    # Host NVIDIA audit: compact output, no repair.
+    local nvidia_code=0
+
+    if nvidia_display_doctor >/dev/null 2>&1; then
+        echo -e "${COLOR_GREEN}[OK]${COLOR_RESET} NVIDIA display audit"
+    else
+        nvidia_code=$?
+
+        if (( NVD_FAIL > 0 )); then
+            echo -e "${COLOR_RED}[FAIL]${COLOR_RESET} NVIDIA display (diagnosis $nvidia_code)"
+        else
+            echo -e "${COLOR_YELLOW}[WARN]${COLOR_RESET} NVIDIA display (diagnosis $nvidia_code)"
+        fi
+
+        echo "  Details: remedia system nvidia-display doctor"
+    fi
+
+    FAIL=$((FAIL + NVD_FAIL))
+    WARN=$((WARN + NVD_WARN))
+
     # 3. user context
     echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET} USER: ${RUN_USER:-$(whoami)}"
     echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET} HOME: ${HOME:-unknown}"
@@ -43,6 +63,7 @@ system_diagnostics() {
         echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET} VERSION: unknown"
     fi
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
     local TOTAL=$((FAIL + WARN))
     local SCORE=100
 
@@ -50,7 +71,7 @@ system_diagnostics() {
         SCORE=$((100 - FAIL*30 - WARN*10))
         (( SCORE < 0 )) && SCORE=0
     fi
-    
+
     if (( FAIL == 0 && WARN == 0 )); then
         echo -e "${COLOR_GREEN}[OK]${COLOR_RESET} remedia system healthy"
     elif (( FAIL == 0 )); then
@@ -61,7 +82,7 @@ system_diagnostics() {
 
     echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET} FAIL: $FAIL  WARN: $WARN"
     echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET} REMEDIA SYSTEM HEALTH: ${SCORE}%"
-    
+
     REMEDIA_FAIL=$FAIL
     REMEDIA_WARN=$WARN
 

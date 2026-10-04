@@ -21,6 +21,7 @@ screen_system() {
     echo "4) DPKG system upgrade"
     echo "5) CUDA tollkit"
     echo "6) Manifest"
+    echo "7) NVIDIA display"
     echo
     echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
     echo
@@ -33,6 +34,7 @@ screen_system() {
         4) screen_dpkg ;;
         5) screen_cuda_tools ;;
         6) screen_manifest ;;
+        7) screen_nvidia_display ;;
         0) return ;;
         *) echo "Invalid option" ;;
     esac

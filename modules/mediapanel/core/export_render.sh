@@ -6,7 +6,9 @@
 #
 # Входные проекты:
 #   video/${project}_video.mlt
+#   ...
 #   short/${project}_short.mlt
+#   ...
 #
 # Результаты:
 #   export/${project}_video_final.mp4
@@ -21,6 +23,71 @@
 # Shotcut Flatpak:
 #   flatpak run --command=melt org.shotcut.Shotcut
 # ============================================================
+
+# Prepare a render-only copy; never rewrite the Shotcut project.
+export_prepare_render_mlt() {
+    python3 - "$1" "$2" <<'PY_MLT'
+import os
+import sys
+from pathlib import Path
+import xml.etree.ElementTree as ET
+
+source = Path(sys.argv[1]).absolute()
+target = Path(sys.argv[2])
+try:
+    tree = ET.parse(source)
+    root = tree.getroot()
+    declared = root.get("root", "")
+    xml_base = Path(declared).expanduser() if declared else source.parent
+    if not xml_base.is_absolute():
+        xml_base = source.parent / xml_base
+
+    def resolve_results(value):
+        path = Path(value).expanduser()
+        if path.is_absolute():
+            candidates = [path]
+        else:
+            candidates = [xml_base / path, source.parent / path,
+                          Path.home() / path]
+        matches = {p.resolve() for p in candidates if p.is_file()}
+        # A moved project can retain an old relative directory prefix.
+        # Only use its local basename when the full paths found nothing.
+        if not matches and not path.is_absolute():
+            local = source.parent / path.name
+            if local.is_file():
+                matches.add(local.resolve())
+        if len(matches) != 1:
+            reason = "not found" if not matches else "ambiguous"
+            raise ValueError(f"Stabilization file {reason}: {value}")
+        resolved = matches.pop()
+        if resolved.stat().st_size == 0 or not os.access(resolved, os.R_OK):
+            raise ValueError(f"Stabilization file empty or unreadable: {resolved}")
+        return resolved
+
+    for filt in root.iter("filter"):
+        props = {p.get("name"): p for p in filt.findall("property")}
+        def value(name):
+            prop = props.get(name)
+            return prop.text if prop is not None and prop.text else ""
+        if value("mlt_service") != "vidstab":
+            continue
+        if value("disable") == "1":
+            continue
+        results = value("results")
+        if not results:
+            raise ValueError("Stabilization analysis missing; run Analyze in Shotcut "
+                             "and save the project before exporting")
+        resolved = resolve_results(results)
+        props["results"].text = str(resolved)
+        if "filename" in props:
+            props["filename"].text = str(resolved)
+        print(f"[INFO] Stabilization results: {resolved}")
+    tree.write(target, encoding="utf-8", xml_declaration=True)
+except (OSError, ET.ParseError, ValueError) as exc:
+    print(f"[ERROR] {exc}", file=sys.stderr)
+    sys.exit(1)
+PY_MLT
+}
 
 export_render() {
 
@@ -87,21 +154,6 @@ export_render() {
         echo "[ERROR] No Shotcut projects found in:"
         echo "        $video_dir"
         echo "        $short_dir"
-        echo
-
-        return 1
-    fi
-
-    if (( ${#files[@]} == 0 )); then
-        log_error "$project" \
-            "No Shotcut MLT projects found"
-
-        echo
-        echo "[ERROR] No Shotcut projects found."
-        echo
-        echo "Expected:"
-        echo "  $video_mlt"
-        echo "  $short_mlt"
         echo
 
         return 1
@@ -337,6 +389,7 @@ export_render() {
     local render_type
     local render_dir
     local rc
+    local render_mlt
     local rendered=0
 
     for mlt in "${selected_files[@]}"; do
@@ -403,6 +456,19 @@ export_render() {
             )
         fi
 
+        # Validate stabilization before touching any existing MP4.
+        command -v python3 >/dev/null 2>&1 || {
+            log_error "$project" "python3 is required for MLT path validation"
+            return 1
+        }
+
+        render_mlt="$(mktemp "$render_dir/.remedia-render-XXXXXX.xml")" || return 1
+        if ! export_prepare_render_mlt "$mlt" "$render_mlt"; then
+            rm -f -- "$render_mlt"
+            log_error "$project" "Stabilization validation failed: $mlt"
+            return 1
+        fi
+
         # ----------------------------------------------------
         # REMOVE OLD OUTPUT
         # ----------------------------------------------------
@@ -413,6 +479,7 @@ export_render() {
             rm -f "$out" || {
                 log_error "$project" \
                     "Cannot remove existing output: $out"
+                rm -f -- "$render_mlt"
                 return 1
             }
         fi
@@ -436,19 +503,19 @@ export_render() {
         log_project "$project" \
             "$render_type export started: $(basename "$mlt")"
 
-        # Running from the MLT directory also keeps relative
-        # project resources associated with video/ or short/.
+        # Keep the temporary XML beside the original for other relative resources.
+        # Capture failures explicitly, including when the caller uses set -e.
+        rc=0
         (
+            trap 'rm -f -- "$render_mlt"' EXIT
             cd "$render_dir" || exit 1
-
             LC_ALL=C.UTF-8 \
             "${MELT_CMD[@]}" \
                 -progress2 \
-                "$mlt" \
+                "$render_mlt" \
                 "${CONSUMER_ARGS[@]}"
-        )
-
-        rc=$?
+        ) || rc=$?
+        rm -f -- "$render_mlt"
 
         if (( rc != 0 )); then
             log_error "$project" \

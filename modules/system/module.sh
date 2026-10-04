@@ -32,6 +32,14 @@ cmd_system_home() {
     system_home_run "$@"
 }
 
+cmd_system_nvidia_display() {
+    system_nvidia_display_run "$@"
+}
+
+cmd_system_nvidia_flatpak_nvenc() {
+    system_nvidia_flatpak_nvenc_run "$@"
+}
+
 cmd_system_dpkg() {
     system_dpkg_run "$@"
 }
@@ -64,6 +72,8 @@ register_module() {
     remedia_register "symlinks" cmd_symlinks
     remedia_register "man" cmd_system_man
     remedia_register "home" cmd_system_home
+    remedia_register "nvidia-flatpak-nvenc" cmd_system_nvidia_flatpak_nvenc
+    remedia_register "nvidia-display" cmd_system_nvidia_display
     remedia_register "dpkg" cmd_system_dpkg
     remedia_register "manifest" cmd_manifest
     remedia_register "doctor" cmd_system_doctor

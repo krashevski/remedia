@@ -1,12 +1,12 @@
 Package: remedia
-Version: 1.2.0
+Version: 1.3.0
 Section: utils
 Priority: optional
 Architecture: all
 Maintainer: Vladislav <v.krashevski@gmail.com>
 Depends: bash (>= 5.0), coreutils
 Recommends: util-linux, findutils
-Description: Remedia - media-oriented system extension
+Description: Remedia - media-oriented system extensio5
  Remedia is a modular system designed to extend Debian/Ubuntu-based environments
  for media production, user data archiving, and system recovery.
  Remedia CLI system - modular CLI framework with runtime, registry and module system.

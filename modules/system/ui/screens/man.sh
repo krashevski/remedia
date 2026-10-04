@@ -15,6 +15,7 @@ screen_man() {
         echo "2) Doctor"
         echo "3) Open users-home-restore"
         echo "4) Open nvidia-display-restore"
+        echo "5) Open nvidia-flatpak-nvenc"
         echo
         echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
         echo
@@ -25,6 +26,7 @@ screen_man() {
             2) remedia system man doctor ;;
             3) remedia system man open users-home-restore ;;
             4) remedia system man open nvidia-display-restore ;;
+            5) remedia system man open nvidia-flatpak-nvenc ;;
             0) return ;;
             *) echo "Invalid option" ;;
         esac

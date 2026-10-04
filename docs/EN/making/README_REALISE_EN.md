@@ -24,14 +24,20 @@ rg -n --hidden -g '!.git' '(^|[^[:digit:]])v?1\.1\.0([^[:digit:]]|$)|(^|[^[:digi
 git diff --check
 ```
 
-Checking the installed version (via `remedia --version`, `remedia-doctor --version`, and similar commands) applies only if the project actually supports the corresponding command. For the Debian package, the source of truth is the `Version` field in its `control` file.
+If the last command produces no output, the check has passed.
 
-## 3. Check source code and behavior
+### Removing whitespace
+Trailing whitespace is usually invisible in GNOME Text Editor. You can highlight it using the search function:
+1. Open the file and press Ctrl+F.
+2. In the search settings (gear icon), enable regular expressions.
+3. Search for `[ \t]+$` — this matches spaces or tabs immediately before the end of the line. The editor supports regular expression searches.
 
-- [ ] Review `git status --short` and `git diff --stat`; exclude personal media files, caches, logs, and temporary outputs.
-- [ ] Check the syntax of modified Bash files (`bash -n path/to/file.sh`). For files that are merely included via `source`, this checks syntax but not behavior.
-- [ ] Run the project's existing tests and record the commands and results. Test MediaPanel using a sample project: creating/opening video and short MLT projects, exporting, selecting single/multiple files for YouTube, reusing JSON, and cancelling via empty selection.
-- [ ] Test both officially supported export paths: CPU and NVENC; for the Flatpak version of Shotcut, verify compatibility with the installed NVIDIA runtime. Do not treat a single successful export as validation of all modes.
+## 3. Verify source code and behavior
+
+- [ ] Check `git status --short` and `git diff --stat`; exclude personal media files, cache, logs, and temporary results.
+- [ ] Check the syntax of modified Bash files (`bash -n path/to/file.sh`). For files that are merely sourced, this checks syntax but not behavior.
+- [ ] Run existing project tests and record the commands and results. Test MediaPanel using a test project: create/open video and short MLT projects, export, select single/multiple files for YouTube, reuse JSON, and cancel via empty selection.
+- [ ] Test both supported export paths: CPU and NVENC; for the Flatpak version of Shotcut, verify compatibility with the installed NVIDIA runtime. Do not consider a single successful export as verification of all modes.
 - [ ] Verify that `README.md`, ROADMAP, and installation instructions align with the actual 1.2.0 release and the `video/`, `short/`, and `export/` directory structure.
 
 ```bash
@@ -42,10 +48,19 @@ git diff --check
 
 ## 4. Build and verify the package
 
-- [ ] Run the standard build command from the repository (check `Makefile`, `scripts/`, `debian/`, or existing instructions; do not substitute it with an arbitrary command).
+- [ ] Run the standard build command from the repository (check `./DEBIAN/build.sh` or the existing `README_DEBIAN_WORK_EN.md` instructions; do not substitute it with an arbitrary command).
+* Once the .deb package has been built, no further changes to the source scripts are permitted. Finalize the release as is.
 - [ ] Verify the metadata, contents, and dependencies of the resulting `.deb` package.
-- [ ] Install the package in a test environment or via your standard update process; verify that `remedia`, `remedia-setup`, `remedia-doctor`, and MediaPanel launch correctly, and check the version and preservation of user state.
-- [ ] Record the exact package name and checksum for the release page.
+- [ ] Install the package in a test environment or via your standard update process; verify the execution of `remedia`, `remedia-setup`, `remedia-doctor`, and MediaPanel, then check the version and ensure user state preservation.
+*  Checking the installed version (using `remedia --version`, `remedia-doctor --version`, etc.) applies only if the project actually supports that command. For a Debian package, the source of truth is the `Version` field in its `control` file.
+- [ ] To save the checksum alongside the `.deb` file, navigate to the package directory and run:
+
+```bash
+sha256sum remedia_1.2.0_all.deb > SHA256SUMS
+cat SHA256SUMS
+```
+
+- [ ] Perform checks:
 
 ```bash
 dpkg-deb -f path/to/remedia_1.2.0_all.deb Package Version Architecture Depends
@@ -53,33 +68,47 @@ dpkg-deb -c path/to/remedia_1.2.0_all.deb | less
 sha256sum path/to/remedia_1.2.0_all.deb
 ```
 
-Replace `path/to/` with the actual path after the build. If the name or architecture differs, use the actual values ​​and investigate the cause of the discrepancy before release.
+Replace `path/to/` with the actual path after the build. If the name or architecture differs, use the actual values ​​and investigate the reason for the discrepancy before release. ## 5. Commit the release in Git
 
-## 5. Commit the release in Git
-
-- [ ] Check the branch and ensure changes are clean: `git status --short`, `git branch --show-current`, `git diff`.
+- [ ] Check the current branch and ensure there are no uncommitted changes: `git status --short`, `git branch --show-current`, `git diff`.
 - [ ] Commit the prepared release; ensure `CHANGELOG.md` and all version numbers have been updated.
-- [ ] Verify that the tag `v1.2.0` does not already exist; create an annotated tag on the release commit and verify what it points to.
+```bash
+git add -A
+git diff --cached --stat
+git diff --cached --check
+git commit -m "Release Remedia 1.2.0"
+```
+
+- [ ] Verify that the tag `v1.2.0` does not already exist.
+
 ```bash
 git status --short
 git tag -l v1.2.0
 git log -1 --oneline
-git tag -a v1.2.0 -m "Remedia 1.2.0"
-git show --no-patch --decorate v1.2.0
 ```
 
 If the tag already exists, first determine which commit it points to. Do not overwrite a published tag.
 
-## 6. Publish to GitHub
-
-- [ ] Push the release commit to the appropriate branch followed by the `v1.2.0` tag; verify both on GitHub.
-- [ ] Create a GitHub Release **from the existing `v1.2.0` tag**. Title: `Remedia 1.2.0`. Draft the release notes using the verified `CHANGELOG.md` section, highlighting notable MediaPanel changes and any necessary upgrade instructions.
-- [ ] Attach the verified `.deb` and SHA-256 file, or include the hash in the release notes. Compare the package on the release page against the locally verified file.
-- [ ] After publishing, verify the release link, the package download, and a match for `Version: 1.2.0`.
-
+- [ ] Create an annotated tag for the release commit and verify its target.
 ```bash
-git push origin HEAD
-git push origin v1.2.0
+git tag -a v1.2.0 -m "Remedia 1.2.0"
+git log -1 --oneline
+git show -s --format='%h %s' 'v1.2.0^{commit}'
+git show --no-patch --decorate v1.2.0
 ```
 
-Check the target `origin` branch before pushing. Publishing the release and uploading the package should be done only after all checks have been completed.
+The last two commands should show the new 1.2.0 commit with the same hash. Only then should you push the branch and tag and create the release on the website.
+
+## 6. Publish on GitHub
+
+- [ ] Run `git status --short` before pushing; there should be no overlooked changes.
+- [ ] Check the target `origin` branch before pushing. Publishing the release and uploading the package should only be done after all the listed checks are complete. - [ ] Push the changes:
+```bash
+git push origin main
+git push origin v1.2.0
+```
+- [ ] Open the release creation page: `github.com/krashevski/remedia/releases/new`.
+- [ ] Under "Choose a tag," select the existing **v1.2.0**. Set the title to `Remedia 1.2.0`. Add the description from `CHANGELOG.md`, highlighting notable changes and any necessary upgrade instructions.
+- [ ] Attach the verified `.deb` and SHA-256 files, or include the hash in the release notes. Verify that the package on the release page matches the locally verified file.
+- [ ] Review the draft and click **Publish release**.
+- [ ] After publishing, verify the release link, the package download, and that the version is `1.2.0`.

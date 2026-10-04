@@ -128,9 +128,40 @@ must show the exact extension reference and confirm its availability. It
 must never install a different driver series, alter the host NVIDIA driver,
 or remove older Flatpak extensions as part of this repair. If repair is
 unavailable or verification fails, report CPU export as the fallback.
+.SH REMEDIA COMMANDS
+.RS
+.nf
+remedia system nvidia-flatpak-nvenc doctor
+remedia system nvidia-flatpak-nvenc heal
+remedia system nvidia-flatpak-nvenc doctor --scope=system
+.fi
+.RE
+.PP
+Run these commands as the desktop user, without sudo. System installation
+permissions are requested by Flatpak itself. MediaPanel System Status includes separate NVIDIA Flatpak NVENC Doctor and Heal actions.
+The global System Doctor does not run the Shotcut encode test.
+.PP
+Doctor selects a unique installed Shotcut reference and installation. If
+multiple copies or branches exist, use --scope=user, --scope=system or
+--scope=NAME, and --branch=BRANCH. Use --remote=REMOTE to select a configured
+remote; flathub is the default. No remote is added automatically.
+.PP
+The audit tests 30 frames at 640x360, with a 45-second timeout. Success
+requires exit status zero, 30 frames and a final progress=end record.
+If the NVIDIA module is not loaded, nvidia-smi is skipped to avoid implicit
+module loading. Diagnose the host first with nvidia-display doctor.
+.PP
+Heal is offered only when the encode fails, the exact extension is missing
+from the selected Shotcut installation, the required GL driver is active,
+and the exact architecture/ref is available in the chosen remote.
+Confirmation requires the complete short extension reference. Installation
+uses --no-related and --no-deps. The host driver and overrides are not
+changed; older extensions are not removed. A real encode is repeated after
+installation. A matching extension with a failed encode requires manual
+investigation, rather than a blind reinstall.
 .SH SEE ALSO
 nvidia-display-restore(8), nvidia-smi(1), flatpak(1), ffmpeg(1)
 .SH AUTHOR
 Remedia Project
 .SH STATUS
-Draft; diagnostic and repair policy for the Flatpak NVIDIA extension mismatch.
+Remedia Doctor/Heal implementation; real-hardware recovery verification remains pending.

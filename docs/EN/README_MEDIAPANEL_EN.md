@@ -57,7 +57,7 @@ Designed for documentary and creative projects.
 
 1. Installation
 ```bash
-sudo apt install remedia_1.2.0_all.deb
+sudo apt install remedia_1.3.0_all.deb
 ```
 
 Dependencies:

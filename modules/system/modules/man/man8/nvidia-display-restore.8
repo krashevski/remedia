@@ -121,6 +121,29 @@ the result of
 Its default behavior is audit and report. It must not install packages or
 load kernel modules merely because a display mode is absent. A repair
 action requires a separate explicit request and confirmation.
+.SH REMEDIA COMMANDS
+.RS
+.nf
+remedia system nvidia-display doctor
+remedia system nvidia-display heal
+.fi
+.RE
+.PP
+The System menu includes NVIDIA display with separate Doctor and Heal actions.
+Doctor is read-only. It skips nvidia-smi when the module is not loaded, because
+some installations invoke nvidia-modprobe from nvidia-smi.
+.PP
+Heal and Fix require an exact package-name confirmation. They only install a
+matching prebuilt module package when diagnostics identify a missing module,
+a single installed driver variant, prior prebuilt module packages, and an APT
+candidate for the running Ubuntu kernel. An APT simulation rejects removals
+and changes outside NVIDIA kernel-module packages. DKMS, loaded nouveau,
+an already installed matching package, and existing but unloaded modules
+require manual investigation. The module never disables Secure Boot, removes
+drivers, unloads modules, changes display modes, or reboots automatically.
+.PP
+After repair, Doctor runs again. Verify the expected resolution in desktop
+settings and repeat Doctor after a manual reboot.
 .SH SEE ALSO
 uname(1), dpkg-query(1), modinfo(8), lsmod(8), depmod(8), modprobe(8),
 nvidia-smi(1), apt(8), nvidia-flatpak-nvenc(8)

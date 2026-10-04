@@ -9,7 +9,7 @@ Focus is not on features, but on:
 * condition monitoring
 * reproducibility
 
-## 📍 Current State (v1.2.0)
+## 📍 Current State (v1.3.0)
 
 The system already implements:
 ✔ CLI router and runtime environment

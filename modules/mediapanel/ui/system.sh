@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# mediapanel/core/system.sh
+# mediapanel/ui/system.sh
 
 : "${REMEDIA_LIB:?missing REMEDIA_LIB}"
 : "${FAST_STORAGE:?missing FAST_STORAGE}"
@@ -173,6 +173,8 @@ show_shotcut_config_status() {
         fi
     fi
 
+    mediapanel_shotcut_nvenc_status
+
     # Количество импортированных наборов фильтров
     if [[ -d "$filter_dir" ]]; then
         filter_count="$(
@@ -192,19 +194,61 @@ show_shotcut_config_status() {
     fi
 }
 
+# NVENC is tested explicitly inside Shotcut Flatpak, never during screen refresh.
+mediapanel_shotcut_nvenc_run() {
+    local action="${1:-doctor}" code=0
+    if [[ "$action" != doctor && "$action" != heal ]]; then
+        echo "[ERROR] unsupported Shotcut NVENC action: $action"
+        return 2
+    fi
+    if remedia system nvidia-flatpak-nvenc "$action"; then
+        code=0
+    else
+        code=$?
+    fi
+    MEDIAPANEL_SHOTCUT_NVENC_CODE="$code"
+    MEDIAPANEL_SHOTCUT_NVENC_TIME="$(date '+%H:%M:%S')"
+    echo
+    echo "[Shotcut Flatpak NVENC] action=$action exit=$code"
+    if (( code == 14 )); then
+        echo 'Choose the installation explicitly with the CLI, for example:'
+        echo "  remedia system nvidia-flatpak-nvenc $action --scope=system"
+    fi
+    # A diagnostic failure must not close the MediaPanel UI.
+    return 0
+}
+
+mediapanel_shotcut_nvenc_status() {
+    local code="${MEDIAPANEL_SHOTCUT_NVENC_CODE:-unchecked}"
+    local checked="${MEDIAPANEL_SHOTCUT_NVENC_TIME:-}"
+    case "$code" in
+        unchecked)
+            echo '   NVENC: not checked (6: Doctor, 7: Heal)'
+            ;;
+        0)
+            echo "   NVENC: last test PASSED at $checked (h264_nvenc, 640x360)"
+            ;;
+        1)
+            echo "   NVENC: last action cancelled/failed at $checked; run Doctor"
+            ;;
+        *)
+            echo "   NVENC: last diagnosis $code at $checked (details: Doctor)"
+            ;;
+    esac
+}
+
 system_status() {
     while true; do
         active="$(get_active_project)"
 #        LOG_FILE="$PROJECT_DIR/$active/.log"
         LOG_FILE="$(ensure_log_file "$active" || true)"
         echo
-        clear        
-        
-        local GPU NVENC projects_count     
-        
+        clear
+
+        local GPU projects_count
+
         GPU="$(get_gpu_cached)"
-        NVENC="$(get_nvenc_cached)"       
-   
+        # Shotcut NVENC is checked only via menu 6/7.
 
         local projects_count=0
         [[ -d "$PROJECT_DIR" ]] && \
@@ -215,22 +259,7 @@ system_status() {
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
         echo
         echo " GPU:      $GPU"
-        case "$NVENC" in
-            YES)
-                if [[ "$NVENC" == "YES" ]]; then
-                    echo -e " NVENC:    ${COLOR_GREEN}AVAILABLE (h264/hevc)${COLOR_RESET}"
-                fi
-                ;;
-            NO_FFMPEG)
-                echo -e " NVENC:    ${COLOR_YELLOW}FFmpeg missing NVENC${COLOR_RESET}"
-                ;;
-            NO_GPU)
-                echo -e " NVENC:    ${COLOR_RED}No NVIDIA GPU${COLOR_RESET}"
-                ;;
-            *)
-                echo -e " NVENC:    ${COLOR_RED}UNKNOWN${COLOR_RESET}"
-                ;;
-        esac 
+        # NVENC status belongs to the Shotcut block below.
         echo
         echo " Projects: $projects_count"
         if [[ -n "$active" ]]; then
@@ -253,6 +282,8 @@ system_status() {
         echo " 3) Show disk usage"
         echo " 4) Show GPU info"
         echo " 5) Import Shotcut filter sets"
+        echo " 6) Shotcut Flatpak NVENC doctor"
+        echo " 7) Shotcut Flatpak NVENC heal"
         echo
         echo -e " ${COLOR_YELLOW}0) Back${COLOR_RESET}"
         echo
@@ -326,7 +357,7 @@ system_status() {
                 printf "%-20s %s\n" " BACKUP_STORAGE:" "$(safe_du "$BACKUP_STORAGE")"
 
                 printf "%-20s %s\n" " PROJECT_DIR:" "$(safe_du "$PROJECT_DIR")"
-                
+
                 echo
                 echo -e "${COLOR_BOLD}Paths:${COLOR_RESET}"
                 echo
@@ -345,7 +376,9 @@ system_status() {
                 echo
                 lspci | grep -i vga
                 echo
-                ffmpeg -encoders 2>/dev/null | grep nvenc || echo "NVENC not available"
+                echo "Host FFmpeg encoder list (not a Shotcut Flatpak test):"
+                ffmpeg -encoders 2>/dev/null | grep nvenc ||
+                    echo "Host FFmpeg does not list NVENC; use menu 6 to test Shotcut Flatpak"
                 echo
                 read -rp "Press Enter..."
                 ;;
@@ -353,11 +386,19 @@ system_status() {
                 install_shotcut_filter_sets
                 read -rp "Press Enter to continue..."
                 ;;
+            6)
+                mediapanel_shotcut_nvenc_run doctor
+                read -rp "Press Enter to continue..."
+                ;;
+            7)
+                mediapanel_shotcut_nvenc_run heal
+                read -rp "Press Enter to continue..."
+                ;;
             0)
                 echo "Back..."
                 return 0   # если это функция
                 # или break  # если это loop внутри скрипта
-                ;;         
+                ;;
             *)
                 echo "Invalid option"
                 sleep 1

@@ -44,6 +44,7 @@ source "$MODULE_DIR/ui/screens/backupkit_userhome.sh"
 source "$MODULE_DIR/ui/screens/backupkit_users.sh"
 source "$MODULE_DIR/ui/screens/cuda_tools.sh"
 source "$MODULE_DIR/ui/screens/dpkg.sh"
+source "$MODULE_DIR/ui/screens/nvidia_display.sh"
 source "$MODULE_DIR/ui/screens/cinema.sh"
 
 # DOCTOR MODULE
@@ -61,6 +62,20 @@ source "$MODULE_DIR/modules/home/doctor.sh"
 source "$MODULE_DIR/modules/home/fix.sh"
 source "$MODULE_DIR/modules/home/heal.sh"
 source "$MODULE_DIR/modules/home/module.sh"
+
+# NVIDIA DISPLAY MODULE
+source "$MODULE_DIR/modules/nvidia-display/policy.sh"
+source "$MODULE_DIR/modules/nvidia-display/doctor.sh"
+source "$MODULE_DIR/modules/nvidia-display/fix.sh"
+source "$MODULE_DIR/modules/nvidia-display/heal.sh"
+source "$MODULE_DIR/modules/nvidia-display/module.sh"
+
+# NVIDIA FLATPAK NVENC MODULE
+source "$MODULE_DIR/modules/nvidia-flatpak-nvenc/policy.sh"
+source "$MODULE_DIR/modules/nvidia-flatpak-nvenc/doctor.sh"
+source "$MODULE_DIR/modules/nvidia-flatpak-nvenc/fix.sh"
+source "$MODULE_DIR/modules/nvidia-flatpak-nvenc/heal.sh"
+source "$MODULE_DIR/modules/nvidia-flatpak-nvenc/module.sh"
 
 # DPKG MODULE
 source "$MODULE_DIR/modules/dpkg/doctor.sh"

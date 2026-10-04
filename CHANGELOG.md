@@ -6,6 +6,36 @@ The format is based on Keep a Changelog and semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+- Moved Shotcut Flatpak NVENC Doctor/Heal access to MediaPanel System Status and removed the encode test from the global System Doctor.
+- Replaced the misleading host FFmpeg NVENC summary with the last explicit Shotcut Flatpak diagnosis; opening or refreshing System Status does not run an NVENC test.
+
+
+## [1.3.0] - 2026-10-04
+
+### Documentation
+- Updated `nvidia-flatpak-nvenc(8)` from draft policy to implemented Doctor/Heal guidance and added `docs/RU/NVIDIA_FLATPAK_NVENC_DOCTOR.md`; real-hardware recovery verification remains pending.
+- Documented NVIDIA Display commands and recovery restrictions in `nvidia-display-restore(8)` and `docs/RU/NVIDIA_DISPLAY_DOCTOR.md`.
+- Corrections have been made to the file README_REALISE.
+
+### Added
+- Added NVIDIA Flatpak NVENC Doctor and explicitly confirmed Heal/Fix actions with Shotcut installation scope and exact NVIDIA extension matching. Heal/Fix were verified in mocked test scenarios; recovery from an actual failure has not yet been tested.
+- Added NVIDIA Flatpak NVENC to the System menu in the MediaPanel module, commands metadata, and the System Doctor with a real 30-frame 640x360 encode test.
+- Added NVIDIA Display Doctor and explicitly confirmed Heal/Fix actions for the missing prebuilt module of the running Ubuntu kernel. Heal/Fix were verified in mocked test scenarios; recovery from an actual failure has not yet been tested.
+- Added NVIDIA display to the System menu in the System module and read-only NVIDIA diagnostics to the System Doctor.
+
+### Changed
+- Moved Shotcut Flatpak NVENC Doctor/Heal access to MediaPanel System Status and removed the encode test from the global System Doctor.
+- Replaced the misleading host FFmpeg NVENC summary with the last explicit Shotcut Flatpak diagnosis; opening or refreshing System Status does not run an NVENC test.
+- Updated phone footage ingest to synchronize the project's pipeline state:
+  * Set `ingest=done` after successful copying or verification of previously imported files.
+  * Set `ingest=failed` when copying or verification fails.
+  * Preserve the previous state when the queue is empty or contains only trashed files.
+- Updated `pipeline_set()` to initialize the project state file before writing and validate state keys and values.
+- Updated MediaPanel Export Render to validate stabilization result files before rendering and resolve their paths to absolute paths in a temporary MLT copy.
+- Preserved original Shotcut project files and prevented removal of existing MP4 exports when stabilization validation fails.
+- Added clear error messages for missing, empty, unreadable, or ambiguous stabilization result files.
+
 ## [1.2.0] - 2026-09-29
 
 ### Documentation
@@ -35,11 +65,11 @@ The format is based on Keep a Changelog and semantic versioning.
 - Redesigned the MediaPanel project output workflow to support multiple full-length videos and multiple Shorts within a single project.
 - Changed the project structure so that full-length video assets are managed in `video/` and Shorts are managed in `short/`, removing the need for a separate `export/` directory for newly created projects.
 - Updated the rendering workflow to work with multiple Shotcut `.mlt` projects instead of assuming a single full-video project and a single Short project.
-- Changed rendered output handling so that each `.mp4` can be stored alongside its corresponding `.mlt` project in `video/` or `short/`.
+- Changed rendered output handling so that each `.mp4` be stored alongside its corresponding `.mlt` project in `video/` or `short/`.
 - Updated YouTube export preparation to discover publication-ready `.mp4` files directly from `video/` and `short/`.
 - Changed VIDEO/SHORT classification to use the project directory (`video/` or `short/`) instead of relying on filename suffixes.
 - Updated subtitle generation to discover Shotcut `.mlt` projects from both `video/` and `short/` and allow explicit selection of a single project for transcription.
-- Changed subtitle output organization so that generated WAV, intermediate SRT, backup, and final SRT files can be associated with the selected Shotcut project without overwriting subtitle work for other videos.
+- Changed subtitle output organization so that generated WAV, intermediate SRT, backup, and final SRT files be associated with the selected Shotcut project without overwriting subtitle work for other videos.
 - Refined the subtitle workflow around separate `.srt` deliverables, allowing final videos to remain free of burned-in subtitles and making subtitle files suitable for independent YouTube delivery.
 - Generalized the MediaPanel workflow from a fixed “one video + one Short per project” model to a reusable project workspace capable of producing multiple independent publication deliverables from the same source material.
 

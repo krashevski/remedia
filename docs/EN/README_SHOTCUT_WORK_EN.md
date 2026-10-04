@@ -60,6 +60,14 @@ L  → Forward/Play
 It is best performed **before final image processing**.
 * If you intend to stabilize specific segments, do not merge them back together after cutting.
 
+### If a sudden frame jump of 50–90° occurs during stabilization
+This looks like an error in rotation compensation or a rotation angle too extreme for standard shake correction.
+Start by checking the following:
+1. Disable "Stabilization" and play back that section.
+2. If the jump is gone, re-enable the filter and run "Analyze" again, saving the result to a new .stab file specifically for that clip. Do not select an analysis file from a different scene.
+3. Wait for the task to complete and check that same moment.
+If the jump recurs at the exact same spot, examine the source footage: look for a sudden jerk, a blurred frame, or a person obscuring the background. It is better to leave such a brief segment unstabilized than to attempt to correct an erroneous rotation with a counter-rotation.
+
 ### Filters for the entire Timeline track
 1. **Noise reduction** (Wavelet Denoise filter) / **image cleanup**.
 After stabilization, the final frame geometry is established, and digital noise can then be removed.

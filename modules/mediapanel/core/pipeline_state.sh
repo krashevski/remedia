@@ -61,13 +61,20 @@ pipeline_set() {
     local project="$1"
     local key="$2"
     local value="$3"
-
     local file
-    file="$(pipeline_state_file "$project")"
 
-    grep -q "^$key=" "$file" \
-        && sed -i "s|^$key=.*|$key=$value|" "$file" \
-        || echo "$key=$value" >> "$file"
+    [[ -n "$project" ]] || return 1
+    [[ "$key" =~ ^[a-z_]+$ ]] || return 1
+    [[ "$value" =~ ^[a-z_]+$ ]] || return 1
+
+    pipeline_load "$project" || return 1
+    file="$(pipeline_state_file "$project")" || return 1
+
+    if grep -q "^$key=" "$file"; then
+        sed -i "s|^$key=.*|$key=$value|" "$file"
+    else
+        printf '%s=%s\n' "$key" "$value" >> "$file"
+    fi
 }
 
 pipeline_lock_file() {

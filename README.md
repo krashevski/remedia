@@ -67,7 +67,7 @@ Remedia can also operate on a single drive, provided the user creates the approp
 ## 🚀 Installation
 
 ```bash
-sudo apt install remedia_1.2.0_all.deb
+sudo apt install remedia_1.3.0_all.deb
 ```
 
 Dependencies:
@@ -176,7 +176,7 @@ Support: ChatGPT
 
 ## 📌 Status
 
-Version: **1.2.0**
+Version: **1.3.0**
 The project is in active development:
 * contract stabilization
 * runtime improvements

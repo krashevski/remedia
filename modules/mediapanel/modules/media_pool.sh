@@ -302,96 +302,137 @@ ingest_to_raw() {
 }
 
 ingest_from_phone_v3() {
-
-    local start_ts end_ts
+    local start_ts end_ts runtime
+    local phone_dir project queue_file previous_state final_state
+    local ok=0 fail=0 skip=0 total=0 existing=0 idx=0 error=""
+    local f name raw dst hash
+    local -a QUEUE=()
 
     start_ts=$(date +%s%3N)
-
-    local phone_dir project
-    local ok=0 fail=0 skip=0 total=0 error=""
-
     phone_dir="$(detect_phone 2>/dev/null || true)"
     project="$(get_active_project 2>/dev/null || true)"
 
-    # ========= SAFE GUARD =========
+    # Preserve the JSON stdout / return-0 contract used by the ingest UI.
     if [[ -z "$phone_dir" || -z "$project" ]]; then
-        echo '{"ok":0,"fail":0,"skip":0,"total":0,"error":"no_device_or_project","runtime_ms":0}'
+        printf '%s\n' '{"ok":0,"fail":0,"skip":0,"total":0,"error":"no_device_or_project","runtime_ms":0}'
         return 0
     fi
 
-    mapfile -d '' QUEUE < <(
-        find "$phone_dir" -type f \( -iname "*.mp4" -o -iname "*.mov" \) -print0
-    )
+    if ! declare -F pipeline_load >/dev/null ||
+       ! declare -F pipeline_get >/dev/null ||
+       ! declare -F pipeline_set >/dev/null; then
+        ui_log "pipeline_state.sh must be loaded before ingest"
+        printf '%s\n' '{"ok":0,"fail":0,"skip":0,"total":0,"error":"pipeline_state_unavailable","runtime_ms":0}'
+        return 0
+    fi
 
+    if ! pipeline_load "$project" >&2; then
+        printf '%s\n' '{"ok":0,"fail":0,"skip":0,"total":0,"error":"pipeline_state_init_failed","runtime_ms":0}'
+        return 0
+    fi
+    previous_state="$(pipeline_get "$project" ingest)"
+    previous_state="${previous_state:-pending}"
+
+    if ! mkdir -p "$RAW_DIR" "$PROJECT_DIR/$project/media" ||
+       ! ensure_media_db >&2; then
+        pipeline_set "$project" ingest failed >&2 || true
+        printf '%s\n' '{"ok":0,"fail":0,"skip":0,"total":0,"error":"ingest_setup_failed","runtime_ms":0}'
+        return 0
+    fi
+
+    # Capture find's exit code; process substitution would hide scan errors.
+    if ! queue_file="$(mktemp)"; then
+        printf '%s\n' '{"ok":0,"fail":0,"skip":0,"total":0,"error":"queue_create_failed","runtime_ms":0}'
+        return 0
+    fi
+    if ! find "$phone_dir" -type f \( -iname "*.mp4" -o -iname "*.mov" \) -print0 > "$queue_file"; then
+        rm -f "$queue_file"
+        pipeline_set "$project" ingest failed >&2 || true
+        printf '%s\n' '{"ok":0,"fail":0,"skip":0,"total":0,"error":"phone_scan_failed","runtime_ms":0}'
+        return 0
+    fi
+    mapfile -d '' QUEUE < "$queue_file"
+    rm -f "$queue_file"
     total="${#QUEUE[@]}"
-    local idx=0
-    ((idx++))
-    
-    # ========= LOOP =========
-    for f in "${QUEUE[@]}"; do
-        local name raw dst hash
 
+    if ! pipeline_set "$project" ingest running >&2; then
+        printf '{"ok":0,"fail":0,"skip":0,"total":%d,"error":"pipeline_state_write_failed","runtime_ms":0}\n' "$total"
+        return 0
+    fi
+
+    for f in "${QUEUE[@]}"; do
+        ((++idx))
         name="$(basename "$f")"
         raw="$RAW_DIR/$name"
         dst="$PROJECT_DIR/$project/media/$name"
 
-        # ========= PLAN =========
         if [[ "$name" == .trashed-* ]]; then
-            ((skip++))
+            ((++skip))
             continue
         fi
 
-        if [[ -f "$dst" ]]; then
-            ((skip++))
+        if [[ -e "$dst" ]]; then
+            # A name match alone cannot confirm an earlier successful copy.
+            if [[ -s "$dst" ]] && cmp -s "$f" "$dst"; then
+                ((++skip))
+                ((++existing))
+            else
+                ui_log "existing file differs or is empty: $name"
+                ((++fail))
+            fi
             continue
         fi
 
-        # ========= RAW INGEST =========
         if ! copy_with_retry "$f" "$raw"; then
-            ((fail++))
+            ((++fail))
             continue
         fi
-
-        # ========= VERIFY RAW =========
         hash="$(sha1sum "$raw" 2>/dev/null | awk '{print $1}')"
-
-        if [[ -z "$hash" ]]; then
-            ((fail++))
+        if [[ -z "$hash" || ! -s "$raw" ]]; then
+            ((++fail))
             continue
         fi
-
-        # ========= MATERIALIZE =========
         if ! copy_with_retry "$raw" "$dst"; then
-            ((fail++))
+            ((++fail))
             continue
         fi
-
-        # ========= VERIFY v2 =========
         if ! cmp -s "$raw" "$dst"; then
             rm -f "$dst"
-            ((fail++))
+            ((++fail))
             continue
         fi
 
-        # ========= REGISTER =========
-        log_event "$hash" "FOUND" "$f|$project"
-        log_event "$hash" "RAW_DONE" "$raw"
-        log_event "$hash" "LOCAL_DONE" "$dst"
-
-        cleanup_raw "$raw"
-
-        ((ok++))
-        ((idx++))
-        ui_log "[$idx/$total] $(basename "$f")"
+        if ! log_event "$hash" FOUND "$f|$project" ||
+           ! log_event "$hash" RAW_DONE "$raw" ||
+           ! log_event "$hash" LOCAL_DONE "$dst"; then
+            ((++fail))
+            error="journal_write_failed"
+            continue
+        fi
+        cleanup_raw "$raw" >&2
+        ((++ok))
+        ui_log "[$idx/$total] $name"
     done
 
+    if (( fail > 0 )); then
+        final_state=failed
+        error="${error:-copy_or_verify_failed}"
+    elif (( ok + existing > 0 )); then
+        final_state=done
+    else
+        # Empty queue / trashed files do not prove ingest completion.
+        final_state="$previous_state"
+        [[ "$final_state" != running ]] || final_state=pending
+    fi
+
+    if ! pipeline_set "$project" ingest "$final_state" >&2; then
+        error="pipeline_state_write_failed"
+    fi
     end_ts=$(date +%s%3N)
-
-    local runtime=$((end_ts - start_ts))
-
-    # ========= STRICT OUTPUT =========
-    printf '{"ok":%d,"fail":%d,"skip":%d,"total":%d,"error":"","runtime_ms":%d}\n' \
-        "$ok" "$fail" "$skip" "$total" "$runtime"
+    runtime=$((end_ts - start_ts))
+    printf '{"ok":%d,"fail":%d,"skip":%d,"total":%d,"error":"%s","runtime_ms":%d}\n' \
+        "$ok" "$fail" "$skip" "$total" "$error" "$runtime"
+    return 0
 }
 
 open_media() {
