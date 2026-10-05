@@ -219,7 +219,7 @@ Not just "workable," but **survivable and time-resistant**.
 <img src="docs/img/REMEDIA_SYSTEM_CENTER.png" width="45%"/> 
 <img src="docs/img/REMEDIA_HELP.png" width="45%"/> </p> 
 <p align="center"> 
-<img src="docs/img/REMEDIA_DOCTOR.png" width="45%"/>
+<img src="docs/img/REMEDIA_DOCTOR-1.png" width="45%"/>
 <img src="docs/img/MEDIASYSTEM.png" width="45%"/> </p> 
 <p align="center"> 
 <img src="docs/img/MEDIASYSTEM_SUMMARY.png" width="45%"/>
