@@ -2,8 +2,8 @@
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Made with Bash](https://img.shields.io/badge/Made%20with-Bash-1f425f.svg)
-[![GitHub Repository Size](https://img.shields.io/github/repo-size/krashevski/reincarnation-backup-kit)](https://github.com/krashevski/reincarnation-backup-kit)
-[![GitHub Stars](https://img.shields.io/github/stars/krashevski/reincarnation-backup-kit)](https://github.com/krashevski/reincarnation-backup-kit)
+[![GitHub Repository Size](https://img.shields.io/github/repo-size/krashevski/remedia)](https://github.com/krashevski/remedia)
+[![GitHub Stars](https://img.shields.io/github/stars/krashevski/remedia)](https://github.com/krashevski/remedia)
 
 [🇬🇧 English](README.md) | [🇷🇺 Russian](docs/RU/README_RU.md) | [🇰🇿 Қазақ тілі](docs/KZ/README_KZ.md)
 
