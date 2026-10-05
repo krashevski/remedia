@@ -262,3 +262,4 @@ File -> Save As...
 9. Export the created short video to the `short/` directory
 ```text
 File -> Export -> Video/Audio -> 001_Video_short.mp4
+```

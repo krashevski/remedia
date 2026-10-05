@@ -72,26 +72,6 @@ It ensures that the system does not rely on theoretical GPU availability, but on
 * Hardware-specific tuning (NVIDIA / AMD / Intel)
 * Integration with `remedia doctor`
 
-## 🩺 NVIDIA Doctor Recovery
-
-### Goal
-Diagnose NVIDIA failures at the layer where they occur and offer a targeted repair.
-
-### Planned checks
-* Host driver and kernel module: use `nvidia-display-restore(8)` when
-  `nvidia-smi` cannot communicate with the driver.
-* Shotcut Flatpak NVENC: use `nvidia-flatpak-nvenc(8)` when the host driver
-  works but an actual encode inside Shotcut Flatpak fails.
-* Derive the required Flatpak NVIDIA extension from the loaded driver
-  version; never hard-code a driver release.
-* Verify recovery with a real 640×360 NVENC encode.
-
-### Repair policy
-* Default Doctor mode audits and reports without changing packages.
-* A separately selected repair may install the exact available Flatpak
-  extension or a confirmed kernel module package for the running kernel.
-* If NVENC remains unavailable, MediaPanel uses CPU encoding and reports why.
-
 ## 📦 MediaPanel Delivery Layer
 
 ### The Next Stage of Automation
