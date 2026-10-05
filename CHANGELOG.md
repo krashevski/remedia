@@ -7,9 +7,12 @@ The format is based on Keep a Changelog and semantic versioning.
 ## [Unreleased]
 
 ### Changed
-- Moved Shotcut Flatpak NVENC Doctor/Heal access to MediaPanel System Status and removed the encode test from the global System Doctor.
-- Replaced the misleading host FFmpeg NVENC summary with the last explicit Shotcut Flatpak diagnosis; opening or refreshing System Status does not run an NVENC test.
-
+- Updated **Launch Shotcut** to support multiple Shotcut `.mlt` projects within a single Remedia project:
+  - automatically discovers all `.mlt` files in the project's `video/` and `short/` directories;
+  - displays available projects dynamically as `[VIDEO]` and `[SHORT]`;
+  - allows switching between multiple video and Short edits without leaving the Remedia project;
+  - preserves access to the original generated video and Short `.mlt` projects alongside additional user-created edits;
+  - launches Shotcut from the selected `.mlt` file's directory to preserve relative project resources such as stabilization `.stab` files.
 
 ## [1.3.0] - 2026-10-04
 
@@ -25,6 +28,8 @@ The format is based on Keep a Changelog and semantic versioning.
 - Added NVIDIA display to the System menu in the System module and read-only NVIDIA diagnostics to the System Doctor.
 
 ### Changed
+- Moved Shotcut Flatpak NVENC Doctor/Heal access to MediaPanel System Status and removed the encode test from the global System Doctor.
+- Replaced the misleading host FFmpeg NVENC summary with the last explicit Shotcut Flatpak diagnosis; opening or refreshing System Status does not run an NVENC test.
 - Moved Shotcut Flatpak NVENC Doctor/Heal access to MediaPanel System Status and removed the encode test from the global System Doctor.
 - Replaced the misleading host FFmpeg NVENC summary with the last explicit Shotcut Flatpak diagnosis; opening or refreshing System Status does not run an NVENC test.
 - Updated phone footage ingest to synchronize the project's pipeline state:

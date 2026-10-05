@@ -1345,20 +1345,60 @@ launch_shotcut() {
 
     local project
     local project_dir
-    local video_mlt
-    local short_mlt
     local project_mlt
     local shotcut_dir
     local project_type
     local choice
     local rc
+    local i
+    local file
+
+    local -a mlt_files=()
+    local -a mlt_types=()
 
     project="$(require_active_project)" || return 1
 
     project_dir="$PROJECT_DIR/$project"
 
-    video_mlt="$project_dir/video/${project}_video.mlt"
-    short_mlt="$project_dir/short/${project}_short.mlt"
+    # --------------------------------------------------------
+    # COLLECT VIDEO MLT PROJECTS
+    # --------------------------------------------------------
+
+    if [[ -d "$project_dir/video" ]]; then
+        while IFS= read -r -d '' file; do
+            mlt_files+=("$file")
+            mlt_types+=("video")
+        done < <(
+            find "$project_dir/video" \
+                -maxdepth 1 \
+                -type f \
+                -name '*.mlt' \
+                -print0 |
+            sort -z
+        )
+    fi
+
+    # --------------------------------------------------------
+    # COLLECT SHORT MLT PROJECTS
+    # --------------------------------------------------------
+
+    if [[ -d "$project_dir/short" ]]; then
+        while IFS= read -r -d '' file; do
+            mlt_files+=("$file")
+            mlt_types+=("short")
+        done < <(
+            find "$project_dir/short" \
+                -maxdepth 1 \
+                -type f \
+                -name '*.mlt' \
+                -print0 |
+            sort -z
+        )
+    fi
+
+    # --------------------------------------------------------
+    # MENU
+    # --------------------------------------------------------
 
     echo
     echo "===================================================="
@@ -1367,24 +1407,37 @@ launch_shotcut() {
     echo
     echo "Project: $project"
     echo
-    echo "Select Shotcut project:"
-    echo
 
-    if [[ -f "$video_mlt" ]]; then
-        echo " 1) Video project"
-        echo "    $video_mlt"
-    else
-        echo " 1) Video project [not found]"
+    if (( ${#mlt_files[@]} == 0 )); then
+        echo "[WARN] No Shotcut MLT projects found."
+        echo
+        echo "Checked:"
+        echo "  $project_dir/video"
+        echo "  $project_dir/short"
+
+        log_project \
+            "$project" \
+            "No Shotcut MLT projects found"
+
+        return 0
     fi
 
+    echo "Available Shotcut projects:"
     echo
 
-    if [[ -f "$short_mlt" ]]; then
-        echo " 2) Short project"
-        echo "    $short_mlt"
-    else
-        echo " 2) Short project [not found]"
-    fi
+    for i in "${!mlt_files[@]}"; do
+
+        if [[ "${mlt_types[$i]}" == "video" ]]; then
+            printf " %d) [VIDEO] %s\n" \
+                "$((i + 1))" \
+                "$(basename "${mlt_files[$i]}")"
+        else
+            printf " %d) [SHORT] %s\n" \
+                "$((i + 1))" \
+                "$(basename "${mlt_files[$i]}")"
+        fi
+
+    done
 
     echo
     echo " 0) Back"
@@ -1392,32 +1445,34 @@ launch_shotcut() {
 
     read -r -p "Select: " choice
 
-    case "$choice" in
-        1)
-            project_mlt="$video_mlt"
-            shotcut_dir="$project_dir/video"
-            project_type="video"
-            ;;
-        2)
-            project_mlt="$short_mlt"
-            shotcut_dir="$project_dir/short"
-            project_type="short"
-            ;;
-        0)
-            return 0
-            ;;
-        *)
-            echo "[ERROR] invalid selection"
-            return 1
-            ;;
-    esac
+    # --------------------------------------------------------
+    # VALIDATE SELECTION
+    # --------------------------------------------------------
 
-    [[ -f "$project_mlt" ]] || {
-        echo "[ERROR] MLT project not found:"
-        echo "        $project_mlt"
-        log_error "$project" "$project_type MLT project not found"
+    [[ "$choice" =~ ^[0-9]+$ ]] || {
+        echo "[ERROR] invalid selection"
         return 1
     }
+
+    if (( choice == 0 )); then
+        return 0
+    fi
+
+    if (( choice < 1 || choice > ${#mlt_files[@]} )); then
+        echo "[ERROR] invalid selection"
+        return 1
+    fi
+
+    # Array indexes start from 0.
+    i=$((choice - 1))
+
+    project_mlt="${mlt_files[$i]}"
+    project_type="${mlt_types[$i]}"
+    shotcut_dir="$(dirname "$project_mlt")"
+
+    # --------------------------------------------------------
+    # OPEN PROJECT
+    # --------------------------------------------------------
 
     echo
     echo "[Production] launching Shotcut for $project"
@@ -1430,32 +1485,46 @@ launch_shotcut() {
         "Opening $project_type MLT project: $project_mlt"
 
     if command -v flatpak >/dev/null 2>&1; then
+
         (
             cd "$shotcut_dir" || exit 1
             flatpak run org.shotcut.Shotcut "$project_mlt"
         )
+
         rc=$?
+
     elif command -v shotcut >/dev/null 2>&1; then
+
         (
             cd "$shotcut_dir" || exit 1
             shotcut "$project_mlt"
         )
+
         rc=$?
+
     else
         echo "[ERROR] Shotcut not found"
         log_error "$project" "Shotcut not found"
         return 1
     fi
 
+    # --------------------------------------------------------
+    # RESULT
+    # --------------------------------------------------------
+
     if (( rc != 0 )); then
         echo "[ERROR] Shotcut exited with code: $rc"
-        log_error "$project" \
-            "Shotcut failed for $project_type project: exit $rc"
+
+        log_error \
+            "$project" \
+            "Shotcut failed for $project_type project: $project_mlt, exit $rc"
+
         return "$rc"
     fi
 
-    log_project "$project" \
-        "Shotcut closed: $project_type project"
+    log_project \
+        "$project" \
+        "Shotcut closed: $project_type project: $project_mlt"
 
     return 0
 }
