@@ -5,7 +5,7 @@
 [![GitHub Repository Size](https://img.shields.io/github/repo-size/krashevski/reincarnation-backup-kit)](https://github.com/krashevski/reincarnation-backup-kit)
 [![GitHub Stars](https://img.shields.io/github/stars/krashevski/reincarnation-backup-kit)](https://github.com/krashevski/reincarnation-backup-kit)
 
-[🇬🇧 English](README.md) | [🇷🇺 Russian](docs/RU/README_RU.md)
+[🇬🇧 English](README.md) | [🇷🇺 Russian](docs/RU/README_RU.md) | [🇰🇿 Қазақ тілі](docs/KZ/README_KZ.md)
 
 **Remedia** is a modular system environment for Debian/Ubuntu, focused on:
 * media production

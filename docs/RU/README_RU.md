@@ -1,11 +1,6 @@
 # REMEDIA
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Создано с помощью Bash](https://img.shields.io/badge/Made%20with-Bash-1f425f.svg)
-[![Размер репозитория GitHub](https://img.shields.io/github/repo-size/krashevski/reincarnation-backup-kit)](https://github.com/krashevski/reincarnation-backup-kit)
-[![Звезды GitHub](https://img.shields.io/github/stars/krashevski/reincarnation-backup-kit)](https://github.com/krashevski/reincarnation-backup-kit)
-
-[🇬🇧 Английский](README.md) | [🇷🇺 Русский](docs/RU/README_RU.md)
+[🇬🇧 Английский](,,/../README.md) | [🇷🇺 Русский](README_RU.md) | [🇰🇿 Қазақ тілі](../KZ/README_KZ.md)
 
 **Remedia** — это модульная системная среда для Debian/Ubuntu, ориентированная на:
 * медиа-производство
