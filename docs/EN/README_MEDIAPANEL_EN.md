@@ -8,23 +8,18 @@ Designed for documentary and creative projects.
 
 ## Key Features
 
-1. **System Status** – Displays GPU, NVENC, available space, and the number of projects.
-2. **Project Information** – Displays:
-- Number of clips in `footage`
-- Number of proxy files
-- Folder size
-- General project statistics, last modified date, and lifecycle stage
-3. **Create Project** – Creates a project in two locations:
+1. **System Status** – Displays GPU, available space, and the number of projects.
+2. **Create Project** – Creates a project in two locations:
 - Storage: `/mnt/storage/Videos/projects/ProjectName`
 - Shotcut: `/home/user/shotcut/projects/ProjectName`
-4. **Upload Videos from Phone** – Import videos from your phone:
+3. **Upload Videos from Phone** – Import videos from your phone:
 - Originals in `raw` format
 - Working files in `footage` format
-5. **Create Proxy** – Creates proxy files in the Shotcut folder with UTF-8 encoding and security settings.
-6. **Run Shotcut** – Opens Shotcut (Flatpak).
-7. **Export to YouTube** – Exports the finished video to the `exports` folder with YouTube settings.
-8. **Archive Project** – saves the video project to a .tar.gz archive.
-9. **Video/Graphics/Audio Tools** – Quick access to APT, SNAP, and Flatpak applications:
+4. **Create Proxy** – Creates proxy files in the Shotcut folder with UTF-8 encoding and security settings.
+5. **Run Shotcut** – Opens Shotcut (Flatpak).
+6. **Export to YouTube** – Exports the finished video with YouTube settings.
+7. **Archive Project** – saves the video project to a .tar.gz archive.
+8. **Video/Graphics/Audio Tools** – Quick access to APT, SNAP, and Flatpak applications:
 - Shotcut, OBS Studio
 - GIMP, Krita
 - Audacity
@@ -33,15 +28,17 @@ Designed for documentary and creative projects.
 
 **Storage (Originals)**
 /mnt/storage/Videos/projects/ProjectName
-* footage/
-* raw/
+* media/
+* audio/
+* scenes/
 * edit/
-* export/
+* video/
+* short/
+* subtitles/
 
 **Shotcut (Workspace)**
 /home/vladislav/shotcut/projects/ProjectName
 * proxy/
-* project/
 
 ## 🔧 PRODUCTION MEDIA PANEL (media PANEL) Requirements
 
@@ -91,7 +88,6 @@ Typical workflow:
 - Split scenes
 - Edit in Shotcut
 - Export (YouTube/archive)
-- Automatic logging updated
 
 ## 🧠 PRODUCTION MEDIA PANEL (mediapanel) Project Lifecycle States
 
@@ -101,22 +97,22 @@ DONE — completed
 
 ## 🔐 PRODUCTION MEDIA Design Principles PANEL (mediapanel)
 
-✔ Modularity
+* Modularity
 Each suite operates independently:
 - No hard dependencies between modules
 - Component sharing only via shared-li
-✔ Fault-tolerant architecture
+* Fault-tolerant architecture
 - set -euo pipefail is used in core scripts
 - PID-based locking system in production tools
 - Automatic cleaning of obsolete locks
 - Secure deletion of media files via the Recycle Bin
-✔ Production-focused workflow
+* Production-focused workflow
 The system is designed for:
 - Long-term projects
 - Workflows with large volumes of media content (4K editing)
 - Non-destructive processing
 - Step-by-step pipelines (RAW → EDIT → EXPORT)
-✔ Logs in a human-readable format
+* Logs in a human-readable format
 Each project supports:
 ```bash
 .log — Production history timeline
