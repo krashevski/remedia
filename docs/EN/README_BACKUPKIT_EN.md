@@ -69,4 +69,4 @@ Support: ChatGPT + project documentation
 
 - MEDIA SYSTEM (mediasystem) [README_MEDIASYSTEM_EN.md](README_MEDIASYSTEM_EN.md)
 - PRODUCTION MEDIA PANEL (mediopanel) [README_MEDIAPANEL_EN.md](README_MEDIAPANEL_EN.md)
-- REINCARNATION MEDIA (remedia) [../../README.md](../../README.md)
+- REINCARNATION MEDIA (remedia) [README.md](../../README.md)

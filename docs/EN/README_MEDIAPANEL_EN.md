@@ -143,4 +143,4 @@ Support: ChatGPT and project documentation
 
 - MEDIA SYSTEM (mediasystem) [README_MEDIASYSTEM_EN.md](README_MEDIASYSTEM_EN.md)
 - REINCARNATION BACKUP KIT (backupkit) [README_BACKUPKIT_EN.md](README_BACKUPKIT_EN.md)
-- REINCARNATION MEDIA (remedia) [../../README_EN.md](../../README_EN.md)
+- REINCARNATION MEDIA (remedia) [README.md](../../README.md)
