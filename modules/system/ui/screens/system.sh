@@ -19,9 +19,10 @@ screen_system() {
     echo "2) Users home"
     echo "3) Create symlinks for user big directories"
     echo "4) DPKG system upgrade"
-    echo "5) CUDA tollkit"
-    echo "6) Manifest"
-    echo "7) NVIDIA display"
+    echo "5) NVIDIA display"
+    echo "6) CUDA tollkit"
+    echo "7) Manifest"
+    
     echo
     echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
     echo
@@ -32,9 +33,10 @@ screen_system() {
         2) screen_usres_home ;;
         3) system_symlinks_run ;; 
         4) screen_dpkg ;;
-        5) screen_cuda_tools ;;
-        6) screen_manifest ;;
-        7) screen_nvidia_display ;;
+        5) screen_nvidia_display ;;
+        6) screen_cuda_tools ;;
+        7) screen_manifest ;;
+
         0) return ;;
         *) echo "Invalid option" ;;
     esac
