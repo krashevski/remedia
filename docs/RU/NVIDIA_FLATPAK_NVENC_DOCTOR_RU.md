@@ -1,5 +1,7 @@
 # NVIDIA Flatpak NVENC Doctor / Heal
 
+[🇬🇧 English](../EN/NVIDIA_FLATPAK_NVENC_DOCTOR_EN.md) | [🇷🇺 Russian](NVIDIA_FLATPAK_NVENC_DOCTOR_RU.md)
+
 Модуль реализует сценарий `nvidia-flatpak-nvenc(8)` для Shotcut Flatpak.
 В MediaPanel System Status добавлены пункты **6) Shotcut Flatpak NVENC doctor** и **7) Shotcut Flatpak NVENC heal**.
 

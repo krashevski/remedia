@@ -1,5 +1,7 @@
 # NVIDIA Display Doctor / Heal
 
+[🇬🇧 English](../EN/NVIDIA_DISPLAY_DOCTOR_EN.md) | [🇷🇺 Russian](NVIDIA_DISPLAY_DOCTOR_RU.md)
+
 Модуль реализует ограниченный сценарий из `nvidia-display-restore(8)`:
 диагностика пропавшего NVIDIA-модуля после обновления ядра Ubuntu.
 
