@@ -1,6 +1,6 @@
 # SSD + HDD partitioning for Linux (optimized for editing in Shotcut)
 
-[🇬🇧 English](README_SSD_SETUP_EN.md) | [🇷🇺 Русский](../RU/README_SSD_SETUP_RU.md)
+[🇬🇧 English](README_SSD_SETUP_EN.md) | [🇷🇺 Русский](../RU/README_SSD_SETUP_RU.md)  | [🇰🇿 Қазақ тілі](../KZ/README_SSD_SETUP_KZ.md)
 
 **Author:** Vladislav Krashevskiy
 **Support:** ChatGPT
@@ -26,7 +26,7 @@ SSD + HDD partitioning and configuration for editing in Shotcut
 | `/mnt/shotcut` | 240 GB | ext4 | Shotcut working directory (caches, proxies, temporary renders). |
 | **Total** | ~478 GB | | There is a small reserve for SSD service blocks. |
 
-> ]!] Important: If you are installing Ubuntu in UEFI+GPT motherboard mode, a special ESP (EFI System Partition) is required; it must be marked correctly in the installer.
+> [!] Important: If you are installing Ubuntu in UEFI+GPT motherboard mode, a special ESP (EFI System Partition) is required; it must be marked correctly in the installer.
 When installing Ubuntu:
 1. On the SSD (e.g. /dev/sdc1), select EFI System Partition (or "Bootable EFI") in the Use as drop-down list.
 2. At the bottom, in the Device for bootloader installation field, specify the entire SSD drive (/dev/sdc), not the partition.
@@ -43,7 +43,6 @@ Post-installation check:
 | `/mnt/backups` (on the second hard drive) | Archive of old projects, backups. |
 
 > [!] An external USB hard drive is not suitable for backing up user data due to its slow performance.
-> [I]
 
 ## 🛠 Shotcut Setup
 
