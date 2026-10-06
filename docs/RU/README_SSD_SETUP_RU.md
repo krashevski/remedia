@@ -58,9 +58,3 @@
 
 Автор: Владислав Крашевский
 Поддержка: ChatGPT и документация проекта
-
-## См. также
-
-- Настройки Shotcut для быстрого редактирования и экспорта [README_SHOTCUT_RU.md](README_SHOTCUT_RU.md)
-- REINCARNATION MEDIA (remedia) [README_RU.md](README_RU.md)
-

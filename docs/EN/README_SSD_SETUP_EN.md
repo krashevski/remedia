@@ -2,9 +2,6 @@
 
 [🇬🇧 English](README_SSD_SETUP_EN.md) | [🇷🇺 Русский](../RU/README_SSD_SETUP_RU.md)  | [🇰🇿 Қазақ тілі](../KZ/README_SSD_SETUP_KZ.md)
 
-**Author:** Vladislav Krashevskiy
-**Support:** ChatGPT
-
 SSD + HDD partitioning and configuration for editing in Shotcut
 
 ---
@@ -66,7 +63,9 @@ Post-installation check:
 - **240–256 GB** — space can be allocated for the Shotcut cache, but the amount is limited.
 - **480 GB** — optimal balance: system, users, and installation on the SSD, data on the HDD.
 
-## See also
+## Contacts and Support
 
-- For connecting a second disk in Linux, see [README_DISK_EN.md](README_DISK_EN.md)
-- Shotcut settings for quick editing and export [README_SHOTCUT_EN.md](README_SHOTCUT_EN.md)
+Author: Vladislav Krashevsky
+Support: ChatGPT and project documentation
+
+
