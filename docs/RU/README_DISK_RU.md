@@ -96,7 +96,5 @@ BACKUP_DIR="/mnt/backups"
 ## См. также
 
 - SSD + HDD разметка для Linux (под монтаж в Shotcut) см. файл [README_SSD_SETUP_RU.md](README_SSD_SETUP_RU.md)
-- Переустановка операционной системы см. файл [README_REINSTALL_SYSTEM_RU.md](README_REINSTALL_SYSTEM_RU.md)
-- Backup Kit — Установка и Использование см. файл [README_ALL_RU.md](README_ALL_RU.md)
 
 
