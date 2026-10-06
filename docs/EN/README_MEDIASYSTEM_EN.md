@@ -69,13 +69,10 @@ To safely remove installed packages, Flatpak applications, and configuration fil
 
 ## Ubuntu vs. Debian
 
-| OS | First Run Notes | Common Problems and Solutions |
-
-| ----------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-
-| **Ubuntu** | - Usually contains up-to-date packages. <br> - Run with `sudo` when installing system packages. | - LTS versions may be missing some older dependencies. <br> - Make sure `curl`, `wget`, `git`, and `build-essential` are installed. |
-
-| **Debian** | - The standard stable version may be older; enabling `backports` may be required. <br> - Use `sudo` for APT commands. | - Missing dependencies (e.g. `python3-venv`, `ffmpeg`) often require manual installation. <br> - Some modules may not work on older library versions. |
+| OS          | First Run Notes                                                                               | Common Problems and Solutions                                                                      |
+| ----------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Ubuntu**  | Usually contains up-to-date packages. <br> Run with `sudo` when installing system packages. | LTS versions may be missing some older dependencies. <br> - Make sure `curl`, `wget`, `git`, and `build-essential` are installed. |
+| **Debian**  | The standard stable version may be older; enabling `backports` may be required. <br> Use `sudo` for APT commands. | Missing dependencies (e.g. `python3-venv`, `ffmpeg`) often require manual installation. <br> Some modules may not work on older library versions. |
 
 ### Quick setup tips for both systems:
 ```bash
