@@ -44,13 +44,6 @@ flatpak run org.shotcut.Shotcut
 - FullHD rendering can be done on the CPU without loading the GPU.
 - The GPU is used only if the NVIDIA driver and CUDA are installed.
 
-## Productivity Infographics
-
-<div align="center">
-
-[![Shotcut Infographics and Presets](../../images/Shotcut_presets_chart_ChatGPT.png)](../../images/Shotcut_presets_chart_ChatGPT.png) *Click to enlarge*
-</div>
-
 ## See also
 
 - SSD + HDD partitioning for Linux (for mounting in Shotcut) see [README_SSD_SETUP_EN.md](README_SSD_SETUP_EN.md)

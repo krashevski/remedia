@@ -46,14 +46,6 @@ flatpak run org.shotcut.Shotcut
 Автор: Владислав Крашевский
 Поддержка: ChatGPT и документация проекта
 
-
-### 📊 Инфографика производительности
-
-<div align="center">
-
-[![Инфографика Shotcut и пресеты](../../images/Shotcut_presets_chart_ChatGPT.png)](../../images/Shotcut_presets_chart_ChatGPT.png) *Нажмите для увеличения*
-</div>
-
 ## См. также
 
 - SSD + HDD разметка для Linux (под монтаж в Shotcut) см. файл [README_SSD_SETUP_RU.md](README_SSD_SETUP_RU.md)

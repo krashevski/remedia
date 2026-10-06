@@ -17,14 +17,14 @@ SSD + HDD partitioning and configuration for editing in Shotcut
 
 ## 📊 Recommended partitioning for a 480 GB SSD
 
-| Partition / Mount point | Size | FS | Purpose |
-|----------------------------|----------|------------------------------------------------------------------------|
-| `/boot/efi` | 512 MB | FAT32 | EFI boot (if using UEFI). |
-| `/` (root) | 50 GB | ext4 | System and programs. |
-| `swap` | 8 GB | swap | 16 GB of RAM is enough. For hibernation, set = RAM. |
-| `/home` | 180 GB | ext4 | User home directories, settings, documents, small data. |
-| `/mnt/shotcut` | 240 GB | ext4 | Shotcut working directory (caches, proxies, temporary renders). |
-| **Total** | ~478 GB | | There is a small reserve for SSD service blocks. |
+| Partition / Mount point | Size   | FS    | Purpose                                                          |
+|-------------------------|--------|-------|------------------------------------------------------------------|
+| `/boot/efi`             | 512 MB | FAT32 | EFI boot (if using UEFI).                                        |
+| `/` (root)              | 50 GB  | ext4  | System and programs.                                             |
+| `swap`                  | 8 GB   | swap  | 16 GB of RAM is enough. For hibernation, set = RAM.              |
+| `/home`                 | 180 GB | ext4  | User home directories, settings, documents, small data.          |
+| `/mnt/shotcut`          | 240 GB | ext4  | Shotcut working directory (caches, proxies, temporary renders).  |
+| **Total**               | ~478 GB|       | There is a small reserve for SSD service blocks.                 |
 
 > [!] Important: If you are installing Ubuntu in UEFI+GPT motherboard mode, a special ESP (EFI System Partition) is required; it must be marked correctly in the installer.
 When installing Ubuntu:
@@ -36,11 +36,11 @@ Post-installation check:
 
 ## 📂 HDD (e.g. 1–2 TB)
 
-| Mount point | Destination |
-|---------------------------------------------|----------------------------------|
-| `/mnt/storage` (on the third hard drive) | Source files (video, photos, music). |
-| `/home/user2` (on the third hard drive) | for user2 if is. |
-| `/mnt/backups` (on the second hard drive) | Archive of old projects, backups. |
+| Mount point                               | Destination                          |
+|-------------------------------------------|--------------------------------------|
+| `/mnt/storage` (on the third hard drive)  | Source files (video, photos, music). |
+| `/home/user2` (on the third hard drive)   | for user2 if is.                     |
+| `/mnt/backups` (on the second hard drive) | Archive of old projects, backups.    |
 
 > [!] An external USB hard drive is not suitable for backing up user data due to its slow performance.
 
@@ -68,7 +68,5 @@ Post-installation check:
 
 ## See also
 
-- For operating system reinstallation, see [README_REINSTALL_SYSTEM_EN.md](README_REINSTALL_SYSTEM_EN.md)
 - For connecting a second disk in Linux, see [README_DISK_EN.md](README_DISK_EN.md)
 - Shotcut settings for quick editing and export [README_SHOTCUT_EN.md](README_SHOTCUT_EN.md)
-- For installation and usage of Backup Kit, see [README_ALL_EN.md](README_ALL_EN.md)
