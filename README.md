@@ -110,7 +110,7 @@ Media environment management and workflow interface.
 System for restoring user data and system state.
 
 **See also**
-- REINCARNATION BACKUP KIT (backupkit) [README_BACKUPKIT_EN.md](README_BACKUPKIT_EN.md)
+- REINCARNATION BACKUP KIT (backupkit) [README_BACKUPKIT_EN.md](docs/EN/README_BACKUPKIT_EN.md)
 
 ### System Tools
 A set of diagnostic, monitoring, and maintenance tools.
