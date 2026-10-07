@@ -60,6 +60,9 @@ Remedia разработана для раздельного размещени�
 
 Remedia может работать и на одном диске, если пользователь заранее создаст подходящие каталоги/точки монтирования. Производительность и надёжность резервного копирования при этом будут ниже.
 
+**Смотри также**
+- SSD + HDD разметка для Linux (оптимизировано под монтаж в Shotcut) [README_SSD_SETUP_RU.md](README_SSD_SETUP_RU.md)
+
 ## 🚀 Установка
 
 ```bash
@@ -106,7 +109,7 @@ Pipeline-ориентированная система для медиа-про�
 Система восстановления пользовательских данных и состояния системы.
 
 **Смотри также**
-- REINCARNATION BACKUP KIT (backupkit) [README_BACKUPKIT_RU.md](README_BACKUPKIT_RU.md)
+- REINCARNATION BACKUP KIT [README_BACKUPKIT_RU.md](README_BACKUPKIT_RU.md)
 
 ### System Tools
 Набор инструментов диагностики, контроля и обслуживания.

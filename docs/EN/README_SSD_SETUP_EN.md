@@ -68,4 +68,8 @@ Post-installation check:
 Author: Vladislav Krashevsky
 Support: ChatGPT and project documentation
 
+## See also
+
+- REMEDIA [README.md](../../README.md)
+
 

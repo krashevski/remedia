@@ -64,6 +64,9 @@ Create and mount the necessary disk partitions or, for a minimal installation, t
 
 Remedia can also operate on a single drive, provided the user creates the appropriate directories or mount points beforehand. However, performance and backup reliability will be lower in this configuration.
 
+**See also**
+- SSD + HDD partitioning for Linux (optimized for editing in Shotcut) [README_SSD_SETUP_EN.md](../EN/README_SSD_SETUP_EN.md)
+
 ## 🚀 Installation
 
 ```bash
