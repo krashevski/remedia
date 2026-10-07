@@ -109,6 +109,9 @@ Media environment management and workflow interface.
 ### BackupKit (Reincarnation)
 System for restoring user data and system state.
 
+**See also**
+- REINCARNATION BACKUP KIT (backupkit) [README_BACKUPKIT_EN.md](README_BACKUPKIT_EN.md)
+
 ### System Tools
 A set of diagnostic, monitoring, and maintenance tools.
 
@@ -127,7 +130,7 @@ Manifest:
 * is used as a **trust anchor**
 * helps recover from system degradation
 
-## 🔍 Remedia Doctor (planned)
+## 🔍 Remedia Doctor
 
 Global system diagnostics:
 ```bash

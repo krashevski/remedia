@@ -105,6 +105,9 @@ Pipeline-ориентированная система для медиа-про�
 ### BackupKit (Reincarnation)
 Система восстановления пользовательских данных и состояния системы.
 
+**Смотри также**
+- REINCARNATION BACKUP KIT (backupkit) [README_BACKUPKIT_RU.md](README_BACKUPKIT_RU.md)
+
 ### System Tools
 Набор инструментов диагностики, контроля и обслуживания.
 
@@ -123,7 +126,7 @@ Manifest:
 * используется как **trust anchor**
 * помогает восстановлению при деградации системы
 
-## 🔍 Remedia Doctor (планируется)
+## 🔍 Remedia Doctor
 
 Глобальная диагностика системы:
 ```bash
