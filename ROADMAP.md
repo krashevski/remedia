@@ -204,3 +204,24 @@ echo "$(t UI_DELIVERY)"
 ### Design Goal
 > “A minimal, deterministic i18n system that works in pure Bash,
 > without external dependencies, but scales to multi-language UI”
+
+## 📖 Unified Help System
+
+Remedia aims to provide a unified help system through
+the `remedia system man` command.
+
+### Documentation Principle
+Each major Remedia module should have its own man page.
+Planned documentation includes:
+- `remedia(1)` — main command and capabilities.
+- `remedia-setup(8)` — installation and initial configuration.
+- `remedia-doctor(8)` — system health diagnostics.
+- `remedia-backup(8)` — backup and recovery.
+- `remedia-mediapanel(1)` — video production management.
+
+### Localization
+Man pages should be available in three languages:
+- English (`en`)
+- Russian (`ru`)
+- Japanese (`ja`)
+Documentation will be expanded incrementally as Remedia evolves.
