@@ -87,3 +87,7 @@ python3 tests/test_nvidia_flatpak_nvenc.py
 Документация Flatpak:
 - https://docs.flatpak.org/en/latest/flatpak-command-reference.html
 - https://docs.flatpak.org/en/latest/extension.html
+
+## Смотри также
+
+- REMEDIA [README_RU.md](README_RU.md)

@@ -89,3 +89,8 @@ yet been verified; checking a healthy system does not confirm the recovery branc
 Flatpak documentation:
 - https://docs.flatpak.org/en/latest/flatpak-command-reference.html
 - https://docs.flatpak.org/en/latest/extension.html
+
+## See also
+
+- REMEDIA [README.md](../../README.md)
+

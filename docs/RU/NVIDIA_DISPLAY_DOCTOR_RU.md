@@ -71,3 +71,7 @@ python3 tests/test_nvidia_display.py
 
 Основание: `nvidia-display-restore(8)` и официальная документация Ubuntu:
 https://ubuntu.com/server/docs/how-to/graphics/install-nvidia-drivers/
+
+## Смотри также
+
+- REMEDIA [README_RU.md](README_RU.md)

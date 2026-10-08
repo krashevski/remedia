@@ -68,3 +68,8 @@ The tests use temporary files and mock system commands.
 
 Reference: `nvidia-display-restore(8)` and official Ubuntu documentation:
 https://ubuntu.com/server/docs/how-to/graphics/install-nvidia-drivers/
+
+## See also
+
+- REMEDIA [README.md](../../README.md)
+

@@ -146,6 +146,11 @@ gpu       → SKIPPED
 SYSTEM HEALTH: 92%
 ```
 
+**Смотри также**
+- NVIDIA Display Doctor / Heal [NVIDIA_DISPLAY_DOCTOR_RU.md](NVIDIA_DISPLAY_DOCTOR_RU.md)
+- NVIDIA Flatpak NVENC Doctor / Heal [NVIDIA_FLATPAK_NVENC_DOCTOR_RU.m](NVIDIA_FLATPAK_NVENC_DOCTOR_RU.m)
+
+
 ## 🔐 Философия
 
 Remedia — это слой между пакетом и системой.
