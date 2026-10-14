@@ -6,7 +6,7 @@ The format is based on Keep a Changelog and semantic versioning.
 
 ## [Unreleased]
 
-## [1.3.0] - 2026-10-14
+## [1.4.0] - 2026-10-14
 
 ### Added
 - Added `Restore Compact Project` module to MediaPanel.
