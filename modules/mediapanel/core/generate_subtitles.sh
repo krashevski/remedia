@@ -81,7 +81,7 @@ generate_subtitles() {
         echo "  $short_dir"
         echo
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "No Shotcut MLT projects found for subtitle generation"
 
         return 1
@@ -133,7 +133,7 @@ generate_subtitles() {
 
         echo "[ERROR] Invalid selection: $choice"
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
              "Invalid subtitle MLT selection: $choice"
 
         return 1
@@ -279,7 +279,7 @@ generate_subtitles() {
         echo "[ERROR] Project directory not found:"
         echo "        $project_path"
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Project directory not found: $project_path"
 
         return 1
@@ -303,7 +303,7 @@ generate_subtitles() {
         echo "[ERROR] Main MLT project not found:"
         echo "        $mlt"
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Main MLT project not found: $mlt"
 
         return 1
@@ -314,7 +314,7 @@ generate_subtitles() {
         echo "[ERROR] Main MLT project is not readable:"
         echo "        $mlt"
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Main MLT project is not readable: $mlt"
 
         return 1
@@ -330,7 +330,7 @@ generate_subtitles() {
         echo "[ERROR] Whisper model not found:"
         echo "        $model"
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Whisper model not found: $model"
 
         return 1
@@ -341,7 +341,7 @@ generate_subtitles() {
         echo "[ERROR] Whisper model is not readable:"
         echo "        $model"
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Whisper model is not readable: $model"
 
         return 1
@@ -385,7 +385,7 @@ generate_subtitles() {
         echo "Install MLT or Shotcut Flatpak."
         echo
 
-        log_error "$project" "melt not found"
+        mediapanel_log_error "$project" "melt not found"
 
         return 1
     fi
@@ -399,7 +399,7 @@ generate_subtitles() {
 
         echo "[ERROR] melt is not executable"
 
-        log_error "$project" "melt is not executable"
+        mediapanel_log_error "$project" "melt is not executable"
 
         return 1
     fi
@@ -451,7 +451,7 @@ generate_subtitles() {
         echo "Expected Shotcut Flatpak whisper-cli."
         echo
 
-        log_error "$project" "whisper-cli not found"
+        mediapanel_log_error "$project" "whisper-cli not found"
 
         return 1
     fi
@@ -465,7 +465,7 @@ generate_subtitles() {
 
         echo "[ERROR] whisper-cli is not executable"
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "whisper-cli is not executable"
 
         return 1
@@ -494,7 +494,7 @@ generate_subtitles() {
 
             echo "[ERROR] Cannot remove existing WAV"
 
-            log_error "$project" \
+            mediapanel_log_error "$project" \
                 "Cannot remove existing subtitle WAV"
 
             return 1
@@ -533,7 +533,7 @@ generate_subtitles() {
         echo "        Exit code: $rc"
         echo
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Subtitle WAV rendering failed (exit code $rc)"
 
         rm -f "$wav"
@@ -552,7 +552,7 @@ generate_subtitles() {
         echo "[ERROR] WAV was not created or is empty."
         echo
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Subtitle WAV missing or empty"
 
         rm -f "$wav"
@@ -603,7 +603,7 @@ generate_subtitles() {
         echo "        Exit code: $rc"
         echo
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Whisper transcription failed (exit code $rc)"
 
         rm -f "$srt_new"
@@ -622,7 +622,7 @@ generate_subtitles() {
         echo "[ERROR] Whisper did not create subtitles_new.srt."
         echo
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Whisper produced no SRT"
 
         return 1
@@ -653,7 +653,7 @@ generate_subtitles() {
         echo "[ERROR] Failed to create backup:"
         echo "        $srt_bak"
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Failed to create subtitles_new.srt.bak"
 
         return 1
@@ -699,7 +699,7 @@ generate_subtitles() {
 
         echo "[ERROR] Cannot create temporary SRT"
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Cannot create temporary SRT file"
 
         return 1
@@ -785,7 +785,7 @@ generate_subtitles() {
         echo "[ERROR] Failed to process SRT."
         echo
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Failed to remove adjacent duplicate subtitles"
 
         return 1
@@ -805,7 +805,7 @@ generate_subtitles() {
         echo "        Original subtitles were preserved."
         echo
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Processed subtitles_final.srt would be empty"
 
         return 1
@@ -825,7 +825,7 @@ generate_subtitles() {
         echo "        $srt_final"
         echo
 
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Cannot install subtitles_final.srt"
 
         return 1

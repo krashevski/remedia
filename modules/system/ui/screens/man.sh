@@ -13,9 +13,10 @@ screen_man() {
         echo
         echo "1) Install man pages"
         echo "2) Doctor"
-        echo "3) Open users-home-restore"
-        echo "4) Open nvidia-display-restore"
-        echo "5) Open nvidia-flatpak-nvenc"
+        echo "3) Open remedia"
+        echo "4) Open users-home-restore"
+        echo "5) Open nvidia-display-restore"
+        echo "6) Open nvidia-flatpak-nvenc"
         echo
         echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
         echo
@@ -24,9 +25,10 @@ screen_man() {
         case "$c" in
             1) remedia system man install ;;
             2) remedia system man doctor ;;
-            3) remedia system man open users-home-restore ;;
-            4) remedia system man open nvidia-display-restore ;;
-            5) remedia system man open nvidia-flatpak-nvenc ;;
+            3) remedia system man open remedia ;;
+            4) remedia system man open users-home-restore ;;
+            5) remedia system man open nvidia-display-restore ;;
+            6) remedia system man open nvidia-flatpak-nvenc ;;
             0) return ;;
             *) echo "Invalid option" ;;
         esac

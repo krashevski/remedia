@@ -6,13 +6,195 @@ The format is based on Keep a Changelog and semantic versioning.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-14
+
+### Added
+- Added `Restore Compact Project` module to MediaPanel.
+- Added safe extraction of compact project archives.
+- Added Shotcut MLT resource path restoration.
+- Added validation of Shotcut stabilization dependencies.
+- Added detection of intermediate scene resources requiring regeneration.
+- Added dry-run support for compact project restoration.
+- Added Compact and Full project archive modes to MediaPanel.
+- Added Shotcut MLT dependency validation before compact archiving.
+- Added support for resolving Shotcut stabilization files beside MLT projects.
+- Added special handling for regenerable Full Pipeline scene references.
+- Added support for Shotcut stabilization files stored beside MLT projects.
+- Added interactive YouTube delivery queue archiving.
+- Added "Archive YouTube Queue Jobs" to the MediaPanel Export menu.
+- Added explicit user confirmation before archiving queue jobs.
+- Added preservation of archived jobs in `delivery/archived-jobs/`.
+- Added interactive YouTube API Setup menu to MediaPanel.
+- Added automatic detection of Python dependencies and OAuth credentials.
+- Added OAuth authorization and token validation.
+- Added automatic OAuth access token refresh support.
+- Added read-only YouTube API connection test.
+- Added interactive Google Cloud setup instructions.
+- Implemented YouTube Data API v3 integration for MediaPanel.
+- Added OAuth 2.0 desktop authorization with persistent credentials.
+- Added Python 3 uploader with resumable uploads and progress reporting.
+- Added YouTube delivery queue worker with sequential processing
+  of VIDEO and SHORT.
+- Added persistent upload results, including YouTube video IDs,
+  URLs and timestamps.
+- Added OAuth 2.0 desktop authorization with persistent credentials.
+- Implemented YouTube Data API v3 upload backend for MediaPanel.
+- Added OAuth 2.0 desktop authorization with persistent credentials.
+- Added resumable video uploads with progress reporting.
+- Added YouTube delivery queue worker.
+- Added persistent YouTube video IDs, URLs and upload timestamps
+  to delivery queue jobs.
+- Added `Stabilizer_Gimbal_High_magnification` filter preset
+  for video recorded with a gimbal at high magnification.
+  * High-accuracy stabilization (`accuracy=10`).
+  * Strong motion smoothing (`smoothing=50`).
+  * Additional stabilization zoom (`zoom=50`).
+  * Two-stage noise reduction (HQDN3D + Vague Denoiser).
+  * Additional framing using Size, Position & Rotate.
+  * Removed the project-specific `.stab` filename to make
+    the preset reusable across different video projects.
+  * Verified that Shotcut correctly generates a new `.stab`
+    file when applying the preset without a predefined filename.
+  * Successfully tested rendering through MediaPanel.
+- Added Shotcut-compatible Reframe export support to MediaPanel.
+- Added automatic generation of temporary MLT export jobs for
+  vertical Shorts using the original Shotcut Output Reframe geometry.
+- Added automatic timeline duration detection for Reframe export jobs.
+- Added NVENC troubleshooting guidance directing users to
+  MediaPanel System Status → Doctor / Heal.
+
 ### Changed
+- Reduced compact archive contents to essential project directories:
+  `video/`, `short/`, `edit/`, `subtitles/`, and an empty `media/`.
+- Excluded regenerable `scenes/` and `audio/` directories.
+- Preserved Shotcut projects, stabilization data, and publication metadata.
+- Excluded regenerable intermediate directories from compact archives.
+- Skipped scene dependency checks for original Full Pipeline MLT projects.
+- Preserved strict dependency validation for edited Shotcut projects.
+- Added Full and Compact archive modes.
+- Improved YouTube delivery queue management.
+- Preserved media files and publication metadata during job archiving.
+- Excluded archived jobs from active queue processing.
+- Improved YouTube Queue Status presentation.
+- Replaced technical job identifiers with readable media filenames.
+- Added display of all media files in multi-item delivery jobs.
+- Preserved complete job history, including completed uploads.
+- Added clear queue summary for completed, queued and failed jobs.
+- Unified YouTube queue status presentation with the processing menu.
+- Improved YouTube delivery queue presentation.
+- Displayed media filenames and job statuses instead of
+  internal JSON job identifiers.
+- Filtered completed jobs from the processing menu.
+- Limited selectable jobs to `queued` and `failed` statuses.
+- Added multi-file job indicators.
+- Preserved the existing YouTube Worker execution workflow.
+- Replaced the standalone YouTube API dependencies installer
+  with the unified YouTube API Setup menu.
+- Updated Export Render to preserve existing successful MP4 files
+  until replacement renders complete successfully.
+- Improved separation between project-level logging and
+  system-level logging.
+- Added the main `remedia(1)` manual page documenting
+  the Remedia CLI, architecture, system components,
+  configuration, storage layout, and diagnostic tools.
+- Extended the unified Remedia documentation system
+  with a standard Linux manual entry point.
+- Extended the Remedia System Man installer to support
+  both `man1` and `man8` documentation sections.
+- Expanded multilingual man page support to four languages:
+  English, Russian, Japanese, and Kazakh.
+- Improved installation output, error handling,
+  and installed-page counting.
 - Updated **Launch Shotcut** to support multiple Shotcut `.mlt` projects within a single Remedia project:
-  - automatically discovers all `.mlt` files in the project's `video/` and `short/` directories;
-  - displays available projects dynamically as `[VIDEO]` and `[SHORT]`;
-  - allows switching between multiple video and Short edits without leaving the Remedia project;
-  - preserves access to the original generated video and Short `.mlt` projects alongside additional user-created edits;
-  - launches Shotcut from the selected `.mlt` file's directory to preserve relative project resources such as stabilization `.stab` files.
+  * automatically discovers all `.mlt` files in the project's `video/` and `short/` directories;
+  * displays available projects dynamically as `[VIDEO]` and `[SHORT]`;
+  * allows switching between multiple video and Short edits without leaving the Remedia project;
+  * preserves access to the original generated video and Short `.mlt` projects alongside additional user-created edits;
+  * launches Shotcut from the selected `.mlt` file's directory to preserve relative project resources such as stabilization `.stab` files.
+
+### Fixed
+- Prevented unnecessary YouTube delivery jobs when all selected
+  media files have already been uploaded.
+- Added an explicit completion message with existing YouTube URLs.
+- Preserved publication metadata and YouTube video IDs.
+- Kept existing mixed-job handling for uploaded and queued items.
+- Added support for transitioning YouTube metadata from
+  `ready_for_upload` to `queued`.
+- Fixed automatic delivery enqueue after manual upload preparation.
+- Preserved existing YouTube metadata during delivery mode changes.
+- Aligned YouTube Worker queue path with MediaPanel state directory.
+- Fixed delivery enqueue logic to preserve previously uploaded
+  video metadata and YouTube IDs.
+- Added cross-job duplicate upload protection.
+- Added detection of inconsistent publication metadata.
+- Added cross-job duplicate upload protection to YouTube Worker.
+- Added detection of previously uploaded videos using
+  per-video `.youtube.json` metadata.
+- Restored existing YouTube video IDs and URLs into new
+  delivery jobs without re-uploading media.
+- Added safety checks for inconsistent or uncertain
+  YouTube publication metadata.
+- Aligned YouTube Worker queue path with MediaPanel state directory:
+  `$REMEDIA_VAR/mediapanel/delivery/queue`.
+- Fixed YouTube delivery worker queue path resolution.
+- Aligned YouTube Worker state directory with MediaPanel
+  (`$REMEDIA_VAR/mediapanel/delivery/queue`).
+- Preserved support for custom `REMEDIA_VAR` and `--state-dir`.
+- Fixed MediaPanel export failures caused by incorrect Reframe
+  geometry and output profile configuration.
+- Fixed NVENC export failures caused by incompatible interlaced
+  encoding parameters in generated MLT jobs.
+- Fixed a logging function name collision that could terminate
+  MediaPanel after an export failure.
+- Fixed unsafe error handling during render failures.
+
+### Verified
+- Successfully restored compact archive of project `019_День культуры Японии`.
+- Restored 13 Shotcut MLT projects.
+- Repaired 285 MLT properties.
+- Resolved 26 stabilization dependencies with no missing files.
+- Verified no missing non-pipeline media dependencies.
+- Verified no unresolved external media references.
+- Confirmed original project remained unchanged.
+- Successfully created a compact archive of project 019.
+- Verified archive integrity using tar.
+- Successfully extracted the archive to a separate SSD directory.
+- Verified preservation of all 13 Shotcut MLT projects.
+- Verified preservation of stabilization files.
+- Confirmed empty `media/` and exclusion of intermediate directories.
+- Reduced archive size from approximately 48.2 GB to 17.48 GB.
+- Successfully checked 13 Shotcut MLT projects.
+- Skipped 250 regenerable pipeline scene references.
+- Resolved 11 Shotcut stabilization references.
+- Confirmed retained media dependencies passed validation.
+- Verified automatic job status transition to `completed`.
+- Verified uploaded media item status transition to `uploaded`.
+- OAuth credentials successfully recognized.
+- OAuth token validation passed.
+- YouTube API connection successfully established.
+- Authorized YouTube channel successfully identified.
+- Read-only connection test completed without video upload.
+- Verified successful creation of a YouTube delivery job
+  from metadata previously marked `ready_for_upload`.
+- Successfully uploaded a private YouTube Short through MediaPanel.
+- Successfully processed a combined VIDEO + SHORT delivery job.
+- Verified that an already uploaded Short is skipped while
+  a new full-length video is uploaded.
+- Verified successful completion of the delivery job with
+  two distinct YouTube video IDs.
+- Verified persistence of upload results in queue JSON.
+- Passed isolated offline tests for enqueue and worker logic.
+- Verified duplicate upload prevention using mocked
+  YouTube uploader and isolated test files.
+- Verified restoration of existing YouTube video IDs
+  into newly created delivery jobs.
+- Verified synchronization of upload status between delivery jobs
+  and per-video `.youtube.json` metadata.
+- Successfully uploaded a private YouTube Short through MediaPanel
+  using OAuth 2.0 and YouTube Data API v3.
+- Verified that completed delivery jobs retain YouTube video IDs,
+  publication URLs and upload timestamps.
+- Verified successful job completion and persistence of upload results.
 
 ## [1.3.0] - 2026-10-04
 

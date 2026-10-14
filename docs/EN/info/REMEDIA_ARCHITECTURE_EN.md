@@ -261,7 +261,7 @@ UI is secondary.
 
 ## 📎 Conclusion
 
-Remedia is not just a tool.
+Remedia is not just a tool. Architecturally, REMEDIA is a mini-operating system—or simply a runtime environment—for video production.
 It is an attempt to create:
 > a managed operating environment on top of Linux,
 where:

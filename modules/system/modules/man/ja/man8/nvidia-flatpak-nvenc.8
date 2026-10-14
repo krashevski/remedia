@@ -1,0 +1,162 @@
+.TH NVIDIA-FLATPAK-NVENC 8 "2026年9月" "Remedia" "システム管理"
+.ad l
+.nh
+.SH 名前
+nvidia-flatpak-nvenc \- Shotcut FlatpakにおけるNVENCの診断と復旧
+.SH 説明
+Shotcut Flatpakでは、
+.B h264_nvenc
+エンコーダーがリストに表示されていても、
+.BR "Cannot load libcuda.so.1"
+というエラーが発生し、使用できない場合があります。これは、NVIDIAドライバーの更新後、読み込まれたドライバーのバージョンに対応するFlatpak用NVIDIA GL拡張機能が不足している場合に起こり得ます。ホスト上で
+.B nvidia-smi
+が正常に動作していても、Flatpak内部でCUDAが利用可能であるとは限りません。
+.PP
+この手順はShotcut FlatpakのNVENCに関するものです。もし
+.B nvidia-smi
+がドライバーと通信できない場合は、まずホスト側のドライバーを調査してください。
+.BR nvidia-display-restore (8)
+を参照してください。 .SH 症状を参照してください。
+.SH 症状
+.IP \(bu 2
+NVENCを使用したMediaPanelの書き出しが失敗し、
+.BR "Cannot load libcuda.so.1"
+というエラーが報告される。
+.IP \(bu 2
+ホスト上では
+.B nvidia-smi
+が動作するが、Shotcut Flatpak版での実際のNVENCエンコードは失敗する。
+.IP \(bu 2
+Flatpak環境内で
+.B ffmpeg -encoders
+を実行すると
+.B h264_nvenc
+がリストに表示されるが、実際にはエンコーダを起動できない。
+.SH 診断
+.SS "ホストのドライバとShotcutのインストール状況を確認する"
+.RS
+.nf
+nvidia-smi
+flatpak info org.shotcut.Shotcut
+flatpak --gl-drivers
+.fi
+.RE
+.PP
+.BR nvidia-smi
+で報告されたドライババージョンを確認します。
+NVIDIA GL拡張機能は、読み込まれているドライバの完全なバージョンと一致している必要があります。
+例えば、ドライバ
+.B 595.91.07
+は
+.BR org.freedesktop.Platform.GL.nvidia-595-91-07//1.4
+に対応します。
+古いバージョンの拡張機能がインストールされていても、この一致条件は満たされません。
+.SS "一致する拡張機能を特定し、確認する"
+.RS
+.nf
+driver_version=$(nvidia-smi --query-gpu=driver_version \
+--format=csv,noheader | sed -n '1p')
+if [[ "$driver_version" =~ ^[0-9]+(\e.[0-9]+)+$ ]]; then
+driver_ref="org.freedesktop.Platform.GL.nvidia-${driver_version//./-}//1.4"
+printf '%s\en' "$driver_ref"
+flatpak info "$driver_ref"
+else
+printf 'Invalid driver version\en' >&2
+fi
+.fi
+.RE
+.PP
+これをBashで実行してください。もし
+.B flatpak info
+がその正確な参照先を見つけられない場合は、利用可能性を確認してください。インストールを検討する前に、Flathub リモートが設定されていることを確認してください。
+近いバージョンのドライバーを選択したり、Doctor 内に特定のバージョンを
+ハードコードしたりしないでください。
+.SS "Shotcut Flatpak 内での実際の NVENC エンコードのテスト"
+.RS
+.nf
+flatpak run --command=ffmpeg org.shotcut.Shotcut \
+-hide_banner -f lavfi -i testsrc2=size=640x360:rate=30 \
+-t 1 -c:v h264_nvenc -f null -
+printf 'Exit status: %s\en' "$?"
+.fi
+.RE
+.PP
+終了ステータスが 0 であり、30 フレームがエンコードされたことが確認できれば、
+この簡易テストは成功です。null 出力では動画ファイルは書き出されません。
+128x128 のテストフレームは一部の NVIDIA エンコーダーには小さすぎるため、
+誤った失敗と判断される可能性があります。エンコーダーの一覧を表示するだけでは、
+エンコードテストの代わりにはなりません。
+.SH 復旧
+.SS "利用可能な場合は適合する拡張機能をインストールする"
+ホストドライバーが動作しており、適合する拡張機能が存在せず、
+かつユーザーが明示的に修復を要求した場合は、設定済みの Flathub リモートを確認してください。
+.RS
+.nf
+flatpak remote-info flathub "$driver_ref"
+.fi
+.RE
+.PP
+その正確なリファレンスが利用可能な場合は、インストールを行います。
+.RS
+.nf
+flatpak install flathub "$driver_ref"
+.fi
+.RE
+.PP
+適切な Flatpak インストールスコープと設定済みリモートを使用してください。
+Flatpak にはユーザー単位とシステム単位のインストールが存在し得ます。
+Doctor は Shotcut のインストール場所を特定し、利用不可能なスコープに
+インストールされた拡張機能を「十分なもの」として扱わないようにする必要があります。
+インストール時には大きなランタイムがダウンロードされる可能性があり、
+承認が必要になる場合があります。監査モード（audit mode）中に実行してはいけません。
+.PP
+正確な拡張機能が利用できない場合やインストールに失敗した場合は、
+その理由を報告してください。異なるドライバーバージョンの拡張機能を
+インストールしたり、単にこの Flatpak 拡張機能と適合させるためだけに
+ホストドライバーを変更したりしないでください。
+.SH 検証
+その簡易テストを繰り返してください。インストール後に640x360のエンコードテストを行います。成功した場合は、
+NVENCを使用してMediaPanelのエクスポートを再試行します。失敗した場合は、
+診断出力を保持し、CPU上の
+.B libx264
+を使用してMediaPanelのエクスポートを行います。テストが成功しても、すべてのMLTプロジェクトや
+フィルタが正常にレンダリングされるとは限りません。実際のエクスポート結果を確認してください。
+.SH 自動化ポリシー
+Remedia Doctorは、ホストドライバの状態、読み込まれたドライバのバージョン、
+必要なFlatpak拡張機能とインストール済みの拡張機能、および実際の
+NVENCエンコードの結果を報告する必要があります。デフォルトのモードは「監査と報告」です。
+.B ffmpeg -encoders
+や
+.B nvidia-smi
+の出力のみに基づいて、NVENCが使用可能かどうかを判断してはなりません。
+.PP
+修復は、ユーザーが選択して行う別個のアクションです。インストール前に、Doctorは
+正確な拡張機能の参照先を表示し、その利用可能性を確認する必要があります。
+この修復の一環として、異なるドライバシリーズをインストールしたり、ホストのNVIDIAドライバを変更したり、
+古いFlatpak拡張機能を削除したりしてはなりません。修復が不可能な場合や検証に失敗した場合は、
+フォールバックとしてCPUによるエクスポートを報告してください。
+.SH REMEDIAコマンド
+.RS
+.nf
+remedia system nvidia-flatpak-nvenc doctor
+remedia system nvidia-flatpak-nvenc heal
+remedia system nvidia-flatpak-nvenc doctor --scope=system
+.fi
+.RE
+.PP
+これらのコマンドは、sudoを使用せず、デスクトップユーザーとして実行してください。システムへのインストール権限は、Flatpak自体によって要求されます。MediaPanelの「System Status（システム状態）」には、NVIDIA Flatpak向けの「NVENC Doctor」および「Heal（修復）」機能が個別に含まれています。
+全体的な「System Doctor」は、Shotcutのエンコードテストを実行しません。
+.PP
+Doctorは、インストール済みのShotcutの参照先（ref）とインストール環境を特定して選択します。
+複数のコピーやブランチが存在する場合は、`--scope=user`、`--scope=system`、または`--scope=NAME`と`--branch=BRANCH`を使用してください。設定済みのリモートを選択するには`--remote=REMOTE`を使用します（デフォルトは`flathub`です）。リモートが自動的に追加されることはありません。
+.PP
+この監査（audit）では、640x360解像度で30フレームのテストを行い、タイムアウトは45秒に設定されています。成功とみなされるには、終了ステータスが0であること、30フレームが処理されること、そして最後に`progress=end`という記録が出力されることが必要です。
+NVIDIAモジュールがロードされていない場合、モジュールの暗黙的なロードを避けるために`nvidia-smi`の実行はスキップされます。その場合は、まず`nvidia-display doctor`でホスト環境を診断してください。
+.PP
+「Heal（修復）」機能は、エンコードが失敗し、かつ選択したShotcutのインストール環境に特定の拡張機能（extension）が不足しており、必要なGLドライバーが有効で、選択したリモートに該当するアーキテクチャ/参照先（ref）が存在する場合にのみ利用可能です。実行の確認には、拡張機能の完全な短い参照名（short extension reference）の入力が必要です。インストール時には`--no-related`および`--no-deps`オプションが使用されます。ホストドライバーやオーバーライド設定は変更されず、古い拡張機能も削除されません。インストール後、実際のエンコード処理が再度実行されます。エンコードに失敗した拡張機能については、単に再インストールを試みるのではなく、手動での調査が必要です。
+.SH 関連項目
+nvidia-display-restore(8), nvidia-smi(1), flatpak(1), ffmpeg(1)
+.SH 著者
+Remedia Project
+.SH 状態
+Remedia Doctor/Healの実装済み。実機での復旧検証は未実施。

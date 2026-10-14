@@ -76,9 +76,13 @@ sudo apt install remedia_1.3.0_all.deb
 Dependencies:
 * bash >= 5.0
 * coreutils
+* python3 >= 3.8
+
 Recommended:
 * util-linux
 * findutils
+* python3-venv
+* python3-pip
 
 ## 🖥 Usage
 
@@ -186,7 +190,7 @@ Support: ChatGPT
 
 ## 📌 Status
 
-Version: **1.3.0**
+Version: **1.4.0**
 The project is in active development:
 * contract stabilization
 * runtime improvements

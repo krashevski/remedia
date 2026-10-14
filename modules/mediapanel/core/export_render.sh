@@ -31,6 +31,7 @@ import os
 import sys
 from pathlib import Path
 import xml.etree.ElementTree as ET
+import re
 
 source = Path(sys.argv[1]).absolute()
 target = Path(sys.argv[2])
@@ -82,11 +83,67 @@ try:
         if "filename" in props:
             props["filename"].text = str(resolved)
         print(f"[INFO] Stabilization results: {resolved}")
+    # The Shotcut Reframe output filter requires export-time conversion.
+    # Capture a static rectangle as metadata; reject animated/unknown formats
+    # rather than silently exporting a landscape SHORT.
+    reframes = []
+    for tractor in root.iter("tractor"):
+        for filt in tractor.findall("filter"):
+            props = {p.get("name"): (p.text or "") for p in filt.findall("property")}
+            if props.get("shotcut:filter") == "reframe" and props.get("disable") != "1":
+                reframes.append(props)
+    if len(reframes) > 1:
+        raise ValueError("Multiple enabled Reframe filters; cannot select safely")
+    if reframes:
+        value = reframes[0].get("rect", "").strip()
+        if not re.fullmatch(r"-?\d+(?:\.\d+)?(?:px)?[ ,]+-?\d+(?:\.\d+)?(?:px)?[ ,]+\d+(?:\.\d+)?(?:px)?[ ,]+\d+(?:\.\d+)?(?:px)?(?:[ ,]+(?:[01](?:\.\d+)?))?", value):
+            raise ValueError("Reframe has keyframes or unsupported rectangle: " + value +
+                             "; use Shotcut export for animated Reframe")
+        nums = [float(x.removesuffix("px")) for x in re.split(r"[ ,]+", value)[:4]]
+        x, y, w, h = map(round, nums)
+        profile = root.find("profile")
+        if profile is None:
+            raise ValueError("Missing MLT profile for Reframe")
+        pw, ph = int(profile.get("width", "0")), int(profile.get("height", "0"))
+        if not (pw > 0 and ph > 0 and w > 0 and h > 0
+                and w % 2 == 0 and h % 2 == 0
+                and x >= 0 and y >= 0 and x + w <= pw and y + h <= ph):
+            raise ValueError(f"Invalid Reframe crop: {x},{y} {w}x{h} in {pw}x{ph}")
+        print(f"[REFRAME] {x} {y} {w} {h} / profile {pw}x{ph}")
     tree.write(target, encoding="utf-8", xml_declaration=True)
 except (OSError, ET.ParseError, ValueError) as exc:
     print(f"[ERROR] {exc}", file=sys.stderr)
     sys.exit(1)
 PY_MLT
+}
+
+export_nvenc_help() {
+    echo
+    echo "[WARNING] Shotcut Flatpak NVENC is unavailable."
+    echo "MediaPanel -> SYSTEM STATUS:"
+    echo "  6) Shotcut Flatpak NVENC doctor"
+    echo "  7) Shotcut Flatpak NVENC heal"
+    echo "CLI: remedia system nvidia-flatpak-nvenc doctor"
+    echo "CLI: remedia system nvidia-flatpak-nvenc heal"
+    echo "[INFO] No automatic repairs will be performed."
+    echo
+}
+
+# Read an enabled static Reframe rectangle from Output (tractor).
+# Do not guess keyframed motion. The preparation step validates geometry.
+export_reframe_geometry() {
+    python3 - "$1" <<'PY_REF'
+import sys, re, xml.etree.ElementTree as ET
+root=ET.parse(sys.argv[1]).getroot()
+for tractor in root.iter('tractor'):
+    for filt in tractor.findall('filter'):
+        props={p.get('name'): (p.text or '') for p in filt.findall('property')}
+        if props.get('shotcut:filter') == 'reframe' and props.get('disable') != '1':
+            rect=props.get('rect','').strip()
+            vals=[int(round(float(x.removesuffix('px')))) for x in re.split(r'[ ,]+',rect)[:4]]
+            print(*vals)
+            sys.exit(0)
+PY_REF
 }
 
 export_render() {
@@ -106,7 +163,7 @@ export_render() {
     local -a selected_files=()
 
     if [[ ! -d "$project_dir" ]]; then
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "Project directory not found: $project_dir"
 
         echo
@@ -118,7 +175,7 @@ export_render() {
     fi
 
     mkdir -p "$video_dir" "$short_dir" || {
-        log_error "$project" \
+        mediapanel_log_error "$project" \
         "Cannot create video/short directories"
         return 1
     }
@@ -147,7 +204,7 @@ export_render() {
 )
 
     if (( ${#files[@]} == 0 )); then
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "No Shotcut MLT projects found"
 
         echo
@@ -220,7 +277,7 @@ export_render() {
                (( choice < 1 ||
                   choice > ${#files[@]} )); then
 
-                log_error "$project" \
+                mediapanel_log_error "$project" \
                     "Invalid export selection: $choice"
 
                 echo "[ERROR] Invalid selection: $choice"
@@ -238,7 +295,7 @@ export_render() {
     fi
 
     if (( ${#selected_files[@]} == 0 )); then
-        log_error "$project" \
+        mediapanel_log_error "$project" \
             "No MLT projects selected"
         return 1
     fi
@@ -282,7 +339,7 @@ export_render() {
 
     else
 
-        log_error "$project" "melt not found"
+        mediapanel_log_error "$project" "melt not found"
 
         echo
         echo "[ERROR] MLT render engine 'melt' is not available."
@@ -304,7 +361,7 @@ export_render() {
 
     if [[ -z "$melt_version" ]]; then
 
-        log_error "$project" "melt is not executable"
+        mediapanel_log_error "$project" "melt is not executable"
 
         echo
         echo "[ERROR] melt was found but could not be executed."
@@ -365,6 +422,9 @@ export_render() {
 
                 log_warn "h264_nvenc unavailable inside MLT/Shotcut environment"
                 log_info "Using CPU encoder libx264"
+                if [[ "${MELT_CMD[0]}" == "flatpak" ]]; then
+                    export_nvenc_help
+                fi
 
             fi
 
@@ -391,6 +451,9 @@ export_render() {
     local rc
     local render_mlt
     local rendered=0
+    local -a REFRAME_ARGS=()
+    local render_target
+    local ref_x ref_y ref_w ref_h ref_gcd
 
     for mlt in "${selected_files[@]}"; do
 
@@ -412,17 +475,20 @@ export_render() {
                   ;;
 
               *)
-                  log_error "$project" \
+                  mediapanel_log_error "$project" \
                   "Unknown MLT project type: $mlt"
                   return 1
                   ;;
           esac
 
         [[ -r "$mlt" ]] || {
-            log_error "$project" \
+            mediapanel_log_error "$project" \
                 "MLT project is not readable: $mlt"
             return 1
         }
+
+        # Render to a temporary MP4; leave existing successful output intact.
+        render_target="$(mktemp "$render_dir/.remedia-output-XXXXXXXX.mp4")" || return 1
 
         # ----------------------------------------------------
         # BUILD MLT CONSUMER
@@ -433,7 +499,7 @@ export_render() {
         if [[ "$encoder" == "h264_nvenc" ]]; then
             CONSUMER_ARGS=(
                 -consumer
-                "avformat:$out"
+                "avformat:$render_target"
                 vcodec=h264_nvenc
                 acodec=aac
                 ab=192k
@@ -441,11 +507,12 @@ export_render() {
                 preset=p5
                 cq=19
                 pix_fmt=yuv420p
+                progressive=1
             )
         else
             CONSUMER_ARGS=(
                 -consumer
-                "avformat:$out"
+                "avformat:$render_target"
                 vcodec=libx264
                 acodec=aac
                 ab=192k
@@ -453,36 +520,59 @@ export_render() {
                 crf=18
                 preset=slow
                 pix_fmt=yuv420p
+                progressive=1
             )
         fi
 
         # Validate stabilization before touching any existing MP4.
         command -v python3 >/dev/null 2>&1 || {
-            log_error "$project" "python3 is required for MLT path validation"
+            mediapanel_log_error "$project" "python3 is required for MLT path validation"
             return 1
         }
 
         render_mlt="$(mktemp "$render_dir/.remedia-render-XXXXXX.xml")" || return 1
         if ! export_prepare_render_mlt "$mlt" "$render_mlt"; then
-            rm -f -- "$render_mlt"
-            log_error "$project" "Stabilization validation failed: $mlt"
+            rm -f -- "$render_mlt" "$render_target"
+            mediapanel_log_error "$project" "Stabilization/Reframe validation failed: $mlt"
             return 1
         fi
 
         # ----------------------------------------------------
-        # REMOVE OLD OUTPUT
+        # SHOTCUT REFRAME -> MLT AFFINE (static rectangle)
         # ----------------------------------------------------
-
-        if [[ -f "$out" ]]; then
-            log_warn "Removing existing export: $out"
-
-            rm -f "$out" || {
-                log_error "$project" \
-                    "Cannot remove existing output: $out"
-                rm -f -- "$render_mlt"
-                return 1
-            }
+        REFRAME_ARGS=()
+        local reframe_geometry=""
+        reframe_geometry="$(export_reframe_geometry "$render_mlt")" || {
+            rm -f -- "$render_mlt" "$render_target"
+            echo "[ERROR] Cannot read Shotcut Reframe geometry."
+            return 1
+        }
+        if [[ -n "$reframe_geometry" ]]; then
+            read -r ref_x ref_y ref_w ref_h <<< "$reframe_geometry"
+            ref_gcd=$(python3 - "$ref_w" "$ref_h" <<'PY_GCD'
+import math,sys
+print(math.gcd(int(sys.argv[1]),int(sys.argv[2])))
+PY_GCD
+)
+            REFRAME_ARGS=(
+                -attach affine
+                "transition.rect=-${ref_x} -${ref_y} ${ref_w} ${ref_h}"
+                transition.valign=middle
+                transition.halign=center
+            )
+            CONSUMER_ARGS+=(
+                "width=$ref_w" "height=$ref_h"
+                "display_aspect_num=$((ref_w / ref_gcd))"
+                "display_aspect_den=$((ref_h / ref_gcd))"
+                sample_aspect_num=1 sample_aspect_den=1
+            )
+            echo "[REFRAME] Using saved Shotcut Output crop: $ref_w x $ref_h at $ref_x,$ref_y"
+        elif [[ "$render_type" == "SHORT" ]]; then
+            echo "[WARNING] This SHORT project has no enabled Output Reframe filter."
+            echo "[WARNING] The video will retain its project aspect ratio."
         fi
+
+        # Existing output remains untouched until rendering succeeds.
 
         # ----------------------------------------------------
         # RENDER INFORMATION
@@ -513,15 +603,16 @@ export_render() {
             "${MELT_CMD[@]}" \
                 -progress2 \
                 "$render_mlt" \
+                "${REFRAME_ARGS[@]}" \
                 "${CONSUMER_ARGS[@]}"
         ) || rc=$?
         rm -f -- "$render_mlt"
 
         if (( rc != 0 )); then
-            log_error "$project" \
+            mediapanel_log_error "$project" \
                 "$render_type export failed (exit code $rc)"
 
-            rm -f "$out"
+            rm -f -- "$render_target"
 
             echo
             echo "=================================================="
@@ -531,20 +622,31 @@ export_render() {
             echo "Encoder : $encoder_mode"
             echo "Exit    : $rc"
             echo "=================================================="
+            if [[ "$encoder_mode" == "NVENC" && "${MELT_CMD[0]}" == "flatpak" ]]; then
+                echo "[INFO] If the failure mentions libcuda.so.1 / NVENC:"
+                export_nvenc_help
+                echo "[INFO] Otherwise inspect the MLT filters and error log."
+            fi
             echo
 
             return "$rc"
         fi
 
-        if [[ ! -s "$out" ]]; then
-            log_error "$project" \
+        if [[ ! -s "$render_target" ]]; then
+            mediapanel_log_error "$project" \
                 "$render_type export is missing or empty"
 
-            rm -f "$out"
+            rm -f -- "$render_target"
 
             echo "[ERROR] Export file is missing or empty:"
             echo "        $out"
 
+            return 1
+        fi
+
+        if ! mv -f -- "$render_target" "$out"; then
+            rm -f -- "$render_target"
+            mediapanel_log_error "$project" "Cannot finalize output: $out"
             return 1
         fi
 

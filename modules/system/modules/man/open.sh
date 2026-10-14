@@ -4,6 +4,7 @@
 man_open() {
     local page="${1:-}"
     local -a pages=(
+        remedia
         users-home-restore
         nvidia-display-restore
         nvidia-flatpak-nvenc

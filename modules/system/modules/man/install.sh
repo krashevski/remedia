@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# modules/system/moduels/man/install.sh
+# modules/system/modules/man/install.sh
 
 man_install() {
     log_debug "[DEBUG] HIT5 man_install"
@@ -8,40 +8,93 @@ man_install() {
     echo "Remedia System Man module"
     echo
 
+    # --------------------------------------------------------
+    # ROOT CHECK
+    # --------------------------------------------------------
+
+    if (( EUID != 0 )); then
+        echo "[ERROR] Installing system man pages requires root privileges."
+        return 1
+    fi
+
     echo "[MAN] [INSTALL] installing man pages..."
 
-    local locales=("en" "ru" "ja")
+    local locales=("en" "ru" "ja" "kz")
+    local sections=("man1" "man8")
+
+    local lang section src_dir target_dir
+    local f base installed=0
+
+    # --------------------------------------------------------
+    # INSTALL MAN PAGES
+    # --------------------------------------------------------
 
     for lang in "${locales[@]}"; do
-        if [[ "$lang" == "en" ]]; then
-            SRC_DIR="$MODULE_DIR/modules/man/man8"
-            TARGET_DIR="/usr/share/man/man8"
-        else
-            SRC_DIR="$MODULE_DIR/modules/man/$lang/man8"
-            TARGET_DIR="/usr/share/man/$lang/man8"
-        fi
+        for section in "${sections[@]}"; do
 
-        [[ -d "$SRC_DIR" ]] || {
-            echo "[WARN] missing: $SRC_DIR"
-            continue
-        }
+            if [[ "$lang" == "en" ]]; then
+                src_dir="$MODULE_DIR/modules/man/$section"
+                target_dir="/usr/share/man/$section"
+            else
+                src_dir="$MODULE_DIR/modules/man/$lang/$section"
+                target_dir="/usr/share/man/$lang/$section"
+            fi
 
-        mkdir -p "$TARGET_DIR"
+            # Skip missing directories
+            if [[ ! -d "$src_dir" ]]; then
+                log_debug "[MAN] missing directory: $src_dir"
+                continue
+            fi
 
-        for f in "$SRC_DIR"/*.8; do
-            [[ -f "$f" ]] || continue
+            mkdir -p "$target_dir" || {
+                echo "[ERROR] Cannot create: $target_dir"
+                return 1
+            }
 
-            local base
-            base="$(basename "$f")"
-            cp "$f" "$TARGET_DIR/$base"
-            gzip -f "$TARGET_DIR/$base"
-            echo "[OK] $lang → $base"
-         done
+            # Install files corresponding to section number
+            local ext="${section#man}"
+
+            for f in "$src_dir"/*."$ext"; do
+                [[ -f "$f" ]] || continue
+
+                base="$(basename "$f")"
+
+                if ! install -m 644 "$f" "$target_dir/$base"; then
+                    echo "[ERROR] Failed to install: $base"
+                    return 1
+                fi
+
+                if ! gzip -f "$target_dir/$base"; then
+                    echo "[ERROR] Failed to compress: $base"
+                    return 1
+                fi
+
+                echo "[OK] $lang / $section → $base.gz"
+                ((installed+=1))
+
+            done
+        done
     done
 
-    echo "[MAN] [INSTALL] updating database..."
-    mandb
-    echo "[MAN] [INSTALL] system database updated"
+    # --------------------------------------------------------
+    # UPDATE MAN DATABASE
+    # --------------------------------------------------------
 
+    echo
+    echo "[MAN] [INSTALL] installed pages: $installed"
+
+    if (( installed == 0 )); then
+        echo "[WARN] No man pages found for installation."
+        return 1
+    fi
+
+    echo "[MAN] [INSTALL] updating database..."
+
+    if ! mandb -q; then
+        echo "[ERROR] Failed to update man database."
+        return 1
+    fi
+
+    echo "[MAN] [INSTALL] system database updated"
     echo "[MAN] [INSTALL] done"
 }

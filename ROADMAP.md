@@ -9,7 +9,7 @@ Focus is not on features, but on:
 * condition monitoring
 * reproducibility
 
-## 📍 Current State (v1.3.0)
+## 📍 Current State (v1.4.0)
 
 The system already implements:
 ✔ CLI router and runtime environment
@@ -74,26 +74,9 @@ It ensures that the system does not rely on theoretical GPU availability, but on
 
 ## 📦 MediaPanel Delivery Layer
 
-### The Next Stage of Automation
-
-To ensure the queue actually publishes videos, you need to implement a YouTube API backend:
-
-Create a project in Google Cloud.
-Enable the YouTube Data API v3.
-Create a "Desktop" type OAuth client.
-Authorize MediaPanel to access your YouTube channel once.
-Securely store the OAuth token.
-Add a Python uploader that supports resumable uploads.
-Configure the worker to sequentially upload both the full video and the Short from a single queue job.
-
-The official API accepts the title, description, tags, and visibility settings—meaning our JSON data already contains the necessary fields. Authorization requires OAuth 2.0. [Official YouTube Data API guide](https://developers.google.com/youtube/v3/guides/uploading_a_video?utm_source=chatgpt.com&hl=ru).
-
-For now, choose "Manual YouTube upload" for actual publishing. The queue provides the foundation for the next stage, but it won't send anything until the worker and OAuth are in place. The next logical step is to set up secure YouTube OAuth and then connect a real uploader to the queue.
-
 ### Future Roadmap
 * Non-interactive metadata injection (CLI / templates)
-* Full YouTube API integration (OAuth flow)
-* Queue worker daemon (background processing)
+* Support for animated Reframe with keyframes in export_render.sh
 * Retry + failure classification
 * Multi-platform delivery (Vimeo, cloud storage)
 * Delivery observability (logs + status dashboard)
@@ -102,6 +85,18 @@ For now, choose "Manual YouTube upload" for actual publishing. The queue provide
 ### Design Goal
 > “A deterministic media delivery engine that works offline,
 > but scales to full automation without redesign”
+
+## 📦 MediaPanel Project Recovery — Future Improvement
+
+### Restore Compact Project without an active project
+Currently, `Restore Compact Project` is accessed through **Export → Archive Project**, and `archive_project()` requires an existing active project before displaying its menu.
+Planned improvement:
+- Move **Restore Compact Project** to a standalone entry in the **Export** menu (or a dedicated recovery menu).
+- Allow recovery when no project is active, including on a fresh Remedia installation.
+- List available compact archives and let the user select a destination independently of `PROJECT_DIR` and the active project.
+- Preserve existing safety guarantees: never overwrite an existing project, repair paths only in restored MLT copies, verify `.stab` and media references, and leave intermediate-file regeneration as an explicit separate step.
+
+**Priority:** Post-v1.4.0; keep the tested archive/restore workflow unchanged for the v1.4.0 release.
 
 ## 🌍 UI Internationalization (i18n)
 

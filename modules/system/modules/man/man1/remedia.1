@@ -1,0 +1,264 @@
+.TH REMEDIA 1 "2026-10-08" "Remedia 1.3.0" "User Commands"
+
+.SH NAME
+remedia \- modular Linux environment for media production,
+system diagnostics, and recovery
+
+.SH SYNOPSIS
+.B remedia
+.RI < command > " [args]"
+
+.B remedia
+
+.B remedia system center
+
+.SH DESCRIPTION
+.B Remedia
+is a modular system management and media production
+environment designed primarily for Debian and Ubuntu Linux.
+
+Remedia integrates command-line tools, runtime services,
+system diagnostics, backup and recovery utilities,
+and video production workflows.
+
+The project combines a unified CLI, modular execution
+environment, module registry, and system configuration
+into a single engineering framework.
+
+Remedia operates on top of the host Linux operating
+system and does not replace the Linux kernel,
+systemd, or system package managers.
+
+.SH COMMANDS
+
+.TP
+.B setup
+Configure Remedia and initialize its working environment.
+
+.TP
+.B doctor
+Run system diagnostics and report the health
+of supported system components.
+
+.TP
+.B backupkit
+Access backup and recovery utilities,
+including user data and system recovery tools.
+
+.TP
+.B demo
+Run system simulations and workflow tests.
+
+.TP
+.B mediapanel
+Launch the video production and media management interface.
+
+.TP
+.B mediasystem
+Configure the media production environment,
+including GPU optimization and multimedia tools.
+
+.TP
+.B system
+Access system monitoring, diagnostics,
+maintenance, and repair functions.
+
+.SH QUICK START
+
+Display the main command help:
+
+.EX
+remedia
+.EE
+
+Launch Remedia System Center:
+
+.EX
+remedia system center
+.EE
+
+Run system diagnostics:
+
+.EX
+remedia doctor
+.EE
+
+Open the media production panel:
+
+.EX
+remedia mediapanel
+.EE
+
+Access backup and recovery utilities:
+
+.EX
+remedia backupkit
+.EE
+
+.SH ARCHITECTURE
+
+Remedia uses a modular architecture consisting of:
+
+.TP
+.B CLI
+Main command router and entry point.
+
+.TP
+.B Runtime
+Execution environment for Remedia components.
+
+.TP
+.B Registry
+Module registration and integration contracts.
+
+.TP
+.B Modules
+Independent functional components,
+including system tools, MediaSystem,
+MediaPanel, BackupKit, and Demo.
+
+.TP
+.B Configuration
+System configuration stored under /etc/remedia.
+
+.SH SYSTEM COMPONENTS
+
+.SS MediaSystem
+Provides tools for preparing and maintaining
+a Linux multimedia production environment.
+
+.SS MediaPanel
+Provides a video production workflow
+covering media ingestion, processing,
+editing preparation, and export.
+
+.SS BackupKit
+Provides backup and recovery tools
+for user data and supported system components.
+
+.SS System Tools
+Provides diagnostic, monitoring,
+maintenance, and repair utilities.
+
+.SH STORAGE LAYOUT
+
+Remedia supports separating working data,
+source media, and backup archives
+across multiple storage devices.
+
+Recommended locations:
+
+.TP
+.B /mnt/shotcut
+Fast working storage for proxy files
+and temporary project data.
+
+.TP
+.B /mnt/storage
+Storage for original media files
+and production projects.
+
+.TP
+.B /mnt/backups
+Storage for backup archives and recovery data.
+
+The storage layout should be prepared
+before installing Remedia.
+
+.SH FILES
+
+.TP
+.B /etc/remedia/remedia.env
+Main system configuration file.
+
+.TP
+.B /usr/bin/remedia
+Main command-line entry point.
+
+.TP
+.B /usr/lib/remedia
+Remedia runtime, core components,
+and installed modules.
+
+.SH DIAGNOSTICS
+
+Remedia provides diagnostic tools
+for monitoring supported system components.
+
+Run the global doctor:
+
+.EX
+remedia doctor
+.EE
+
+Diagnostic results may include component
+status information and overall health indicators.
+
+System repair operations may require
+additional privileges.
+
+.SH DEVELOPMENT MODEL
+
+Remedia is evolving towards:
+
+.IP \(bu 2
+Manifest-driven system state management.
+
+.IP \(bu
+Transactional operations with state tracking.
+
+.IP \(bu
+Rollback and recovery mechanisms.
+
+.IP \(bu
+Improved runtime isolation.
+
+.IP \(bu
+Reproducible system environments.
+
+These capabilities represent development directions
+and should not be interpreted as fully implemented
+features.
+
+.SH SAFETY
+
+Remedia can interact with system components,
+filesystems, package management tools,
+and user data.
+
+Users should maintain current backups
+and understand the effects of system-level operations.
+
+Testing in a safe environment is recommended
+before applying potentially disruptive changes.
+
+.SH DOCUMENTATION
+
+The Remedia project provides documentation
+and development information through its
+GitHub repository.
+
+Additional manual pages document
+individual modules and maintenance utilities.
+
+.SH SEE ALSO
+
+.BR bash (1),
+.BR systemctl (1),
+.BR dpkg (1),
+.BR apt (8),
+.BR rsync (1),
+.BR tar (1)
+
+.SH AUTHOR
+
+Vladislav Krashevski.
+
+.SH LICENSE
+
+Remedia is free software
+distributed under the MIT License.
+
+.SH PROJECT
+
+https://github.com/krashevski/remedia

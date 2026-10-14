@@ -449,7 +449,12 @@ export_menu() {
             echo -e "${COLOR_BOLD}Active project: ${COLOR_RED}none${COLOR_RESET}"
         fi
         echo
-        echo "1) Prepare delivery queue job"
+        echo "1) Manual YouTube upload"
+        echo "2) Export YouTube"
+        echo "3) Process YouTube Queue"
+        echo "4) YouTube Queue Status"
+        echo "5) Archive Project"
+        echo "6) Archive YouTube Queue Jobs"
         echo
         echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
         echo
@@ -459,14 +464,45 @@ export_menu() {
         case "$choice" in
 
             1)
-                export_youtube || log_error "Export failed"
+                manual_youtube_upload ||
+                    log_error "Manual YouTube upload failed"
+                ;;
+
+            2)
+                export_youtube_queue ||
+                    log_error "Export YouTube failed"
+                ;;
+
+            3)
+                process_youtube_queue ||
+                    log_error "YouTube queue processing failed"
                 pause
                 ;;
+
+            4)
+                youtube_queue_status ||
+                    log_error "YouTube queue status failed"
+                pause
+                ;;
+
+            5)
+                archive_project ||
+                    log_error "Project archive failed"
+                pause
+                ;;
+
+            6)  archive_youtube_queue_job ||
+                    log_error "YouTube queue archive failed"
+                pause
+                ;;
+
             0)
                 return
                 ;;
+
             *)
                 echo "Invalid option"
+                pause
                 ;;
         esac
     done

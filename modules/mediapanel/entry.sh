@@ -65,6 +65,7 @@ source "$MODULE_DIR/core/production.sh"
 source "$MODULE_DIR/core/pipeline_state.sh"
 source "$MODULE_DIR/core/export_render.sh"
 source "$MODULE_DIR/core/export.sh"
+source "$MODULE_DIR/core/youtube_delivery.sh"
 source "$MODULE_DIR/core/api.sh"
 
 # STATE

@@ -36,7 +36,7 @@ require_ingest_done() {
     return 1
 }
 
-log_error() {
+mediapanel_log_error() {
     local project="$1"
     local message="$2"
 
@@ -73,7 +73,7 @@ generate_proxy() {
     local project_path="$PROJECT_DIR/$project"
     [[ -d "$project_path" ]] || {
         echo "[ERROR] project not found"
-        log_error "$project" "No video files in $src"
+        mediapanel_log_error "$project" "No video files in $src"
         return 1
     }
 
@@ -144,7 +144,7 @@ audio_cleanup() {
 
     (( total == 0 )) && {
         echo "[WARN] no media files"
-        log_error "$project" "No media files for audio cleanup"
+        mediapanel_log_error "$project" "No media files for audio cleanup"
         return 1
     }
 
@@ -1114,7 +1114,7 @@ auto_sync_audio() {
 
     (( total == 0 )) && {
         echo "[WARN] no videos"
-        log_error "$project" "No videos for sync"
+        mediapanel_log_error "$project" "No videos for sync"
         return 1
     }
 
@@ -1133,7 +1133,7 @@ auto_sync_audio() {
 
         if [[ ! -f "$clean_audio" ]]; then
             echo "[SKIP] no cleaned audio"
-            log_error "$project" "Missing cleaned audio for $base"
+            mediapanel_log_error "$project" "Missing cleaned audio for $base"
             ((count++))
             continue
         fi
@@ -1187,7 +1187,7 @@ auto_sync_audio() {
 
     (( total == 0 )) && {
         echo "[WARN] no videos"
-        log_error "$project" "No videos for sync"
+        mediapanel_log_error "$project" "No videos for sync"
         return 1
     }
 
@@ -1206,7 +1206,7 @@ auto_sync_audio() {
 
         if [[ ! -f "$clean_audio" ]]; then
             echo "[SKIP] no cleaned audio"
-            log_error "$project" "Missing cleaned audio for $base"
+            mediapanel_log_error "$project" "Missing cleaned audio for $base"
             ((count++))
             continue
         fi
@@ -1504,7 +1504,7 @@ launch_shotcut() {
 
     else
         echo "[ERROR] Shotcut not found"
-        log_error "$project" "Shotcut not found"
+        mediapanel_log_error "$project" "Shotcut not found"
         return 1
     fi
 

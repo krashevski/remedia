@@ -199,15 +199,12 @@ delivery_enqueue() {
     local queue_dir="$state_root/delivery/queue"
 
     mkdir -p "$queue_dir" || {
-        log_error \
-            "Failed to create queue: $queue_dir"
+        log_error "Failed to create queue: $queue_dir"
         return 1
     }
 
     local job_id
-    job_id="$(
-        date -u '+%Y%m%dT%H%M%SZ'
-    )_$$"
+    job_id="$(date -u '+%Y%m%dT%H%M%SZ')_$$"
 
     local job_file="$queue_dir/${job_id}.json"
 
@@ -219,23 +216,110 @@ delivery_enqueue() {
 import json
 import os
 import sys
+import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 
-job_file = sys.argv[1]
+job_file = Path(sys.argv[1])
 job_id = sys.argv[2]
 project = sys.argv[3]
 media_files = sys.argv[4:]
 
 items = []
+metadata_updates = []
+
+# ----------------------------------------
+# PREFLIGHT: validate all selected files
+# ----------------------------------------
 
 for media_file in media_files:
-    base, _ = os.path.splitext(media_file)
-    metadata_file = base + ".youtube.json"
+    media_path = Path(media_file)
+    metadata_file = media_path.with_suffix(".youtube.json")
 
-    items.append({
-        "media_file": media_file,
-        "metadata_file": metadata_file,
-    })
+    if not media_path.is_file():
+        raise SystemExit(f"Media not found: {media_path}")
+
+    if not metadata_file.is_file():
+        raise SystemExit(f"Metadata not found: {metadata_file}")
+
+    with metadata_file.open(encoding="utf-8") as stream:
+        metadata = json.load(stream)
+
+    if not isinstance(metadata, dict):
+        raise SystemExit(f"Invalid metadata: {metadata_file}")
+
+    status = metadata.get("status")
+    video_id = metadata.get("video_id")
+
+    item = {
+        "media_file": str(media_path),
+        "metadata_file": str(metadata_file),
+    }
+
+    # Already uploaded: preserve publication result.
+    if status == "uploaded" and video_id:
+        item.update({
+            "status": "uploaded",
+            "video_id": video_id,
+            "youtube_url": metadata.get("youtube_url")
+                or f"https://youtu.be/{video_id}",
+        })
+
+        if metadata.get("uploaded_at"):
+            item["uploaded_at"] = metadata["uploaded_at"]
+
+        print(f"Already uploaded: {media_path.name}")
+        print(f"  YouTube ID: {video_id}")
+
+    # Inconsistent or uncertain states: do not enqueue.
+    elif (
+        video_id
+        or status in ("uploaded", "uploading", "needs_review", "failed")
+    ):
+        raise SystemExit(
+            f"Metadata requires review: {metadata_file}\n"
+            f"  status={status}, video_id={video_id}"
+        )
+
+   # New publication or previously prepared manual delivery.
+    elif status in ("prepared", "queued", "ready_for_upload"):
+        item["status"] = "queued"
+
+        updated = dict(metadata)
+        updated["backend"] = "auto"
+        updated["status"] = "queued"
+        updated["updated_at"] = datetime.now(
+            timezone.utc
+        ).isoformat(timespec="seconds")
+
+        metadata_updates.append((metadata_file, updated))
+
+    else:
+        raise SystemExit(
+            f"Unsupported metadata status: {status}"
+        )
+
+    items.append(item)
+
+# ----------------------------------------
+# SKIP ALREADY COMPLETED DELIVERY
+# ----------------------------------------
+
+if items and all(item["status"] == "uploaded" for item in items):
+    print()
+    print("[OK] All selected videos are already uploaded.")
+    print("[INFO] No new delivery job created.")
+
+    for item in items:
+        print()
+        print(f"  {Path(item['media_file']).name}")
+        print(f"  {item['youtube_url']}")
+
+    raise SystemExit(0)
+
+# ----------------------------------------
+# CREATE JOB
+# ----------------------------------------
 
 job = {
     "version": 1,
@@ -250,37 +334,42 @@ job = {
     "items": items,
 }
 
-with open(
-    job_file,
-    "w",
-    encoding="utf-8",
-) as stream:
-    json.dump(
-        job,
-        stream,
-        ensure_ascii=False,
-        indent=2,
+def atomic_write(path, data):
+    fd, temp_name = tempfile.mkstemp(
+        prefix=".remedia-",
+        suffix=".tmp",
+        dir=str(path.parent),
     )
-    stream.write("\n")
+
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(
+                data,
+                stream,
+                ensure_ascii=False,
+                indent=2,
+            )
+            stream.write("\n")
+
+        os.replace(temp_name, path)
+
+    finally:
+        if os.path.exists(temp_name):
+            os.unlink(temp_name)
+
+# Write metadata for new publications only.
+for path, data in metadata_updates:
+    atomic_write(path, data)
+
+# Publish queue job only after metadata writes succeed.
+atomic_write(job_file, job)
+
+print(f"Delivery job queued: {job_file}")
 PY
     then
-        log_error "Failed to create queue job"
+        log_error "Failed to create delivery job"
         return 1
     fi
-
-    local file
-    local metadata_file
-
-    for file in "$@"; do
-        metadata_file="${file%.*}.youtube.json"
-
-        update_delivery_status \
-            "$metadata_file" \
-            "auto" \
-            "queued" || return 1
-    done
-
-    log_info "Delivery job queued: $job_file"
 
     return 0
 }
@@ -408,6 +497,24 @@ delivery_route() {
 
     local -a files=("$@")
 
+   # Direct routing from the MediaPanel Export menu.
+    case "${DELIVERY_ROUTE_MODE:-interactive}" in
+        manual)
+            delivery_manual "${files[@]}"
+            return $?
+            ;;
+        queue)
+            delivery_enqueue "$project" "${files[@]}"
+            return $?
+            ;;
+        interactive)
+            ;;
+        *)
+            log_error "Unknown delivery mode: $DELIVERY_ROUTE_MODE"
+            return 1
+            ;;
+    esac
+
     local file
     local metadata_file
 
@@ -428,14 +535,14 @@ delivery_route() {
     done
 
     echo
-    echo "=================================================="
-    echo " DELIVERY ROUTING"
-    echo "=================================================="
-    echo " 1) Manual YouTube upload"
-    echo " 2) Add to delivery queue"
-    echo " 3) Archive deliverables"
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}==================================================${COLOR_RESET}"
+    echo -e "                 ${COLOR_BOLD}${COLOR_CYAN} DELIVERY ROUTING${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}==================================================${COLOR_RESET}"
+    echo "1) Manual YouTube upload"
+    echo "2) Add to delivery queue"
+    echo "3) Archive deliverables"
     echo
-    echo " 0) Cancel"
+    echo "${COLOR_YELLOW}0) Cancel${COLOR_RESET}"
     echo "=================================================="
 
     local route=""
@@ -786,45 +893,215 @@ export_youtube() {
     return "$result"
 }
 
-archive_project() {
+restore_compact_project_menu() {
+    local archive_dir="${ARCHIVE_VIDEO_DIR:-${MEDIAPANEL_BACKUPS:-}}"
+    local worker="${MODULE_DIR}/core/restore_compact_project.py"
 
-    local project_name="${1:-}"
-
-    # fallback: active project
-    if [[ -z "$project_name" ]]; then
-        project_name="$(require_active_project)" || return 0
-    fi
-
-    local project_path="$PROJECT_DIR/$project_name"
-
-    if [[ ! -d "$project_path" ]]; then
-        log_error "Project directory not found: $project_path"
+    if [[ ! -f "$worker" ]]; then
+        log_error "Restore module not found: $worker"
         return 1
     fi
 
-    local archive_dir="${ARCHIVE_VIDEO_DIR:-$MEDIAPANEL_BACKUPS}"
-    mkdir -p "$archive_dir"
-
-    local archive="$archive_dir/${project_name}_archive_$(date +%Y%m%d).tar.gz"
-
-    log_info "Archiving project: $project_name → $archive"
-
-    local size=0
-    if command -v du >/dev/null 2>&1; then
-        size=$(du -sb "$project_path" 2>/dev/null | cut -f1 || echo 0)
+    if [[ ! -d "$archive_dir" ]]; then
+        log_error "Archive directory not found: $archive_dir"
+        return 1
     fi
 
-    if command -v pv >/dev/null 2>&1; then
-        tar -cf - -C "$PROJECT_DIR" "$project_name" \
-            | pv -s "$size" \
-            | gzip > "$archive"
-    else
-        tar -czf "$archive" -C "$PROJECT_DIR" "$project_name"
+    local -a archives=()
+    local file
+
+    while IFS= read -r -d '' file; do
+        archives+=("$file")
+    done < <(
+        find "$archive_dir" -maxdepth 1 \
+            -type f -name '*_compact_*_archive.tar.gz' \
+            -print0 | sort -z
+    )
+
+    if (( ${#archives[@]} == 0 )); then
+        echo "[INFO] No compact archives found."
+        return 0
     fi
 
-    log_info "Project archived: $project_name"
-    log_info "Archive saved: $archive"
+    echo
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
+    echo -e "            ${COLOR_BOLD}${COLOR_CYAN}RESTORE COMPACT PROJECT${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
+    echo
+    echo "Available compact archives:"
+    echo
 
-    return 0
+    local i
+    for i in "${!archives[@]}"; do
+        printf '%2d) %s\n' "$((i + 1))" "${archives[$i]##*/}"
+    done
+
+    echo
+    echo -e "${COLOR_YELLOW}0) Cancel${COLOR_RESET}"
+    echo
+
+    local choice
+    read -rp "Select archive: " choice || return 0
+
+    [[ "$choice" == "0" ]] && return 0
+
+    if [[ ! "$choice" =~ ^[0-9]+$ ]] ||
+       (( 10#$choice < 1 || 10#$choice > ${#archives[@]} )); then
+        log_error "Invalid archive selection"
+        return 1
+    fi
+
+    local archive="${archives[$((10#$choice - 1))]}"
+
+    echo
+    echo "Selected archive:"
+    echo "$archive"
+    echo
+
+    local destination
+    read -rp "Restore destination [/mnt/shotcut/remedia-restore]: " destination \
+        || return 0
+
+    destination="${destination:-/mnt/shotcut/remedia-restore}"
+
+    # Expand ~/ if entered by the user.
+    if [[ "$destination" == "~/"* ]]; then
+        destination="$HOME/${destination#~/}"
+    fi
+
+    local old_root="${PROJECT_DIR}/${project_name:-}"
+
+    echo
+    echo "Destination: $destination"
+    echo "Original archive: $archive"
+    echo
+    echo "The archive and original project will not be modified."
+    echo "Existing restored project directories must remain untouched."
+    echo
+
+    local confirm
+    read -rp "Type RESTORE to proceed: " confirm || return 0
+
+    if [[ "$confirm" != "RESTORE" ]]; then
+        echo "Cancelled."
+        return 0
+    fi
+
+    mkdir -p -- "$destination" || return 1
+
+    python3 "$worker" "$archive" \
+        --destination "$destination"
 }
 
+# Remedia MediaPanel: compact/full project archiving.
+# Replace ONLY the existing archive_project() function in core/export.sh.
+archive_project() {
+    local project_name="${1:-}"
+    if [[ -z "$project_name" ]]; then
+        project_name="$(require_active_project)" || return 1
+    fi
+
+    local project_path="$PROJECT_DIR/$project_name"
+    [[ -d "$project_path" ]] || { log_error "Project directory not found: $project_path"; return 1; }
+
+    local archive_dir="${ARCHIVE_VIDEO_DIR:-${MEDIAPANEL_BACKUPS:-}}"
+    [[ -n "$archive_dir" ]] || { log_error 'Archive directory is not configured'; return 1; }
+
+    # Preserve legacy caller semantics: archive_project <project> still asks for mode.
+    echo
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
+    echo -e "                 ${COLOR_BOLD}${COLOR_CYAN}ARCHIVE PROJECT${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
+    echo "Project: $project_name"
+    echo
+    echo '1) Compact archive (video, short, edit, subtitles; empty media)'
+    echo '2) Full archive (all project files)'
+    echo '3) Check Shotcut project dependencies'
+    echo '4) Restore Compact Project'
+    echo
+    echo -e "${COLOR_YELLOW}0) Cancel${COLOR_RESET}"
+    echo
+    local mode
+    read -rp 'Choice: ' mode || return 0
+    case "$mode" in
+        0) return 0 ;;
+        1|2|3) ;;
+        4) restore_compact_project_menu; return $? ;;
+        *) log_error 'Invalid archive mode'; return 1 ;;
+    esac
+
+    # Check all MLT files: resources, stabilization data, fonts/assets etc.
+    # A compact archive is blocked on unresolved in-project file references;
+    # this check is conservative and never changes project files.
+    local checker="${REMEDIA_LIB:-}/modules/mediapanel/core/archive_mlt_check.py"
+    if [[ ! -f "$checker" && -f "$MODULE_DIR/core/archive_mlt_check.py" ]]; then
+        checker="$MODULE_DIR/core/archive_mlt_check.py"
+    fi
+    [[ -f "$checker" ]] || { log_error "MLT checker missing: $checker"; return 1; }
+
+    local -a keep_dirs=(video short edit subtitles)
+    if [[ "$mode" == 1 || "$mode" == 3 ]]; then
+        if ! python3 "$checker" "$project_path" "${keep_dirs[@]}"; then
+            echo '[WARN] Compact archive cannot guarantee Shotcut project integrity.'
+            if [[ "$mode" == 3 ]]; then return 1; fi
+            echo 'Choose Full archive until the MLT references are repaired.'
+            return 1
+        fi
+        [[ "$mode" == 3 ]] && return 0
+    fi
+
+    mkdir -p -- "$archive_dir" || return 1
+    local stamp suffix archive temp
+    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    suffix=full
+    [[ "$mode" == 1 ]] && suffix=compact
+    archive="$archive_dir/${project_name}_${suffix}_${stamp}_$$_archive.tar.gz"
+    temp="$(mktemp "$archive_dir/.remedia-archive-XXXXXXXX.tar.gz")" || return 1
+
+    echo
+    echo "Target: $archive"
+    [[ "$mode" == 1 ]] && echo 'Compact archive contains only video/, short/, edit/, subtitles/ and an empty media/.'
+    [[ "$mode" == 2 ]] && echo 'Full archive contains the complete project.'
+    echo 'Original project will not be modified.'
+    local confirm
+    read -rp 'Type ARCHIVE to proceed: ' confirm || { rm -f -- "$temp"; return 0; }
+    if [[ "$confirm" != ARCHIVE ]]; then rm -f -- "$temp"; echo 'Cancelled.'; return 0; fi
+
+    local rc=0
+    if [[ "$mode" == 2 ]]; then
+        tar -czf "$temp" -C "$PROJECT_DIR" -- "$project_name" || rc=$?
+    else
+        # Preserve project root files (e.g. manifests) and wanted folders.
+        # Keep media/ itself but exclude every file/subfolder inside it.
+        local -a exclusions=("--exclude=$project_name/media/*")
+        local path base
+        for path in "$project_path"/*; do
+            [[ -d "$path" ]] || continue
+            base="${path##*/}"
+            case "$base" in
+                video|short|edit|subtitles|media) ;;
+                *) exclusions+=("--exclude=$project_name/$base") ;;
+            esac
+        done
+        # Tar will record media/ as a directory but not its contents.
+        tar -czf "$temp" "${exclusions[@]}" -C "$PROJECT_DIR" -- "$project_name" || rc=$?
+    fi
+
+    if (( rc != 0 )) || ! tar -tzf "$temp" >/dev/null; then
+        rm -f -- "$temp"
+        log_error 'Archive failed or tar integrity check failed; no final archive created.'
+        return 1
+    fi
+    if [[ -e "$archive" ]]; then
+        rm -f -- "$temp"
+        log_error "Archive already exists: $archive"
+        return 1
+    fi
+    if ! mv -n -- "$temp" "$archive"; then
+        rm -f -- "$temp"
+        log_error 'Could not finalize archive'
+        return 1
+    fi
+    log_info "Project archived: $project_name"
+    log_info "Archive saved: $archive"
+}

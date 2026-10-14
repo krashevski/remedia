@@ -10,6 +10,56 @@
 # SYSTEM_DEPS_PATH="${SYSTEM_DEPS_PATH:-$REMEDIA_LIB/modules/mediapanel/core/system_deps.sh}"
 
 # =========================
+# YOUTUBE API RUNTIME
+# =========================
+youtube_api_python() {
+    printf '%s\n' "${REMEDIA_YOUTUBE_PYTHON:-${REMEDIA_YOUTUBE_VENV:-$HOME/.local/share/remedia/youtube-venv}/bin/python}"
+}
+
+mediapanel_install_youtube_api() {
+    local venv_dir="${REMEDIA_YOUTUBE_VENV:-$HOME/.local/share/remedia/youtube-venv}"
+    local py="$venv_dir/bin/python"
+    local confirm
+
+    echo
+    echo 'YouTube API Python dependencies'
+    echo "Virtual environment: $venv_dir"
+    echo 'Packages: google-api-python-client, google-auth-oauthlib, google-auth-httplib2'
+    echo 'Installation downloads packages from PyPI; no sudo required.'
+    echo
+    read -rp 'Install/upgrade dependencies? [y/N]: ' confirm || return 0
+    [[ "$confirm" =~ ^[YyДд]$ ]] || { echo 'Cancelled.'; return 0; }
+
+    if [[ ! -x "$py" ]]; then
+        if ! python3 -m venv "$venv_dir"; then
+            echo '[ERROR] Cannot create venv. Install python3-venv using your package manager.'
+            return 1
+        fi
+    fi
+    if ! "$py" -m pip --version >/dev/null 2>&1; then
+        echo '[ERROR] pip missing in the YouTube virtual environment.'
+        return 1
+    fi
+    "$py" -m pip install \
+        google-api-python-client \
+        google-auth-oauthlib \
+        google-auth-httplib2 || return 1
+
+    "$py" -c 'import googleapiclient, google_auth_oauthlib, google_auth_httplib2' || return 1
+    echo '[OK] YouTube API dependencies installed and importable.'
+}
+
+# OAuth setup is modular: no network calls on system status refresh.
+YOUTUBE_SETUP_MODULE="${REMEDIA_LIB}/modules/mediapanel/ui/youtube_api_setup.sh"
+if [[ -f "$YOUTUBE_SETUP_MODULE" ]]; then
+    # shellcheck source=modules/mediapanel/ui/youtube_api_setup.sh
+    source "$YOUTUBE_SETUP_MODULE"
+else
+    mediapanel_youtube_api_status() { echo 'YouTube API: setup module missing'; }
+    mediapanel_youtube_setup_menu() { echo '[ERROR] YouTube setup module missing'; return 1; }
+fi
+
+# =========================
 # SYSTEM CHECKS
 # =========================
 
@@ -275,6 +325,8 @@ system_status() {
         echo
         show_shotcut_config_status
         echo
+        mediapanel_youtube_api_status
+        echo
         echo -e "${COLOR_BOLD}MENU:${COLOR_RESET}"
         echo
         echo " 1) Refresh"
@@ -284,6 +336,7 @@ system_status() {
         echo " 5) Import Shotcut filter sets"
         echo " 6) Shotcut Flatpak NVENC doctor"
         echo " 7) Shotcut Flatpak NVENC heal"
+        echo " 8) YouTube API Setup"
         echo
         echo -e " ${COLOR_YELLOW}0) Back${COLOR_RESET}"
         echo
@@ -393,6 +446,9 @@ system_status() {
             7)
                 mediapanel_shotcut_nvenc_run heal
                 read -rp "Press Enter to continue..."
+                ;;
+            8)
+                mediapanel_youtube_setup_menu
                 ;;
             0)
                 echo "Back..."

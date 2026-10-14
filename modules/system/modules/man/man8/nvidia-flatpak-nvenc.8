@@ -51,7 +51,7 @@ Installed extensions for older versions do not satisfy this match.
 .nf
 driver_version=$(nvidia-smi --query-gpu=driver_version \
   --format=csv,noheader | sed -n '1p')
-if [[ "$driver_version" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
+if [[ "$driver_version" =~ ^[0-9]+(\e.[0-9]+)+$ ]]; then
   driver_ref="org.freedesktop.Platform.GL.nvidia-${driver_version//./-}//1.4"
   printf '%s\en' "$driver_ref"
   flatpak info "$driver_ref"

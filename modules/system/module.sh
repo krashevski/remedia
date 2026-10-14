@@ -28,6 +28,10 @@ cmd_system_man() {
     system_man_run "$@"
 }
 
+cmd_system_remedia() {
+    system_remedia_run "$@"
+}
+
 cmd_system_home() {
     system_home_run "$@"
 }
@@ -71,6 +75,7 @@ register_module() {
     remedia_register "status" cmd_status
     remedia_register "symlinks" cmd_symlinks
     remedia_register "man" cmd_system_man
+    remedia_register "remedia" cmd_system_remedia
     remedia_register "home" cmd_system_home
     remedia_register "nvidia-flatpak-nvenc" cmd_system_nvidia_flatpak_nvenc
     remedia_register "nvidia-display" cmd_system_nvidia_display
