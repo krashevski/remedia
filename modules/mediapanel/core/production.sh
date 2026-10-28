@@ -504,6 +504,7 @@ EOF
     <property name="eof">pause</property>
     <property name="resource">../edit/$basename</property>
     <property name="mlt_service">avformat-novalidate</property>
+    <property name="shotcut:disableProxy">1</property>
     <property name="audio_index">1</property>
     <property name="video_index">0</property>
   </chain>
@@ -610,6 +611,7 @@ EOF
     <property name="eof">pause</property>
     <property name="resource">../edit/$basename</property>
     <property name="mlt_service">avformat-novalidate</property>
+    <property name="shotcut:disableProxy">1</property>
     <property name="audio_index">1</property>
     <property name="video_index">0</property>
   </chain>
@@ -963,6 +965,7 @@ EOF
     <property name="eof">pause</property>
     <property name="resource">$resource</property>
     <property name="mlt_service">avformat-novalidate</property>
+    <property name="shotcut:disableProxy">1</property>
     <property name="audio_index">1</property>
     <property name="video_index">0</property>
   </chain>

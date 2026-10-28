@@ -36,6 +36,12 @@
 #
 # ============================================================
 
+# Shared preferences are also available when generation is called outside the UI.
+if ! declare -F mediapanel_subtitle_languages_load >/dev/null; then
+    # shellcheck source=modules/mediapanel/core/subtitle_languages.sh
+    source "$(dirname -- "${BASH_SOURCE[0]}")/subtitle_languages.sh" || return 1
+fi
+
 generate_subtitles() {
 
     local project
@@ -159,88 +165,18 @@ generate_subtitles() {
 
     local model="$HOME/.var/app/org.shotcut.Shotcut/data/Meltytech/Shotcut/extensions/whispermodel/ggml-large-v3-q5_0.bin"
 
-    # --------------------------------------------------------
-    # SUBTITLE LANGUAGE
-    #
-    # CLI_LANGUAGE has the highest priority.
-    # SUBTITLE_LANGUAGE can provide a configured default.
-    # --------------------------------------------------------
-
-    local language="${CLI_LANGUAGE:-${SUBTITLE_LANGUAGE:-}}"
-    local language_name
-
-    if [[ -z "$language" ]]; then
-
-        if [[ "${CLI_NO_UI:-0}" == "1" ]]; then
-            language="ru"
-        else
-            echo
-            echo "Select subtitle language:"
-            echo
-            echo " 1) Russian"
-            echo " 2) Kazakh"
-            echo " 3) English"
-            echo " 4) Auto detect"
-            echo
-            echo " 0) Cancel"
-            echo
-
-            local language_choice
-
-            read -r -p "Choice [1-4, default 1]> " language_choice || {
-                echo
-                echo "[ERROR] Cannot read language selection"
-                return 1
-            }
-
-            case "$language_choice" in
-                ""|1)
-                    language="ru"
-                    ;;
-                2)
-                    language="kk"
-                    ;;
-                3)
-                    language="en"
-                    ;;
-                4)
-                    language="auto"
-                    ;;
-                0)
-                    echo "[INFO] Subtitle generation cancelled"
-                    return 0
-                    ;;
-                *)
-                    echo "[ERROR] Invalid language selection"
-                    return 1
-                    ;;
-            esac
-        fi
+    # CLI_LANGUAGE > SUBTITLE_LANGUAGE > saved language menu.
+    # In no-UI mode, use the first saved language if no explicit default exists.
+    local language language_name language_rc
+    if mediapanel_subtitle_language_select; then
+        language="$MEDIAPANEL_SUBTITLE_LANGUAGE"
+    else
+        language_rc=$?
+        # Cancellation is a successful return to the caller's menu.
+        (( language_rc == 2 )) && return 0
+        return "$language_rc"
     fi
-
-    language="${language,,}"
-
-    case "$language" in
-        ru)
-            language_name="Russian"
-            ;;
-        kk)
-            language_name="Kazakh"
-            ;;
-        en)
-            language_name="English"
-            ;;
-        auto)
-            language_name="Auto detect"
-            ;;
-        [a-z][a-z]|[a-z][a-z][a-z])
-            language_name="$language"
-            ;;
-        *)
-            echo "[ERROR] Invalid Whisper language code: $language"
-            return 1
-            ;;
-    esac
+    language_name="$(mediapanel_subtitle_language_name "$language")" || return 1
 
     mkdir -p "$subtitles_dir" || {
         echo "[ERROR] Cannot create subtitles directory:"

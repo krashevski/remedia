@@ -1,171 +1,167 @@
 #!/usr/bin/env bash
 # modules/system/modules/symlinks.sh
+# Requires Bash >= 4.3 (associative arrays and namerefs).
+# The Remedia launcher loads core/config.sh and calls load_config() once.
 
-# -------------------------------------------------------------
-# 0. Entry point (UCC compliant)
-# -------------------------------------------------------------
+# Resolve paths when sourced, so a later cd does not affect config loading.
+REMEDIA_SYMLINKS_MODULE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)" || return 1
 
 cmd_symlinks_run() {
     system_symlinks_run "$@"
 }
 
-# -------------------------------------------------------------
-# 1. Core
-# -------------------------------------------------------------
-
 system_symlinks_run() {
     info "Symlinks: start"
 
-    local BASE_DIR="/mnt/storage"
-    local TARGET_HOME
-    TARGET_HOME="$(resolve_target_home)" || return 1
-
-    # --- language detect ---
-    local lang="${LANG%%_*}"
-    lang="${lang,,}"
-
-    # --- config bind ---
-    declare -n LINK_NAMES="LINK_NAMES_${lang}"
-
-    # fallback → en
-    if ! declare -p LINK_NAMES &>/dev/null; then
-        declare -n LINK_NAMES="LINK_NAMES_en"
+    # Reuse an already loaded core; otherwise load only storage defaults.
+    # Do not reload global configuration from a leaf module.
+    if ! declare -F storage_slow >/dev/null; then
+        local storage_file="$REMEDIA_SYMLINKS_MODULE_DIR/../../../core/storage.sh"
+        if [[ ! -r "$storage_file" ]]; then
+            warn "Storage API unavailable: $storage_file"
+            return 1
+        fi
+        # shellcheck disable=SC1090
+        source "$storage_file" || return 1
     fi
 
-    # ---------------------------------------------------------
-    # 2. Declarative config
-    # ---------------------------------------------------------
+    local BASE_DIR TARGET_HOME
+    BASE_DIR="$(storage_slow)" || return 1
+    TARGET_HOME="$(resolve_target_home)" || return 1
+    if [[ "$BASE_DIR" != /* || "$TARGET_HOME" != /* ]]; then
+        warn "Storage and home paths must be absolute"
+        return 1
+    fi
 
-    declare -A TARGET_DIRS=(
-        [music]="Music"
-        [pictures]="Pictures"
-        [videos]="Videos"
-    )
+    local config_file="$REMEDIA_SYMLINKS_MODULE_DIR/../config/symlinks.conf"
+    if [[ ! -r "$config_file" ]]; then
+        warn "Symlinks config unavailable: $config_file"
+        return 1
+    fi
 
-    declare -a EXTRA_SYMLINKS=(
-        # "Downloads:/mnt/storage/Downloads"
-    )
+    # Keep configuration local to this invocation, including repeated runs.
+    local -A TARGET_DIRS=() LINK_NAMES_en=()
+    local -a EXTRA_SYMLINKS=()
+    # shellcheck disable=SC1090
+    source "$config_file" || return 1
 
-    # --- localization ---
-    declare -A LINK_NAMES_ru=(
-        [music]="Музыка"
-        [pictures]="Изображения"
-        [videos]="Видео"
-    )
+    # A locale can look like ru_RU.UTF-8, ja-JP, en.UTF-8 or C.UTF-8.
+    local lang="${REM_MEDIA_LANG:-${LANG:-en}}"
+    lang="${lang,,}"
+    lang="${lang%%[_.@-]*}"
+    # Validate before using a language as part of a variable name.
+    [[ "$lang" =~ ^[a-z]+$ ]] || lang=en
 
-    declare -A LINK_NAMES_en=(
-        [music]="Music"
-        [pictures]="Pictures"
-        [videos]="Videos"
-    )
+    local names_ref="LINK_NAMES_${lang}" declaration
+    declaration="$(declare -p "$names_ref" 2>/dev/null)" || declaration=""
+    if [[ "$declaration" != "declare -A "* ]]; then
+        names_ref=LINK_NAMES_en
+    fi
+    local -n LINK_NAMES="$names_ref"
 
-    declare -A LINK_NAMES_ja=(
-        [music]="音楽"
-        [pictures]="画像"
-        [videos]="動画"
-    )
+    local key relative target link_name link_path pair name
+    for key in "${!TARGET_DIRS[@]}"; do
+        relative="${TARGET_DIRS[$key]}"
+        if [[ -z "$relative" || "$relative" == /* || "/$relative/" == */../* || "/$relative/" == */./* ]]; then
+            warn "Invalid relative target for key: $key"
+            return 1
+        fi
+        link_name="$(get_link_name "$key" LINK_NAMES LINK_NAMES_en)" || return 1
+        system_symlinks_valid_name "$link_name" || return 1
+    done
 
-    # ---------------------------------------------------------
-    # 3. Main logic (pure declarative)
-    # ---------------------------------------------------------
+    # Validate all extra entries before creating anything.
+    for pair in "${EXTRA_SYMLINKS[@]}"; do
+        name="${pair%%:*}"
+        target="${pair#*:}"
+        if [[ "$pair" != *:* || "$target" != /* ]]; then
+            warn "Invalid symlink format: $pair"
+            return 1
+        fi
+        system_symlinks_valid_name "$name" || return 1
+    done
 
     for key in "${!TARGET_DIRS[@]}"; do
-        local target="$BASE_DIR/${TARGET_DIRS[$key]}"
-        local link_name
-        link_name="$(get_link_name "$key" LINK_NAMES LINK_NAMES_en)"
-
-        local link_path="$TARGET_HOME/$link_name"
-
-        ensure_dir "$target"
-        ensure_symlink "$link_path" "$target"
+        target="${BASE_DIR%/}/${TARGET_DIRS[$key]}"
+        link_name="$(get_link_name "$key" LINK_NAMES LINK_NAMES_en)" || return 1
+        link_path="${TARGET_HOME%/}/$link_name"
+        ensure_dir "$target" || return 1
+        ensure_symlink "$link_path" "$target" || return 1
     done
 
     for pair in "${EXTRA_SYMLINKS[@]}"; do
-        [[ "$pair" == *:* ]] || {
-            warn "Invalid symlink format: $pair"
-            continue
-        }
-
-        local name="${pair%%:*}"
-        local target="${pair##*:}"
-        local link_path="$TARGET_HOME/$name"
-
-        ensure_dir "$target"
-        ensure_symlink "$link_path" "$target"
+        name="${pair%%:*}"
+        target="${pair#*:}"
+        link_path="${TARGET_HOME%/}/$name"
+        ensure_dir "$target" || return 1
+        ensure_symlink "$link_path" "$target" || return 1
     done
 
     info "Symlinks: done"
 }
 
-# -------------------------------------------------------------
-# 4. Primitives
-# -------------------------------------------------------------
+system_symlinks_valid_name() {
+    local name="$1"
+    if [[ -z "$name" || "$name" == . || "$name" == .. || "$name" == */* ]]; then
+        warn "Invalid symlink name: $name"
+        return 1
+    fi
+}
 
 get_link_name() {
     local key="$1"
-    local primary_ref="$2"
-    local fallback_ref="$3"
-
-    declare -n primary="$primary_ref"
-    declare -n fallback="$fallback_ref"
-
-    echo "${primary[$key]:-${fallback[$key]}}"
+    local -n primary="$2"
+    local -n fallback="$3"
+    local value="${primary[$key]:-${fallback[$key]:-}}"
+    if [[ -z "$value" ]]; then
+        warn "Missing English link name for key: $key"
+        return 1
+    fi
+    printf '%s\n' "$value"
 }
 
 ensure_dir() {
-    local dir="$1"
-    [[ -d "$dir" ]] || mkdir -p "$dir"
+    [[ -d "$1" ]] || mkdir -p -- "$1"
 }
 
 ensure_symlink() {
     local link="${1:?missing link}"
     local target="${2:?missing target}"
 
-    # already correct
-    if [[ -L "$link" && "$(realpath -m "$link")" == "$(realpath -m "$target")" ]]; then
-        info "skip (ok): $link"
-        return
+    # Check symlinks BEFORE directories: never inspect/remove their contents.
+    if [[ -L "$link" ]]; then
+        if [[ "$(realpath -m -- "$link")" == "$(realpath -m -- "$target")" ]]; then
+            info "skip (ok): $link"
+        else
+            warn "conflicting symlink: $link"
+            return 1
+        fi
+        return 0
     fi
 
-    # empty dir → replace silently
-    if [[ -d "$link" && -z "$(find "$link" -mindepth 1 -maxdepth 1 2>/dev/null)" ]]; then
-        rm -rf "$link"
-        ln -s "$target" "$link"
-        info "linked: $link → $target"
-        return
-    fi
-
-    # non-empty dir
     if [[ -d "$link" ]]; then
-        if ui_confirm_policy "ask" "Replace directory $link?"; then
-            rm -rf "$link"
-            ln -s "$target" "$link"
-            info "replaced dir: $link → $target"
+        # rmdir succeeds only for an empty real directory.
+        if rmdir -- "$link" 2>/dev/null; then
+            :
+        elif ui_confirm_policy "ask" "Replace directory $link?"; then
+            rm -rf -- "$link" || return 1
         else
             warn "skip: $link"
+            return 0
         fi
-        return
-    fi
-
-    # file conflict
-    if [[ -e "$link" ]]; then
+    elif [[ -e "$link" ]]; then
         warn "conflict: $link"
-        return
+        return 1
     fi
 
-    ln -s "$target" "$link"
+    ln -s -- "$target" "$link" || return 1
     info "linked: $link → $target"
 }
 
-# -------------------------------------------------------------
-# 5. Logging (fallback-safe)
-# -------------------------------------------------------------
-
-info() {
-    printf "[INFO] %s\n" "$*"
-}
-
-warn() {
-    printf "[WARN] %s\n" "$*" >&2
-}
-
+# Logging fallbacks: preserve the launcher's existing functions.
+if ! declare -F info >/dev/null; then
+    info() { printf '[INFO] %s\n' "$*"; }
+fi
+if ! declare -F warn >/dev/null; then
+    warn() { printf '[WARN] %s\n' "$*" >&2; }
+fi

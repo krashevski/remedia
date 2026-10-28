@@ -141,9 +141,109 @@ for tractor in root.iter('tractor'):
         if props.get('shotcut:filter') == 'reframe' and props.get('disable') != '1':
             rect=props.get('rect','').strip()
             vals=[int(round(float(x.removesuffix('px')))) for x in re.split(r'[ ,]+',rect)[:4]]
-            print(*vals)
+            profile=root.find('profile')
+            if profile is None:
+                raise SystemExit('Missing MLT profile')
+            source_w=int(profile.get('width', '0'))
+            source_h=int(profile.get('height', '0'))
+            if source_w <= 0 or source_h <= 0:
+                raise SystemExit('Invalid MLT profile dimensions')
+            print(*vals, source_w, source_h)
             sys.exit(0)
 PY_REF
+}
+
+
+# Build a Shotcut-style export wrapper: the nested project is a producer,
+# and its affine crop is applied inside that producer, never via melt -attach.
+export_create_reframe_wrapper() {
+    python3 - "$1" "$2" <<'PY_WRAPPER'
+import math
+import re
+import sys
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+source, destination = (Path(p).resolve() for p in sys.argv[1:])
+try:
+    root = ET.parse(source).getroot()
+    profile = root.find('profile')
+    if profile is None:
+        raise ValueError('Missing source profile')
+    sw, sh = (int(profile.get(k, '0')) for k in ('width', 'height'))
+    fn = int(profile.get('frame_rate_num', '0'))
+    fd = int(profile.get('frame_rate_den', '0'))
+    if min(sw, sh, fn, fd) <= 0:
+        raise ValueError('Invalid source profile dimensions or frame rate')
+
+    reframes = []
+    for tractor in root.iter('tractor'):
+        for filt in tractor.findall('filter'):
+            props = {p.get('name'): (p.text or '') for p in filt.findall('property')}
+            if props.get('shotcut:filter') == 'reframe' and props.get('disable') != '1':
+                reframes.append(props)
+    if len(reframes) != 1:
+        raise ValueError(f'Expected one enabled Reframe, got {len(reframes)}')
+    rect = reframes[0].get('rect', '').strip().split()
+    if len(rect) not in (4, 5) or (len(rect) == 5 and float(rect[4]) != 1):
+        raise ValueError('Only static Reframe rectangles are supported')
+    x, y, w, h = [int(round(float(v.removesuffix('px')))) for v in rect[:4]]
+    if not (0 <= x and 0 <= y and w > 0 and h > 0
+            and w % 2 == 0 and h % 2 == 0 and x + w <= sw and y + h <= sh):
+        raise ValueError('Invalid Reframe crop')
+
+    # Render the timeline, not the full duration of an underlying source clip.
+    timeline = root.find("./tractor[@id='tractor0']")
+    if timeline is None:
+        raise ValueError('Missing timeline tractor0')
+    end = timeline.get('out', '')
+    if re.fullmatch(r'\d+:\d\d:\d\d\.\d+', end):
+        hh, mm, ss = end.split(':')
+        frames = round((int(hh)*3600 + int(mm)*60 + float(ss)) * fn / fd) + 1
+    elif re.fullmatch(r'\d+', end):
+        frames = int(end) + 1
+    else:
+        raise ValueError(f'Unsupported timeline end: {end!r}')
+    if frames <= 0:
+        raise ValueError('Empty timeline')
+
+    gcd = math.gcd(w, h)
+    wrap = ET.Element('mlt', {
+        'LC_NUMERIC': 'C', 'producer': 'producer0', 'in': '0',
+        'out': str(frames - 1), 'version': root.get('version', '7.41.0')
+    })
+    ET.SubElement(wrap, 'profile', {
+        'description': 'Remedia Shotcut Reframe', 'width': str(w), 'height': str(h),
+        'progressive': profile.get('progressive', '1'),
+        'frame_rate_num': str(fn), 'frame_rate_den': str(fd),
+        'colorspace': profile.get('colorspace', '709'),
+        'display_aspect_num': str(w // gcd), 'display_aspect_den': str(h // gcd),
+        'sample_aspect_num': '1', 'sample_aspect_den': '1'
+    })
+    producer = ET.SubElement(wrap, 'producer', {
+        'id': 'producer0', 'in': '0', 'out': str(frames - 1)
+    })
+    for key, value in (
+        ('length', str(frames)), ('eof', 'pause'),
+        # Absolute path WITHOUT xml: prefix: verified with Shotcut Flatpak melt.
+        ('resource', str(source)), ('aspect_ratio', '1'),
+        ('mlt_service', 'consumer')
+    ):
+        ET.SubElement(producer, 'property', {'name': key}).text = value
+    filt = ET.SubElement(producer, 'filter', {'id': 'filter0'})
+    for key, value in (
+        ('background', 'colour:0'), ('mlt_service', 'affine'),
+        ('transition.valign', 'middle'), ('transition.halign', 'center'),
+        ('transition.rect', f'-{x} -{y} {sw} {sh} 1')
+    ):
+        ET.SubElement(filt, 'property', {'name': key}).text = value
+    ET.ElementTree(wrap).write(destination, encoding='utf-8', xml_declaration=True)
+    print(f'[REFRAME] Source {sw}x{sh}; crop ({x},{y}) {w}x{h}; '
+          f'output {w}x{h}; frames {frames}')
+except (ValueError, OSError, ET.ParseError) as exc:
+    print(f'[ERROR] Reframe wrapper: {exc}', file=sys.stderr)
+    sys.exit(1)
+PY_WRAPPER
 }
 
 export_render() {
@@ -451,9 +551,8 @@ export_render() {
     local rc
     local render_mlt
     local rendered=0
-    local -a REFRAME_ARGS=()
+    local render_wrapper render_input
     local render_target
-    local ref_x ref_y ref_w ref_h ref_gcd
 
     for mlt in "${selected_files[@]}"; do
 
@@ -500,6 +599,8 @@ export_render() {
             CONSUMER_ARGS=(
                 -consumer
                 "avformat:$render_target"
+                real_time=-1
+                buffer=5
                 vcodec=h264_nvenc
                 acodec=aac
                 ab=192k
@@ -513,6 +614,8 @@ export_render() {
             CONSUMER_ARGS=(
                 -consumer
                 "avformat:$render_target"
+                real_time=-1
+                buffer=5
                 vcodec=libx264
                 acodec=aac
                 ab=192k
@@ -538,35 +641,35 @@ export_render() {
         fi
 
         # ----------------------------------------------------
-        # SHOTCUT REFRAME -> MLT AFFINE (static rectangle)
+        # SHOTCUT REFRAME -> NESTED MLT WRAPPER (static crop)
         # ----------------------------------------------------
-        REFRAME_ARGS=()
         local reframe_geometry=""
         reframe_geometry="$(export_reframe_geometry "$render_mlt")" || {
             rm -f -- "$render_mlt" "$render_target"
             echo "[ERROR] Cannot read Shotcut Reframe geometry."
             return 1
         }
+        render_wrapper=""
+        render_input="$render_mlt"
         if [[ -n "$reframe_geometry" ]]; then
-            read -r ref_x ref_y ref_w ref_h <<< "$reframe_geometry"
-            ref_gcd=$(python3 - "$ref_w" "$ref_h" <<'PY_GCD'
-import math,sys
-print(math.gcd(int(sys.argv[1]),int(sys.argv[2])))
-PY_GCD
-)
-            REFRAME_ARGS=(
-                -attach affine
-                "transition.rect=-${ref_x} -${ref_y} ${ref_w} ${ref_h}"
-                transition.valign=middle
-                transition.halign=center
-            )
-            CONSUMER_ARGS+=(
-                "width=$ref_w" "height=$ref_h"
-                "display_aspect_num=$((ref_w / ref_gcd))"
-                "display_aspect_den=$((ref_h / ref_gcd))"
-                sample_aspect_num=1 sample_aspect_den=1
-            )
-            echo "[REFRAME] Using saved Shotcut Output crop: $ref_w x $ref_h at $ref_x,$ref_y"
+            render_wrapper="$(mktemp "$render_dir/.remedia-wrapper-XXXXXXXX.xml")" || {
+                rm -f -- "$render_mlt" "$render_target"
+                return 1
+            }
+            if ! export_create_reframe_wrapper "$render_mlt" "$render_wrapper"; then
+                rm -f -- "$render_wrapper" "$render_mlt" "$render_target"
+                mediapanel_log_error "$project" "Cannot prepare Reframe wrapper: $mlt"
+                return 1
+            fi
+            render_input="$render_wrapper"
+            # Mirror the successful wrapper test (no extra MLT buffer override).
+            # Keep ordinary VIDEO/SHORT encoding options unchanged.
+            local -a wrapper_consumer_args=()
+            local arg
+            for arg in "${CONSUMER_ARGS[@]}"; do
+                [[ "$arg" == buffer=5 ]] || wrapper_consumer_args+=("$arg")
+            done
+            CONSUMER_ARGS=("${wrapper_consumer_args[@]}")
         elif [[ "$render_type" == "SHORT" ]]; then
             echo "[WARNING] This SHORT project has no enabled Output Reframe filter."
             echo "[WARNING] The video will retain its project aspect ratio."
@@ -595,18 +698,18 @@ PY_GCD
 
         # Keep the temporary XML beside the original for other relative resources.
         # Capture failures explicitly, including when the caller uses set -e.
+        
         rc=0
         (
-            trap 'rm -f -- "$render_mlt"' EXIT
+            trap 'rm -f -- "$render_mlt" "$render_wrapper"' EXIT
             cd "$render_dir" || exit 1
             LC_ALL=C.UTF-8 \
             "${MELT_CMD[@]}" \
                 -progress2 \
-                "$render_mlt" \
-                "${REFRAME_ARGS[@]}" \
+                "$render_input" \
                 "${CONSUMER_ARGS[@]}"
         ) || rc=$?
-        rm -f -- "$render_mlt"
+        rm -f -- "$render_mlt" "$render_wrapper"
 
         if (( rc != 0 )); then
             mediapanel_log_error "$project" \

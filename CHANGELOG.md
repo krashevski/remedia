@@ -6,6 +6,54 @@ The format is based on Keep a Changelog and semantic versioning.
 
 ## [Unreleased]
 
+### Added
+- Subtitle language preferences in MediaPanel: `System status` → `9) Subtitle languages`.
+- Selection of 1–4 preferred languages, with a supported-language list and reset to defaults (`ru kk en`).
+- Persistent per-user settings in `${XDG_CONFIG_HOME:-$HOME/.config}/remedia/mediapanel/subtitle-languages.conf`.
+- Shared language catalog and validation in `core/subtitle_languages.sh`.
+- Isolated tests covering persistence, validation, menu integration, language overrides, and mocked subtitle generation.
+- Separate System symlink configuration: `modules/system/config/symlinks.conf`.
+- Optional `REM_MEDIA_LANG` override for localized symlink names.
+- Isolated tests covering language selection, fallback, repeated execution, and filesystem conflicts.
+
+### Changed
+- Subtitle generation now builds its language menu from saved preferences instead of a fixed Russian/Kazakh/English list.
+- The first preferred language is the default; Auto detect remains available separately.
+- Preserved language priority: `CLI_LANGUAGE` → `SUBTITLE_LANGUAGE` → language selection.
+- With `CLI_NO_UI=1`, language selection defaults to the first preferred language unless explicitly overridden.
+- System symlinks now use `storage_slow()` from the core Storage API instead of a hardcoded `/mnt/storage` path.
+- Moved target directories, extra symlinks, and English, Russian, and Japanese name dictionaries out of the script.
+- Language selection now follows `REM_MEDIA_LANG` → `LANG` → English, with per-key English fallback.
+- Filesystem errors now propagate to the caller.
+
+### Fixed
+- Reject duplicate, unsupported, and excessive language selections before saving.
+- Safely fall back to `ru kk en` when saved settings are invalid.
+- Incorrect language dictionary detection and fallback.
+- Handling of conflicting and broken symlinks.
+- Extra symlink targets containing colons.
+- Preserved existing logging functions provided by the Remedia launcher.
+- MediaPanel Production: The property `shotcut:disableProxy=1` 
+  has been added to clip sources within generated VIDEO and SHORT `.mlt` files, 
+  preventing Shotcut from automatically creating proxies. 
+  This setting applies only to newly created `.mlt` files; 
+  existing projects remain unchanged.
+- Fixed Shotcut Output Reframe rendering in MediaPanel Export Render.
+- Replaced direct MLT affine attachment with a Shotcut-compatible
+  nested XML export wrapper.
+- Fixed Reframe geometry handling for vertical video exports.
+- Fixed export hangs when rendering projects with Reframe enabled.
+- Ensured correct decimal parsing in MLT filters using
+  `LC_ALL=C.UTF-8`.
+
+### Improved
+- Preserved NVIDIA NVENC and CPU encoding support.
+- Preserved original Shotcut MLT projects and existing successful exports.
+- Added automatic cleanup of temporary Reframe XML files.
+- Successfully validated full-length vertical Shorts export with
+  multiple Shotcut filters and NVIDIA NVENC.
+- Confirmed SDR Rec.709 output with correct color metadata.
+
 ## [1.4.0] - 2026-10-14
 
 ### Added
