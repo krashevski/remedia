@@ -6,7 +6,15 @@ The format is based on Keep a Changelog and semantic versioning.
 
 ## [Unreleased]
 
+
+## [1.5.0] - 2026-11-01
+
 ### Added
+- Shared Bash i18n runtime in `core/i18n.sh` with key-based translations and literal positional parameters.
+- English, Russian, and Kazakh dictionaries for MediaPanel.
+- Lightweight Python adapter using the same translation files without additional dependencies.
+- Localized module and command metadata, with language selection in core help.
+- Automated tests for translation fallback, dictionary consistency, data contracts, OAuth, archive restoration, and upload duplicate protection.
 - Subtitle language preferences in MediaPanel: `System status` → `9) Subtitle languages`.
 - Selection of 1–4 preferred languages, with a supported-language list and reset to defaults (`ru kk en`).
 - Persistent per-user settings in `${XDG_CONFIG_HOME:-$HOME/.config}/remedia/mediapanel/subtitle-languages.conf`.
@@ -17,6 +25,16 @@ The format is based on Keep a Changelog and semantic versioning.
 - Isolated tests covering language selection, fallback, repeated execution, and filesystem conflicts.
 
 ### Changed
+- **MediaPanel:** Scene segmentation in `production.sh` has been reworked:
+  * Segment boundaries are now determined based on changes in image content.
+  * Settings have been added for detection sensitivity, minimum scene duration, and the number of FFmpeg threads.
+  * Continuous shots with no detected scene changes are preserved in their entirety without re-encoding; when segmentation occurs, keyframes are generated at the scene boundaries.
+  * Existing scenes are protected from being overwritten, and incomplete results are excluded from file searches when generating an MLT.
+- Language resolution follows `REM_MEDIA_LANG` → `LANG` → English; missing translation keys fall back to English.
+- Standardized Kazakh locale code as `kk`, with `kz` accepted as an alias.
+- Localized MediaPanel menus and user-facing messages across project management, production, subtitles, export, archives, media ingest, YouTube delivery, and OAuth.
+- Registered MediaPanel dictionaries centrally during module initialization.
+- Preserved machine-readable output, JSON fields, pipeline states, command identifiers, and canonical error records.
 - Subtitle generation now builds its language menu from saved preferences instead of a fixed Russian/Kazakh/English list.
 - The first preferred language is the default; Auto detect remains available separately.
 - Preserved language priority: `CLI_LANGUAGE` → `SUBTITLE_LANGUAGE` → language selection.
@@ -27,16 +45,19 @@ The format is based on Keep a Changelog and semantic versioning.
 - Filesystem errors now propagate to the caller.
 
 ### Fixed
+- Diagnostic messages contaminating stdout in functions returning project names or paths.
+- Journal parser variables overwriting caller state in `rebuild_state()`.
+- Premature module help termination under `set -e`.
 - Reject duplicate, unsupported, and excessive language selections before saving.
 - Safely fall back to `ru kk en` when saved settings are invalid.
 - Incorrect language dictionary detection and fallback.
 - Handling of conflicting and broken symlinks.
 - Extra symlink targets containing colons.
 - Preserved existing logging functions provided by the Remedia launcher.
-- MediaPanel Production: The property `shotcut:disableProxy=1` 
-  has been added to clip sources within generated VIDEO and SHORT `.mlt` files, 
-  preventing Shotcut from automatically creating proxies. 
-  This setting applies only to newly created `.mlt` files; 
+- MediaPanel Production: The property `shotcut:disableProxy=1`
+  has been added to clip sources within generated VIDEO and SHORT `.mlt` files,
+  preventing Shotcut from automatically creating proxies.
+  This setting applies only to newly created `.mlt` files;
   existing projects remain unchanged.
 - Fixed Shotcut Output Reframe rendering in MediaPanel Export Render.
 - Replaced direct MLT affine attachment with a Shotcut-compatible
@@ -45,6 +66,10 @@ The format is based on Keep a Changelog and semantic versioning.
 - Fixed export hangs when rendering projects with Reframe enabled.
 - Ensured correct decimal parsing in MLT filters using
   `LC_ALL=C.UTF-8`.
+
+### Validation
+- Automated checks passed; Russian and Kazakh interfaces and help verified in the installed system.
+- Full production pipeline successfully tested with newly recorded footage.
 
 ### Improved
 - Preserved NVIDIA NVENC and CPU encoding support.

@@ -4,10 +4,10 @@
 phone_status_mediapanel() {
     local gvfs="/run/user/$UID/gvfs"
 
-    echo " Phone:"
+    echo "$(t MP_SYSTEM_DEPS_PHONE)"
 
     if [[ ! -d "$gvfs" ]]; then
-        echo "   GVFS not available"
+        echo "$(t MP_SYSTEM_DEPS_GVFS_NOT_AVAILABLE)"
         return
     fi
 
@@ -15,7 +15,7 @@ phone_status_mediapanel() {
     mtp=$(find "$gvfs" -maxdepth 1 -type d -name "mtp:*" 2>/dev/null | head -n1)
 
     if [[ -n "$mtp" ]]; then
-        echo "   Android device detected (MTP)"
+        echo "$(t MP_SYSTEM_DEPS_ANDROID_DEVICE_DETECTED_MTP)"
         return
     fi
 
@@ -23,11 +23,11 @@ phone_status_mediapanel() {
     afc=$(find "$gvfs" -maxdepth 1 -type d -name "afc:*" 2>/dev/null | head -n1)
 
     if [[ -n "$afc" ]]; then
-        echo "   iPhone detected (AFC)"
+        echo "$(t MP_SYSTEM_DEPS_IPHONE_DETECTED_AFC)"
         return
     fi
 
-    echo "   No phone detected"
+    echo "$(t MP_SYSTEM_DEPS_NO_PHONE_DETECTED)"
 }
 
 open_video_dialog() {
@@ -36,8 +36,8 @@ open_video_dialog() {
     # 1. Zenity (GUI диалог)
     if command -v zenity &>/dev/null; then
         file=$(zenity --file-selection \
-            --title="Open video" \
-            --file-filter="Video files | *.mp4 *.mkv *.avi *.mov *.webm")
+            --title="$(t MP_DEPS_OPEN_VIDEO)" \
+            --file-filter="$(t MP_DEPS_VIDEO_FILES) | *.mp4 *.mkv *.avi *.mov *.webm")
 
     # 2. KDialog (KDE)
     elif command -v kdialog &>/dev/null; then
@@ -45,7 +45,7 @@ open_video_dialog() {
 
     # 3. CLI fallback
     else
-        read -rp "Enter path to video file: " file
+        read -rp "$(t MP_SYSTEM_DEPS_ENTER_PATH_TO_VIDEO_FILE)" file
     fi
 
     # отмена
@@ -53,7 +53,7 @@ open_video_dialog() {
 
     # проверка файла
     if [[ ! -f "$file" ]]; then
-        echo "File not found"
+        echo "$(t MP_SYSTEM_DEPS_FILE_NOT_FOUND)"
         sleep 1
         return
     fi
@@ -64,7 +64,7 @@ open_video_dialog() {
     elif has_flatpak "org.videolan.VLC"; then
         flatpak run org.videolan.VLC "$file" & disown
     else
-        echo "VLC not found"
+        echo "$(t MP_SYSTEM_DEPS_VLC_NOT_FOUND)"
         sleep 1
     fi
 }

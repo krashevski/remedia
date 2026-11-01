@@ -20,7 +20,7 @@ write_youtube_metadata() {
 
     command -v python3 >/dev/null 2>&1 || {
         log_error \
-            "python3 is required to create JSON metadata"
+            "$(t MP_EXPORT_PYTHON3_IS_REQUIRED_TO_CREATE_JSON_METADATA)"
         return 1
     }
 
@@ -83,11 +83,11 @@ with open(
 PY
     then
         log_error \
-            "Failed to create metadata: $metadata_file"
+            "$(t MP_EXPORT_FAILED_TO_CREATE_METADATA "$metadata_file")"
         return 1
     fi
 
-    log_info "Metadata saved: $metadata_file"
+    log_info "$(t MP_EXPORT_METADATA_SAVED "$metadata_file")"
 
     return 0
 }
@@ -103,7 +103,7 @@ update_delivery_status() {
 
     [[ -f "$metadata_file" ]] || {
         log_error \
-            "Metadata file not found: $metadata_file"
+            "$(t MP_EXPORT_METADATA_FILE_NOT_FOUND "$metadata_file")"
         return 1
     }
 
@@ -155,7 +155,7 @@ delivery_manual() {
 
     echo
     echo "=================================================="
-    echo " MANUAL UPLOAD MODE"
+    echo "$(t MP_EXPORT_MANUAL_UPLOAD_MODE)"
     echo "=================================================="
 
     for file in "$@"; do
@@ -163,7 +163,7 @@ delivery_manual() {
 
         if [[ ! -f "$metadata_file" ]]; then
             log_error \
-                "Metadata not found: $metadata_file"
+                "$(t MP_EXPORT_METADATA_NOT_FOUND "$metadata_file")"
             continue
         fi
 
@@ -173,14 +173,14 @@ delivery_manual() {
             "ready_for_upload" || continue
 
         echo
-        echo "Media:"
+        echo "$(t MP_EXPORT_MEDIA)"
         echo "   $file"
-        echo "Metadata:"
+        echo "$(t MP_EXPORT_METADATA)"
         echo "   $metadata_file"
     done
 
     echo
-    echo "👉 Open:"
+    echo "$(t MP_EXPORT_OPEN)"
     echo "   https://studio.youtube.com/upload"
     echo "=================================================="
 
@@ -199,7 +199,7 @@ delivery_enqueue() {
     local queue_dir="$state_root/delivery/queue"
 
     mkdir -p "$queue_dir" || {
-        log_error "Failed to create queue: $queue_dir"
+        log_error "$(t MP_EXPORT_FAILED_TO_CREATE_QUEUE "$queue_dir")"
         return 1
     }
 
@@ -367,7 +367,7 @@ atomic_write(job_file, job)
 print(f"Delivery job queued: {job_file}")
 PY
     then
-        log_error "Failed to create delivery job"
+        log_error "$(t MP_EXPORT_FAILED_TO_CREATE_DELIVERY_JOB)"
         return 1
     fi
 
@@ -389,7 +389,7 @@ delivery_archive() {
 
     if [[ -z "$archive_root" ]]; then
         log_error \
-            "Delivery archive directory is not configured"
+            "$(t MP_EXPORT_DELIVERY_ARCHIVE_DIRECTORY_IS_NOT_CONFIGURED)"
         return 1
     fi
 
@@ -397,7 +397,7 @@ delivery_archive() {
 
     mkdir -p "$delivery_archive_dir" || {
         log_error \
-            "Failed to create archive directory: $delivery_archive_dir"
+            "$(t MP_EXPORT_FAILED_TO_CREATE_ARCHIVE_DIRECTORY "$delivery_archive_dir")"
         return 1
     }
 
@@ -417,13 +417,13 @@ delivery_archive() {
         metadata_file="${file%.*}.youtube.json"
 
         if [[ ! -f "$file" ]]; then
-            log_error "Media not found: $file"
+            log_error "$(t MP_EXPORT_MEDIA_NOT_FOUND "$file")"
             return 1
         fi
 
         if [[ ! -f "$metadata_file" ]]; then
             log_error \
-                "Metadata not found: $metadata_file"
+                "$(t MP_EXPORT_METADATA_NOT_FOUND "$metadata_file")"
             return 1
         fi
 
@@ -432,7 +432,7 @@ delivery_archive() {
                 ;;
             *)
                 log_error \
-                    "File is outside project: $file"
+                    "$(t MP_EXPORT_FILE_IS_OUTSIDE_PROJECT "$file")"
                 return 1
                 ;;
         esac
@@ -446,14 +446,14 @@ delivery_archive() {
         )
     done
 
-    log_info "Creating delivery archive:"
+    log_info "$(t MP_EXPORT_CREATING_DELIVERY_ARCHIVE)"
     echo "$archive"
 
     if ! tar -czf "$archive" \
         -C "$project_path" \
         "${archive_items[@]}"; then
 
-        log_error "Failed to create delivery archive"
+        log_error "$(t MP_EXPORT_FAILED_TO_CREATE_DELIVERY_ARCHIVE)"
         return 1
     fi
 
@@ -466,22 +466,22 @@ delivery_archive() {
             "archived"; then
 
             log_warn \
-                "Archive created, but metadata status update failed:"
+                "$(t MP_EXPORT_ARCHIVE_CREATED_BUT_METADATA_STATUS_UPDATE_FAILED)"
             echo "$metadata_file"
         fi
     done
 
-    log_info "Delivery archive saved: $archive"
+    log_info "$(t MP_EXPORT_DELIVERY_ARCHIVE_SAVED "$archive")"
 
     echo
-    echo "Archived files:"
+    echo "$(t MP_EXPORT_ARCHIVED_FILES)"
 
     for file in "$@"; do
         echo "   $(basename "$file")"
     done
 
     echo
-    echo "Archive:"
+    echo "$(t MP_EXPORT_ARCHIVE)"
     echo "   $archive"
 
     return 0
@@ -510,7 +510,7 @@ delivery_route() {
         interactive)
             ;;
         *)
-            log_error "Unknown delivery mode: $DELIVERY_ROUTE_MODE"
+            log_error "$(t MP_EXPORT_UNKNOWN_DELIVERY_MODE "$DELIVERY_ROUTE_MODE")"
             return 1
             ;;
     esac
@@ -523,30 +523,30 @@ delivery_route() {
         metadata_file="${file%.*}.youtube.json"
 
         [[ -f "$file" ]] || {
-            log_error "Media not found: $file"
+            log_error "$(t MP_EXPORT_MEDIA_NOT_FOUND "$file")"
             return 1
         }
 
         [[ -f "$metadata_file" ]] || {
             log_error \
-                "Metadata not found: $metadata_file"
+                "$(t MP_EXPORT_METADATA_NOT_FOUND "$metadata_file")"
             return 1
         }
     done
 
     echo
     echo -e "${COLOR_BOLD}${COLOR_CYAN}==================================================${COLOR_RESET}"
-    echo -e "                 ${COLOR_BOLD}${COLOR_CYAN} DELIVERY ROUTING${COLOR_RESET}"
+    echo -e "$(t MP_EXPORT_DELIVERY_ROUTING "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
     echo -e "${COLOR_BOLD}${COLOR_CYAN}==================================================${COLOR_RESET}"
-    echo "1) Manual YouTube upload"
-    echo "2) Add to delivery queue"
-    echo "3) Archive deliverables"
+    echo "$(t MP_UI_1_MANUAL_YOUTUBE_UPLOAD)"
+    echo "$(t MP_EXPORT_2_ADD_TO_DELIVERY_QUEUE)"
+    echo "$(t MP_EXPORT_3_ARCHIVE_DELIVERABLES)"
     echo
-    echo "${COLOR_YELLOW}0) Cancel${COLOR_RESET}"
+    echo "$(t MP_EXPORT_0_CANCEL "${COLOR_YELLOW}" "${COLOR_RESET}")"
     echo "=================================================="
 
     local route=""
-    read -rp "Select delivery route: " route
+    read -rp "$(t MP_EXPORT_SELECT_DELIVERY_ROUTE)" route
 
     case "$route" in
         1)
@@ -564,11 +564,11 @@ delivery_route() {
                 "${files[@]}"
             ;;
         0)
-            log_info "Delivery cancelled"
+            log_info "$(t MP_EXPORT_DELIVERY_CANCELLED)"
             return 0
             ;;
         *)
-            log_error "Invalid delivery route"
+            log_error "$(t MP_EXPORT_INVALID_DELIVERY_ROUTE)"
             return 1
             ;;
     esac
@@ -611,12 +611,12 @@ export_youtube() {
 
     if (( ${#files[@]} == 0 )); then
         log_warn \
-             "No publication-ready MP4 files found in video/ or short/"
+             "$(t MP_EXPORT_NO_PUBLICATION_READY_MP4_FILES_FOUND_IN_VIDEO_OR_SHORT)"
         return 1
     fi
 
     echo
-    echo "Available publication files:"
+    echo "$(t MP_EXPORT_AVAILABLE_PUBLICATION_FILES)"
     echo "------------------------------------------------"
 
     local i=1
@@ -626,13 +626,13 @@ export_youtube() {
     for file in "${files[@]}"; do
         case "$file" in
             "$video_dir"/*)
-                label="VIDEO"
+                label="$(t MP_KIND_VIDEO)"
                 ;;
             "$short_dir"/*)
-                label="SHORT"
+                label="$(t MP_KIND_SHORT)"
                 ;;
             *)
-                label="UNKNOWN"
+                label="$(t MP_KIND_UNKNOWN)"
                 ;;
         esac
 
@@ -645,20 +645,20 @@ export_youtube() {
     done
 
     echo "------------------------------------------------"
-    echo "Select one or several files."
-    echo "Examples: 1   |   1 2   |   all"
+    echo "$(t MP_EXPORT_SELECT_ONE_OR_SEVERAL_FILES)"
+    echo "$(t MP_EXPORT_EXAMPLES_1_1_2_ALL)"
     echo
 
     local selection=""
-    if ! IFS= read -r -p "Selection: " selection; then
-        log_info "Selection cancelled"
+    if ! IFS= read -r -p "$(t MP_EXPORT_SELECTION)" selection; then
+        log_info "$(t MP_EXPORT_SELECTION_CANCELLED)"
         return 0
     fi
 
     selection="${selection//,/ }"
 
     if [[ -z "${selection//[[:space:]]/}" ]]; then
-        log_info "Selection cancelled"
+        log_info "$(t MP_EXPORT_SELECTION_CANCELLED)"
         return 0
     fi
 
@@ -678,7 +678,7 @@ export_youtube() {
                   choice > ${#files[@]} )); then
 
                 log_error \
-                    "Invalid selection: $choice"
+                    "$(t MP_EXPORT_INVALID_SELECTION "$choice")"
                 return 1
             fi
 
@@ -693,12 +693,12 @@ export_youtube() {
     fi
 
     if (( ${#selected_files[@]} == 0 )); then
-        log_error "No files selected"
+        log_error "$(t MP_EXPORT_NO_FILES_SELECTED)"
         return 1
     fi
 
     echo
-    echo "Selected files:"
+    echo "$(t MP_EXPORT_SELECTED_FILES)"
     echo "------------------------------------------------"
 
     for file in "${selected_files[@]}"; do
@@ -726,17 +726,17 @@ export_youtube() {
     # All selected files already have metadata.
     if (( missing_metadata == 0 )); then
         echo
-        echo "Metadata JSON already exists for all selected files."
+        echo "$(t MP_EXPORT_METADATA_JSON_ALREADY_EXISTS_FOR_ALL_SELECTED_FILES)"
         echo
 
         read -rp \
-            "Use existing metadata without changes? [Y/n]: " \
+            "$(t MP_EXPORT_USE_EXISTING_METADATA_WITHOUT_CHANGES_Y_N)" \
             reuse_metadata
 
         reuse_metadata="${reuse_metadata:-Y}"
 
         if [[ "$reuse_metadata" =~ ^[YyДд]$ ]]; then
-            log_info "Using existing metadata"
+            log_info "$(t MP_EXPORT_USING_EXISTING_METADATA)"
 
             delivery_route \
                 "$project" \
@@ -748,7 +748,7 @@ export_youtube() {
             return "$result"
         fi
 
-        log_info "Existing metadata will be recreated"
+        log_info "$(t MP_EXPORT_EXISTING_METADATA_WILL_BE_RECREATED)"
     fi
 
     local overwrite_existing="Y"
@@ -757,12 +757,12 @@ export_youtube() {
           missing_metadata > 0 )); then
 
         echo
-        echo "Existing metadata: $existing_metadata"
-        echo "Missing metadata:  $missing_metadata"
+        echo "$(t MP_EXPORT_EXISTING_METADATA "$existing_metadata")"
+        echo "$(t MP_EXPORT_MISSING_METADATA "$missing_metadata")"
         echo
 
         read -rp \
-            "Recreate existing metadata too? [y/N]: " \
+            "$(t MP_EXPORT_RECREATE_EXISTING_METADATA_TOO_Y_N)" \
             overwrite_existing
 
         overwrite_existing="${overwrite_existing:-N}"
@@ -777,22 +777,22 @@ export_youtube() {
     local line=""
 
     echo
-    echo "Shared YouTube metadata"
+    echo "$(t MP_EXPORT_SHARED_YOUTUBE_METADATA)"
     echo "------------------------------------------------"
 
-    read -rp "Title [$default_title]: " title
+    read -rp "$(t MP_EXPORT_TITLE "$default_title")" title
     title="${title:-$default_title}"
 
     echo
-    echo "Description:"
-    echo "Enter one line at a time."
-    echo "Finish with a single dot (.)"
+    echo "$(t MP_EXPORT_DESCRIPTION)"
+    echo "$(t MP_EXPORT_ENTER_ONE_LINE_AT_A_TIME)"
+    echo "$(t MP_EXPORT_FINISH_WITH_A_SINGLE_DOT)"
     echo "------------------------------------------------"
 
     while true; do
         read -rp "> " line || {
             echo
-            log_error "Description input interrupted"
+            log_error "$(t MP_EXPORT_DESCRIPTION_INPUT_INTERRUPTED)"
             return 1
         }
 
@@ -806,12 +806,12 @@ export_youtube() {
     done
 
     read -rp \
-        "Tags (comma-separated): " \
+        "$(t MP_EXPORT_TAGS_COMMA_SEPARATED)" \
         tags
 
     while true; do
         read -rp \
-            "Visibility [private/unlisted/public] (private): " \
+            "$(t MP_EXPORT_VISIBILITY_PRIVATE_UNLISTED_PUBLIC_PRIVATE)" \
             visibility
 
         visibility="${visibility:-private}"
@@ -822,13 +822,13 @@ export_youtube() {
                 ;;
             *)
                 log_warn \
-                    "Allowed values: private, unlisted, public"
+                    "$(t MP_EXPORT_ALLOWED_VALUES_PRIVATE_UNLISTED_PUBLIC)"
                 ;;
         esac
     done
 
     echo
-    echo "Creating YouTube metadata..."
+    echo "$(t MP_EXPORT_CREATING_YOUTUBE_METADATA)"
     echo "------------------------------------------------"
 
     local content_type
@@ -843,7 +843,7 @@ export_youtube() {
               ! "$overwrite_existing" =~ ^[YyДд]$ ]]; then
 
             log_info \
-                "Using existing metadata: $metadata_file"
+                "$(t MP_EXPORT_USING_EXISTING_METADATA_2 "$metadata_file")"
 
             continue
         fi
@@ -856,7 +856,7 @@ export_youtube() {
                 content_type="short"
                 ;;
             *)
-                log_error "Unknown publication type: $file"
+                log_error "$(t MP_EXPORT_UNKNOWN_PUBLICATION_TYPE "$file")"
                 ((failed += 1))
                 continue
                 ;;
@@ -878,7 +878,7 @@ export_youtube() {
 
     if (( failed > 0 )); then
         log_error \
-            "Delivery routing cancelled: metadata errors"
+            "$(t MP_EXPORT_DELIVERY_ROUTING_CANCELLED_METADATA_ERRORS)"
         pause
         return 1
     fi
@@ -898,12 +898,12 @@ restore_compact_project_menu() {
     local worker="${MODULE_DIR}/core/restore_compact_project.py"
 
     if [[ ! -f "$worker" ]]; then
-        log_error "Restore module not found: $worker"
+        log_error "$(t MP_EXPORT_RESTORE_MODULE_NOT_FOUND "$worker")"
         return 1
     fi
 
     if [[ ! -d "$archive_dir" ]]; then
-        log_error "Archive directory not found: $archive_dir"
+        log_error "$(t MP_EXPORT_ARCHIVE_DIRECTORY_NOT_FOUND "$archive_dir")"
         return 1
     fi
 
@@ -919,16 +919,16 @@ restore_compact_project_menu() {
     )
 
     if (( ${#archives[@]} == 0 )); then
-        echo "[INFO] No compact archives found."
+        echo "$(t MP_EXPORT_INFO_NO_COMPACT_ARCHIVES_FOUND)"
         return 0
     fi
 
     echo
     echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-    echo -e "            ${COLOR_BOLD}${COLOR_CYAN}RESTORE COMPACT PROJECT${COLOR_RESET}"
+    echo -e "$(t MP_EXPORT_RESTORE_COMPACT_PROJECT "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
     echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
     echo
-    echo "Available compact archives:"
+    echo "$(t MP_EXPORT_AVAILABLE_COMPACT_ARCHIVES)"
     echo
 
     local i
@@ -937,29 +937,29 @@ restore_compact_project_menu() {
     done
 
     echo
-    echo -e "${COLOR_YELLOW}0) Cancel${COLOR_RESET}"
+    echo -e "$(t MP_EXPORT_0_CANCEL "${COLOR_YELLOW}" "${COLOR_RESET}")"
     echo
 
     local choice
-    read -rp "Select archive: " choice || return 0
+    read -rp "$(t MP_EXPORT_SELECT_ARCHIVE)" choice || return 0
 
     [[ "$choice" == "0" ]] && return 0
 
     if [[ ! "$choice" =~ ^[0-9]+$ ]] ||
        (( 10#$choice < 1 || 10#$choice > ${#archives[@]} )); then
-        log_error "Invalid archive selection"
+        log_error "$(t MP_EXPORT_INVALID_ARCHIVE_SELECTION)"
         return 1
     fi
 
     local archive="${archives[$((10#$choice - 1))]}"
 
     echo
-    echo "Selected archive:"
+    echo "$(t MP_EXPORT_SELECTED_ARCHIVE)"
     echo "$archive"
     echo
 
     local destination
-    read -rp "Restore destination [/mnt/shotcut/remedia-restore]: " destination \
+    read -rp "$(t MP_EXPORT_RESTORE_DESTINATION_MNT_SHOTCUT_REMEDIA_RESTORE)" destination \
         || return 0
 
     destination="${destination:-/mnt/shotcut/remedia-restore}"
@@ -972,18 +972,18 @@ restore_compact_project_menu() {
     local old_root="${PROJECT_DIR}/${project_name:-}"
 
     echo
-    echo "Destination: $destination"
-    echo "Original archive: $archive"
+    echo "$(t MP_EXPORT_DESTINATION "$destination")"
+    echo "$(t MP_EXPORT_ORIGINAL_ARCHIVE "$archive")"
     echo
-    echo "The archive and original project will not be modified."
-    echo "Existing restored project directories must remain untouched."
+    echo "$(t MP_EXPORT_THE_ARCHIVE_AND_ORIGINAL_PROJECT_WILL_NOT_BE_MODIFIED)"
+    echo "$(t MP_EXPORT_EXISTING_RESTORED_PROJECT_DIRECTORIES_MUST_REMAIN_UNTOUCHED)"
     echo
 
     local confirm
-    read -rp "Type RESTORE to proceed: " confirm || return 0
+    read -rp "$(t MP_EXPORT_TYPE_RESTORE_TO_PROCEED)" confirm || return 0
 
     if [[ "$confirm" != "RESTORE" ]]; then
-        echo "Cancelled."
+        echo "$(t MP_SYS_CANCELLED)"
         return 0
     fi
 
@@ -1002,32 +1002,32 @@ archive_project() {
     fi
 
     local project_path="$PROJECT_DIR/$project_name"
-    [[ -d "$project_path" ]] || { log_error "Project directory not found: $project_path"; return 1; }
+    [[ -d "$project_path" ]] || { log_error "$(t MP_EXPORT_PROJECT_DIRECTORY_NOT_FOUND "$project_path")"; return 1; }
 
     local archive_dir="${ARCHIVE_VIDEO_DIR:-${MEDIAPANEL_BACKUPS:-}}"
-    [[ -n "$archive_dir" ]] || { log_error 'Archive directory is not configured'; return 1; }
+    [[ -n "$archive_dir" ]] || { log_error "$(t MP_EXPORT_ARCHIVE_DIRECTORY_IS_NOT_CONFIGURED)"; return 1; }
 
     # Preserve legacy caller semantics: archive_project <project> still asks for mode.
     echo
     echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-    echo -e "                 ${COLOR_BOLD}${COLOR_CYAN}ARCHIVE PROJECT${COLOR_RESET}"
+    echo -e "$(t MP_EXPORT_ARCHIVE_PROJECT "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
     echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-    echo "Project: $project_name"
+    echo "$(t MP_EXPORT_PROJECT "$project_name")"
     echo
-    echo '1) Compact archive (video, short, edit, subtitles; empty media)'
-    echo '2) Full archive (all project files)'
-    echo '3) Check Shotcut project dependencies'
-    echo '4) Restore Compact Project'
+    echo "$(t MP_EXPORT_1_COMPACT_ARCHIVE_VIDEO_SHORT_EDIT_SUBTITLES_EMPTY_MEDIA)"
+    echo "$(t MP_EXPORT_2_FULL_ARCHIVE_ALL_PROJECT_FILES)"
+    echo "$(t MP_EXPORT_3_CHECK_SHOTCUT_PROJECT_DEPENDENCIES)"
+    echo "$(t MP_EXPORT_4_RESTORE_COMPACT_PROJECT)"
     echo
-    echo -e "${COLOR_YELLOW}0) Cancel${COLOR_RESET}"
+    echo -e "$(t MP_EXPORT_0_CANCEL "${COLOR_YELLOW}" "${COLOR_RESET}")"
     echo
     local mode
-    read -rp 'Choice: ' mode || return 0
+    read -rp "$(t MP_EXPORT_CHOICE)" mode || return 0
     case "$mode" in
         0) return 0 ;;
         1|2|3) ;;
         4) restore_compact_project_menu; return $? ;;
-        *) log_error 'Invalid archive mode'; return 1 ;;
+        *) log_error "$(t MP_EXPORT_INVALID_ARCHIVE_MODE)"; return 1 ;;
     esac
 
     # Check all MLT files: resources, stabilization data, fonts/assets etc.
@@ -1037,14 +1037,14 @@ archive_project() {
     if [[ ! -f "$checker" && -f "$MODULE_DIR/core/archive_mlt_check.py" ]]; then
         checker="$MODULE_DIR/core/archive_mlt_check.py"
     fi
-    [[ -f "$checker" ]] || { log_error "MLT checker missing: $checker"; return 1; }
+    [[ -f "$checker" ]] || { log_error "$(t MP_EXPORT_MLT_CHECKER_MISSING "$checker")"; return 1; }
 
     local -a keep_dirs=(video short edit subtitles)
     if [[ "$mode" == 1 || "$mode" == 3 ]]; then
         if ! python3 "$checker" "$project_path" "${keep_dirs[@]}"; then
-            echo '[WARN] Compact archive cannot guarantee Shotcut project integrity.'
+            echo "$(t MP_EXPORT_WARN_COMPACT_ARCHIVE_CANNOT_GUARANTEE_SHOTCUT_PROJECT_INTEGRITY)"
             if [[ "$mode" == 3 ]]; then return 1; fi
-            echo 'Choose Full archive until the MLT references are repaired.'
+            echo "$(t MP_EXPORT_CHOOSE_FULL_ARCHIVE_UNTIL_THE_MLT_REFERENCES_ARE_REPAIRED)"
             return 1
         fi
         [[ "$mode" == 3 ]] && return 0
@@ -1059,13 +1059,13 @@ archive_project() {
     temp="$(mktemp "$archive_dir/.remedia-archive-XXXXXXXX.tar.gz")" || return 1
 
     echo
-    echo "Target: $archive"
-    [[ "$mode" == 1 ]] && echo 'Compact archive contains only video/, short/, edit/, subtitles/ and an empty media/.'
-    [[ "$mode" == 2 ]] && echo 'Full archive contains the complete project.'
-    echo 'Original project will not be modified.'
+    echo "$(t MP_EXPORT_TARGET "$archive")"
+    [[ "$mode" == 1 ]] && echo "$(t MP_EXPORT_COMPACT_ARCHIVE_CONTAINS_ONLY_VIDEO_SHORT_EDIT_SUBTITLES_AND_AN_E)"
+    [[ "$mode" == 2 ]] && echo "$(t MP_EXPORT_FULL_ARCHIVE_CONTAINS_THE_COMPLETE_PROJECT)"
+    echo "$(t MP_EXPORT_ORIGINAL_PROJECT_WILL_NOT_BE_MODIFIED)"
     local confirm
-    read -rp 'Type ARCHIVE to proceed: ' confirm || { rm -f -- "$temp"; return 0; }
-    if [[ "$confirm" != ARCHIVE ]]; then rm -f -- "$temp"; echo 'Cancelled.'; return 0; fi
+    read -rp "$(t MP_EXPORT_TYPE_ARCHIVE_TO_PROCEED)" confirm || { rm -f -- "$temp"; return 0; }
+    if [[ "$confirm" != ARCHIVE ]]; then rm -f -- "$temp"; echo "$(t MP_SYS_CANCELLED)"; return 0; fi
 
     local rc=0
     if [[ "$mode" == 2 ]]; then
@@ -1089,19 +1089,19 @@ archive_project() {
 
     if (( rc != 0 )) || ! tar -tzf "$temp" >/dev/null; then
         rm -f -- "$temp"
-        log_error 'Archive failed or tar integrity check failed; no final archive created.'
+        log_error "$(t MP_EXPORT_ARCHIVE_FAILED_OR_TAR_INTEGRITY_CHECK_FAILED_NO_FINAL_ARCHIVE_CRE)"
         return 1
     fi
     if [[ -e "$archive" ]]; then
         rm -f -- "$temp"
-        log_error "Archive already exists: $archive"
+        log_error "$(t MP_EXPORT_ARCHIVE_ALREADY_EXISTS "$archive")"
         return 1
     fi
     if ! mv -n -- "$temp" "$archive"; then
         rm -f -- "$temp"
-        log_error 'Could not finalize archive'
+        log_error "$(t MP_EXPORT_COULD_NOT_FINALIZE_ARCHIVE)"
         return 1
     fi
-    log_info "Project archived: $project_name"
-    log_info "Archive saved: $archive"
+    log_info "$(t MP_EXPORT_PROJECT_ARCHIVED "$project_name")"
+    log_info "$(t MP_EXPORT_ARCHIVE_SAVED "$archive")"
 }

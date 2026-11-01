@@ -190,7 +190,7 @@ Support: ChatGPT
 
 ## 📌 Status
 
-Version: **1.4.0**
+Version: **1.5.0**
 The project is in active development:
 * contract stabilization
 * runtime improvements

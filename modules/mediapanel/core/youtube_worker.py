@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Process MediaPanel delivery queue one job at a time, without a daemon."""
+from remedia_i18n import t, value_error, runtime_error, exception_text, ArgumentParser
 import argparse
 import fcntl
 import json
@@ -23,11 +24,11 @@ def process(job_file, config_dir):
     with open(job_file, encoding='utf-8') as f:
         job = json.load(f)
     if job.get('action') != 'youtube_upload' or not isinstance(job.get('items'), list):
-        raise ValueError(f'Not a YouTube queue job: {job_file}')
+        raise value_error('MP_PY_NOT_A_YOUTUBE_QUEUE_JOB', job_file)
     if job.get('status') == 'completed':
         return True
     if job.get('status') in ('uploading', 'needs_review'):
-        print(f'REVIEW REQUIRED: {job_file} (previous upload may have succeeded)', file=sys.stderr)
+        print(t('MP_PY_REVIEW_REQUIRED_PREVIOUS_UPLOAD_MAY_HAVE_SUCCEEDED', job_file), file=sys.stderr)
         return False
     for item in job['items']:
         if item.get('status') == 'uploaded' and item.get('video_id'):
@@ -52,7 +53,7 @@ def process(job_file, config_dir):
                 metadata = json.load(stream)
 
             if not isinstance(metadata, dict):
-                raise ValueError("Invalid metadata structure")
+                raise value_error('MP_PY_INVALID_METADATA_STRUCTURE')
 
         except (OSError, ValueError) as exc:
             item['status'] = 'needs_review'
@@ -80,8 +81,7 @@ def process(job_file, config_dir):
             save(job_file, job)
 
             print(
-                f'Already uploaded: {media.name} '
-                f'→ {item["youtube_url"]}',
+                t('MP_PY_ALREADY_UPLOADED', media.name, item["youtube_url"]),
                 flush=True
             )
             continue
@@ -114,7 +114,7 @@ def process(job_file, config_dir):
             item['error'] = str(exc)
             job['status'] = 'needs_review'
             save(job_file, job)
-            print(f'Upload outcome must be checked in YouTube Studio: {exc}', file=sys.stderr)
+            print(t('MP_PY_UPLOAD_OUTCOME_MUST_BE_CHECKED_IN_YOUTUBE_STUDIO', exception_text(exc)), file=sys.stderr)
             return False
         # Persist API success in the queue before touching sidecar metadata.
         item['video_id'] = video_id
@@ -133,14 +133,14 @@ def process(job_file, config_dir):
                              'updated_at': utcnow()})
             atomic_json(metadata_path, metadata)
         except Exception as exc:
-            print(f'WARNING: YouTube upload succeeded, but sidecar update failed: {exc}', file=sys.stderr)
-        print(f'Uploaded: {media.name} → {item["youtube_url"]}', flush=True)
+            print(t('MP_PY_WARNING_YOUTUBE_UPLOAD_SUCCEEDED_BUT_SIDECAR_UPDATE_FAILED', exception_text(exc)), file=sys.stderr)
+        print(t('MP_PY_UPLOADED', media.name, item["youtube_url"]), flush=True)
     job['status'] = 'completed'
     save(job_file, job)
     return True
 
 def main():
-    p = argparse.ArgumentParser()
+    p = ArgumentParser()
     p.add_argument(
         '--state-dir',
         default=str(
@@ -149,7 +149,7 @@ def main():
         ),
     )
     p.add_argument('--config-dir', default=str(Path.home() / '.config/remedia/youtube'))
-    p.add_argument('--job', help='Process one named job JSON; default: all queued jobs')
+    p.add_argument('--job', help=t('MP_PY_PROCESS_ONE_NAMED_JOB_JSON_DEFAULT_ALL_QUEUED_JOBS'))
     args = p.parse_args()
     queue_dir = Path(args.state_dir).expanduser() / 'delivery/queue'
     queue_dir.mkdir(parents=True, exist_ok=True)
@@ -158,7 +158,7 @@ def main():
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            print('Another delivery worker is running', file=sys.stderr)
+            print(t('MP_PY_ANOTHER_DELIVERY_WORKER_IS_RUNNING'), file=sys.stderr)
             return 1
         jobs = [Path(args.job)] if args.job else sorted(queue_dir.glob('*.json'))
         overall_ok = True
@@ -169,14 +169,14 @@ def main():
                 if status == 'completed':
                     continue
                 if status not in ('queued', 'failed'):
-                    print(f'Skipping {job_file.name}: status {status}')
+                    print(t('MP_PY_SKIPPING_STATUS', job_file.name, status))
                     continue
-                print(f'Processing {job_file.name}', flush=True)
+                print(t('MP_PY_PROCESSING', job_file.name), flush=True)
                 if not process(job_file, args.config_dir):
                     overall_ok = False
             except Exception as exc:
                 overall_ok = False
-                print(f'Job error {job_file}: {exc}', file=sys.stderr)
+                print(t('MP_PY_JOB_ERROR', job_file, exception_text(exc)), file=sys.stderr)
         return 0 if overall_ok else 1
 
 

@@ -75,33 +75,53 @@ It ensures that the system does not rely on theoretical GPU availability, but on
 ## 📦 MediaPanel Delivery Layer
 
 ### Future Roadmap
-* Non-interactive metadata injection (CLI / templates)
-* Support for animated Reframe with keyframes in export_render.sh
-* Retry + failure classification
-* Multi-platform delivery (Vimeo, cloud storage)
-* Delivery observability (logs + status dashboard)
-* Integration with `remedia doctor`
+* Non-interactive metadata injection through CLI options and templates.
+* Support for animated Shotcut Output Reframe with keyframes in
+  `export_render.sh`, extending the verified static Reframe export.
+* Automatic retry policies and failure classification, extending
+  existing manual reprocessing of failed delivery jobs.
+* Multi-platform delivery, including Vimeo and cloud storage.
+* Extended delivery observability: structured failure diagnostics
+  and a consolidated status dashboard, building on existing logs,
+  queue summaries, and persistent upload results.
+* Delivery-specific integration with `remedia doctor`:
+  dependency, OAuth configuration, queue integrity, and publication
+  metadata checks, with network checks explicitly requested.
 
 ### Design Goal
 > “A deterministic media delivery engine that works offline,
 > but scales to full automation without redesign”
 
+Offline operation covers local preparation, metadata, queue management,
+and archiving; uploads and remote account checks require connectivity.
+
 ## 📦 MediaPanel Project Recovery — Future Improvement
 
 ### Restore Compact Project without an active project
-Currently, `Restore Compact Project` is accessed through **Export → Archive Project**, and `archive_project()` requires an existing active project before displaying its menu.
-Planned improvement:
-- Move **Restore Compact Project** to a standalone entry in the **Export** menu (or a dedicated recovery menu).
-- Allow recovery when no project is active, including on a fresh Remedia installation.
-- List available compact archives and let the user select a destination independently of `PROJECT_DIR` and the active project.
-- Preserve existing safety guarantees: never overwrite an existing project, repair paths only in restored MLT copies, verify `.stab` and media references, and leave intermediate-file regeneration as an explicit separate step.
 
-**Priority:** Post-v1.4.0; keep the tested archive/restore workflow unchanged for the v1.4.0 release.
+Compact archive restoration is implemented and verified.
+Its current menu entry remains under **Export → Archive Project**,
+where `archive_project()` requires an existing active project.
+
+Planned improvement:
+* Expose **Restore Compact Project** as a standalone entry in the
+  **Export** menu or a dedicated recovery menu.
+* Allow recovery when no project is active, including on a fresh
+  Remedia installation.
+* List available compact archives and allow destination selection
+  independently of `PROJECT_DIR` and the active project.
+* Preserve existing safety guarantees:
+  never overwrite an existing project; repair paths only in restored
+  MLT copies; verify stabilization and media references; keep
+  intermediate-file regeneration an explicit separate step.
+* Preserve dry-run support and the tested archive/restore workflow.
+
+**Priority:** Future release; independent of the current release preparation.
 
 ## 🌍 UI Internationalization (i18n)
 
 ### Overview
-The MediaPanel UI implements a **key-based internationalization system** designed for:
+The System nodule UI implements a **key-based internationalization system** designed for:
 * CLI-first environments (no GUI dependencies)
 * deterministic output
 * full offline capability

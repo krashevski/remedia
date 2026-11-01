@@ -9,10 +9,10 @@ set_active_project_safe() {
     local name="$1"
 
     if [[ ! -d "$PROJECT_DIR/$name" ]]; then
-        echo "[ERROR] project not found"
+        echo "$(t MP_API_ERROR_PROJECT_NOT_FOUND)"
         return 1
     fi
 
     state_set "active_project" "$name"
-    echo "[OK] active project: $name"
+    echo "$(t MP_API_OK_ACTIVE_PROJECT "$name")"
 }

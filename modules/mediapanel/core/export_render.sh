@@ -119,13 +119,13 @@ PY_MLT
 
 export_nvenc_help() {
     echo
-    echo "[WARNING] Shotcut Flatpak NVENC is unavailable."
-    echo "MediaPanel -> SYSTEM STATUS:"
-    echo "  6) Shotcut Flatpak NVENC doctor"
-    echo "  7) Shotcut Flatpak NVENC heal"
-    echo "CLI: remedia system nvidia-flatpak-nvenc doctor"
-    echo "CLI: remedia system nvidia-flatpak-nvenc heal"
-    echo "[INFO] No automatic repairs will be performed."
+    echo "$(t MP_EXPORT_RENDER_WARNING_SHOTCUT_FLATPAK_NVENC_IS_UNAVAILABLE)"
+    echo "$(t MP_EXPORT_RENDER_MEDIAPANEL_SYSTEM_STATUS)"
+    echo "$(t MP_EXPORT_RENDER_6_SHOTCUT_FLATPAK_NVENC_DOCTOR)"
+    echo "$(t MP_EXPORT_RENDER_7_SHOTCUT_FLATPAK_NVENC_HEAL)"
+    echo "$(t MP_EXPORT_RENDER_CLI_REMEDIA_SYSTEM_NVIDIA_FLATPAK_NVENC_DOCTOR)"
+    echo "$(t MP_EXPORT_RENDER_CLI_REMEDIA_SYSTEM_NVIDIA_FLATPAK_NVENC_HEAL)"
+    echo "$(t MP_EXPORT_RENDER_INFO_NO_AUTOMATIC_REPAIRS_WILL_BE_PERFORMED)"
     echo
 }
 
@@ -264,10 +264,10 @@ export_render() {
 
     if [[ ! -d "$project_dir" ]]; then
         mediapanel_log_error "$project" \
-            "Project directory not found: $project_dir"
+            "$(t MP_EXPORT_PROJECT_DIRECTORY_NOT_FOUND "$project_dir")"
 
         echo
-        echo "[ERROR] Project directory not found:"
+        echo "$(t MP_EXPORT_RENDER_ERROR_PROJECT_DIRECTORY_NOT_FOUND)"
         echo "        $project_dir"
         echo
 
@@ -276,7 +276,7 @@ export_render() {
 
     mkdir -p "$video_dir" "$short_dir" || {
         mediapanel_log_error "$project" \
-        "Cannot create video/short directories"
+        "$(t MP_EXPORT_RENDER_CANNOT_CREATE_VIDEO_SHORT_DIRECTORIES)"
         return 1
     }
 
@@ -305,10 +305,10 @@ export_render() {
 
     if (( ${#files[@]} == 0 )); then
         mediapanel_log_error "$project" \
-            "No Shotcut MLT projects found"
+            "$(t MP_EXPORT_RENDER_NO_SHOTCUT_MLT_PROJECTS_FOUND)"
 
         echo
-        echo "[ERROR] No Shotcut projects found in:"
+        echo "$(t MP_EXPORT_RENDER_ERROR_NO_SHOTCUT_PROJECTS_FOUND_IN)"
         echo "        $video_dir"
         echo "        $short_dir"
         echo
@@ -321,7 +321,7 @@ export_render() {
     # --------------------------------------------------------
 
     echo
-    echo "Available Shotcut projects:"
+    echo "$(t MP_EXPORT_RENDER_AVAILABLE_SHOTCUT_PROJECTS)"
     echo "------------------------------------------------"
 
     local i=1
@@ -331,13 +331,13 @@ export_render() {
     for file in "${files[@]}"; do
         case "$file" in
             "$video_dir"/*)
-                label="VIDEO"
+                label="$(t MP_KIND_VIDEO)"
                 ;;
             "$short_dir"/*)
-                label="SHORT"
+                label="$(t MP_KIND_SHORT)"
                 ;;
             *)
-                label="MLT"
+                label="$(t MP_KIND_MLT)"
                 ;;
         esac
 
@@ -350,13 +350,13 @@ export_render() {
     done
 
     echo "------------------------------------------------"
-    echo "Select one or several projects."
-    echo "Examples: 1   |   1 2   |   all"
-    echo "Enter 0 to return."
+    echo "$(t MP_EXPORT_RENDER_SELECT_ONE_OR_SEVERAL_PROJECTS)"
+    echo "$(t MP_EXPORT_EXAMPLES_1_1_2_ALL)"
+    echo "$(t MP_EXPORT_RENDER_ENTER_0_TO_RETURN)"
     echo
 
     local selection=""
-    read -rp "Selection: " selection
+    read -rp "$(t MP_EXPORT_SELECTION)" selection
 
     selection="${selection//,/ }"
 
@@ -378,9 +378,9 @@ export_render() {
                   choice > ${#files[@]} )); then
 
                 mediapanel_log_error "$project" \
-                    "Invalid export selection: $choice"
+                    "$(t MP_EXPORT_RENDER_INVALID_EXPORT_SELECTION "$choice")"
 
-                echo "[ERROR] Invalid selection: $choice"
+                echo "$(t MP_EXPORT_RENDER_ERROR_INVALID_SELECTION "$choice")"
                 return 1
             fi
 
@@ -396,12 +396,12 @@ export_render() {
 
     if (( ${#selected_files[@]} == 0 )); then
         mediapanel_log_error "$project" \
-            "No MLT projects selected"
+            "$(t MP_EXPORT_RENDER_NO_MLT_PROJECTS_SELECTED)"
         return 1
     fi
 
     echo
-    echo "Selected projects:"
+    echo "$(t MP_EXPORT_RENDER_SELECTED_PROJECTS)"
     echo "------------------------------------------------"
 
     for file in "${selected_files[@]}"; do
@@ -410,7 +410,7 @@ export_render() {
 
     echo "------------------------------------------------"
 
-    log_info "=== Export Render started ==="
+    log_info "$(t MP_EXPORT_RENDER_EXPORT_RENDER_STARTED)"
     log_project "$project" "Export render started"
 
     # --------------------------------------------------------
@@ -423,7 +423,7 @@ export_render() {
 
         MELT_CMD=(melt)
 
-        log_info "MLT engine: system melt"
+        log_info "$(t MP_EXPORT_RENDER_MLT_ENGINE_SYSTEM_MELT)"
 
     elif command -v flatpak >/dev/null 2>&1 \
         && flatpak info org.shotcut.Shotcut >/dev/null 2>&1; then
@@ -435,14 +435,14 @@ export_render() {
             org.shotcut.Shotcut
         )
 
-        log_info "MLT engine: Shotcut Flatpak melt"
+        log_info "$(t MP_EXPORT_RENDER_MLT_ENGINE_SHOTCUT_FLATPAK_MELT)"
 
     else
 
-        mediapanel_log_error "$project" "melt not found"
+        mediapanel_log_error "$project" "$(t MP_EXPORT_RENDER_MELT_NOT_FOUND)"
 
         echo
-        echo "[ERROR] MLT render engine 'melt' is not available."
+        echo "$(t MP_EXPORT_RENDER_ERROR_MLT_RENDER_ENGINE_MELT_IS_NOT_AVAILABLE)"
         echo
 
         return 1
@@ -461,16 +461,16 @@ export_render() {
 
     if [[ -z "$melt_version" ]]; then
 
-        mediapanel_log_error "$project" "melt is not executable"
+        mediapanel_log_error "$project" "$(t MP_EXPORT_RENDER_MELT_IS_NOT_EXECUTABLE)"
 
         echo
-        echo "[ERROR] melt was found but could not be executed."
+        echo "$(t MP_EXPORT_RENDER_ERROR_MELT_WAS_FOUND_BUT_COULD_NOT_BE_EXECUTED)"
         echo
 
         return 1
     fi
 
-    log_info "MLT: $melt_version"
+    log_info "$(t MP_EXPORT_RENDER_MLT "$melt_version")"
 
     # --------------------------------------------------------
     # DETECT NVIDIA
@@ -483,7 +483,7 @@ export_render() {
 
         if nvidia-smi >/dev/null 2>&1; then
 
-            log_info "NVIDIA GPU detected"
+            log_info "$(t MP_EXPORT_RENDER_NVIDIA_GPU_DETECTED)"
 
             # ------------------------------------------------
             # IMPORTANT:
@@ -516,12 +516,12 @@ export_render() {
                 encoder="h264_nvenc"
                 encoder_mode="NVENC"
 
-                log_info "h264_nvenc available inside MLT/Shotcut environment"
+                log_info "$(t MP_EXPORT_RENDER_H264_NVENC_AVAILABLE_INSIDE_MLT_SHOTCUT_ENVIRONMENT)"
 
             else
 
-                log_warn "h264_nvenc unavailable inside MLT/Shotcut environment"
-                log_info "Using CPU encoder libx264"
+                log_warn "$(t MP_EXPORT_RENDER_H264_NVENC_UNAVAILABLE_INSIDE_MLT_SHOTCUT_ENVIRONMENT)"
+                log_info "$(t MP_EXPORT_RENDER_USING_CPU_ENCODER_LIBX264)"
                 if [[ "${MELT_CMD[0]}" == "flatpak" ]]; then
                     export_nvenc_help
                 fi
@@ -530,13 +530,13 @@ export_render() {
 
         else
 
-            log_warn "NVIDIA GPU detected but nvidia-smi failed"
+            log_warn "$(t MP_EXPORT_RENDER_NVIDIA_GPU_DETECTED_BUT_NVIDIA_SMI_FAILED)"
 
         fi
 
     else
 
-        log_info "NVIDIA tools not found; using CPU"
+        log_info "$(t MP_EXPORT_RENDER_NVIDIA_TOOLS_NOT_FOUND_USING_CPU)"
 
     fi
 
@@ -575,14 +575,14 @@ export_render() {
 
               *)
                   mediapanel_log_error "$project" \
-                  "Unknown MLT project type: $mlt"
+                  "$(t MP_EXPORT_RENDER_UNKNOWN_MLT_PROJECT_TYPE "$mlt")"
                   return 1
                   ;;
           esac
 
         [[ -r "$mlt" ]] || {
             mediapanel_log_error "$project" \
-                "MLT project is not readable: $mlt"
+                "$(t MP_EXPORT_RENDER_MLT_PROJECT_IS_NOT_READABLE "$mlt")"
             return 1
         }
 
@@ -629,14 +629,14 @@ export_render() {
 
         # Validate stabilization before touching any existing MP4.
         command -v python3 >/dev/null 2>&1 || {
-            mediapanel_log_error "$project" "python3 is required for MLT path validation"
+            mediapanel_log_error "$project" "$(t MP_EXPORT_RENDER_PYTHON3_IS_REQUIRED_FOR_MLT_PATH_VALIDATION)"
             return 1
         }
 
         render_mlt="$(mktemp "$render_dir/.remedia-render-XXXXXX.xml")" || return 1
         if ! export_prepare_render_mlt "$mlt" "$render_mlt"; then
             rm -f -- "$render_mlt" "$render_target"
-            mediapanel_log_error "$project" "Stabilization/Reframe validation failed: $mlt"
+            mediapanel_log_error "$project" "$(t MP_EXPORT_RENDER_STABILIZATION_REFRAME_VALIDATION_FAILED "$mlt")"
             return 1
         fi
 
@@ -646,7 +646,7 @@ export_render() {
         local reframe_geometry=""
         reframe_geometry="$(export_reframe_geometry "$render_mlt")" || {
             rm -f -- "$render_mlt" "$render_target"
-            echo "[ERROR] Cannot read Shotcut Reframe geometry."
+            echo "$(t MP_EXPORT_RENDER_ERROR_CANNOT_READ_SHOTCUT_REFRAME_GEOMETRY)"
             return 1
         }
         render_wrapper=""
@@ -658,7 +658,7 @@ export_render() {
             }
             if ! export_create_reframe_wrapper "$render_mlt" "$render_wrapper"; then
                 rm -f -- "$render_wrapper" "$render_mlt" "$render_target"
-                mediapanel_log_error "$project" "Cannot prepare Reframe wrapper: $mlt"
+                mediapanel_log_error "$project" "$(t MP_EXPORT_RENDER_CANNOT_PREPARE_REFRAME_WRAPPER "$mlt")"
                 return 1
             fi
             render_input="$render_wrapper"
@@ -671,8 +671,8 @@ export_render() {
             done
             CONSUMER_ARGS=("${wrapper_consumer_args[@]}")
         elif [[ "$render_type" == "SHORT" ]]; then
-            echo "[WARNING] This SHORT project has no enabled Output Reframe filter."
-            echo "[WARNING] The video will retain its project aspect ratio."
+            echo "$(t MP_EXPORT_RENDER_WARNING_THIS_SHORT_PROJECT_HAS_NO_ENABLED_OUTPUT_REFRAME_FILTER)"
+            echo "$(t MP_EXPORT_RENDER_WARNING_THE_VIDEO_WILL_RETAIN_ITS_PROJECT_ASPECT_RATIO)"
         fi
 
         # Existing output remains untouched until rendering succeeds.
@@ -683,13 +683,13 @@ export_render() {
 
         echo
         echo "=================================================="
-        echo " MEDIAPANEL EXPORT RENDER"
+        echo "$(t MP_EXPORT_RENDER_MEDIAPANEL_EXPORT_RENDER)"
         echo "=================================================="
-        echo "Project : $project"
-        echo "Type    : $render_type"
-        echo "MLT     : $(basename "$mlt")"
-        echo "Encoder : $encoder_mode"
-        echo "Output  : $out"
+        echo "$(t MP_EXPORT_RENDER_PROJECT "$project")"
+        echo "$(t MP_EXPORT_RENDER_TYPE "$render_type")"
+        echo "$(t MP_EXPORT_RENDER_MLT_2 "$(basename "$mlt")")"
+        echo "$(t MP_EXPORT_RENDER_ENCODER "$encoder_mode")"
+        echo "$(t MP_EXPORT_RENDER_OUTPUT "$out")"
         echo "=================================================="
         echo
 
@@ -713,22 +713,22 @@ export_render() {
 
         if (( rc != 0 )); then
             mediapanel_log_error "$project" \
-                "$render_type export failed (exit code $rc)"
+                "$(t MP_EXPORT_RENDER_EXPORT_FAILED_EXIT_CODE "$render_type" "$rc")"
 
             rm -f -- "$render_target"
 
             echo
             echo "=================================================="
-            echo " [ERROR] EXPORT RENDER FAILED"
+            echo "$(t MP_EXPORT_RENDER_ERROR_EXPORT_RENDER_FAILED)"
             echo "=================================================="
-            echo "Type    : $render_type"
-            echo "Encoder : $encoder_mode"
-            echo "Exit    : $rc"
+            echo "$(t MP_EXPORT_RENDER_TYPE "$render_type")"
+            echo "$(t MP_EXPORT_RENDER_ENCODER "$encoder_mode")"
+            echo "$(t MP_EXPORT_RENDER_EXIT "$rc")"
             echo "=================================================="
             if [[ "$encoder_mode" == "NVENC" && "${MELT_CMD[0]}" == "flatpak" ]]; then
-                echo "[INFO] If the failure mentions libcuda.so.1 / NVENC:"
+                echo "$(t MP_EXPORT_RENDER_INFO_IF_THE_FAILURE_MENTIONS_LIBCUDA_SO_1_NVENC)"
                 export_nvenc_help
-                echo "[INFO] Otherwise inspect the MLT filters and error log."
+                echo "$(t MP_EXPORT_RENDER_INFO_OTHERWISE_INSPECT_THE_MLT_FILTERS_AND_ERROR_LOG)"
             fi
             echo
 
@@ -737,11 +737,11 @@ export_render() {
 
         if [[ ! -s "$render_target" ]]; then
             mediapanel_log_error "$project" \
-                "$render_type export is missing or empty"
+                "$(t MP_EXPORT_RENDER_EXPORT_IS_MISSING_OR_EMPTY "$render_type")"
 
             rm -f -- "$render_target"
 
-            echo "[ERROR] Export file is missing or empty:"
+            echo "$(t MP_EXPORT_RENDER_ERROR_EXPORT_FILE_IS_MISSING_OR_EMPTY)"
             echo "        $out"
 
             return 1
@@ -749,7 +749,7 @@ export_render() {
 
         if ! mv -f -- "$render_target" "$out"; then
             rm -f -- "$render_target"
-            mediapanel_log_error "$project" "Cannot finalize output: $out"
+            mediapanel_log_error "$project" "$(t MP_EXPORT_RENDER_CANNOT_FINALIZE_OUTPUT "$out")"
             return 1
         fi
 
@@ -760,22 +760,22 @@ export_render() {
 
         echo
         echo "=================================================="
-        echo " [OK] EXPORT RENDERED"
+        echo "$(t MP_EXPORT_RENDER_OK_EXPORT_RENDERED)"
         echo "=================================================="
-        echo "Type    : $render_type"
-        echo "Encoder : $encoder_mode"
-        echo "File    : $out"
-        echo "Size    : $(du -h "$out" | cut -f1)"
+        echo "$(t MP_EXPORT_RENDER_TYPE "$render_type")"
+        echo "$(t MP_EXPORT_RENDER_ENCODER "$encoder_mode")"
+        echo "$(t MP_EXPORT_RENDER_FILE "$out")"
+        echo "$(t MP_EXPORT_RENDER_SIZE "$(du -h "$out" | cut -f1)")"
         echo "=================================================="
         echo
     done
 
     pipeline_set "$project" "export" "done"
 
-    log_info "Export render completed"
-    log_info "Rendered projects: $rendered"
+    log_info "$(t MP_EXPORT_RENDER_EXPORT_RENDER_COMPLETED)"
+    log_info "$(t MP_EXPORT_RENDER_RENDERED_PROJECTS "$rendered")"
 
-    echo "[OK] rendered projects: $rendered"
+    echo "$(t MP_EXPORT_RENDER_OK_RENDERED_PROJECTS "$rendered")"
 
     return 0
 }

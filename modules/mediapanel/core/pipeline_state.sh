@@ -86,7 +86,7 @@ pipeline_lock() {
     local lock="$(pipeline_lock_file "$project")"
 
     if [[ -f "$lock" ]]; then
-        echo "[PIPELINE] already running"
+        echo "$(t MP_PIPELINE_STATE_PIPELINE_ALREADY_RUNNING)"
         return 1
     fi
 
@@ -119,9 +119,9 @@ run_step() {
                 "$project" \
                 "$PROJECT_DIR/$project"
             ;;
-        ingest) echo "[STEP] ingest external" ;;
+        ingest) echo "$(t MP_PIPELINE_STATE_STEP_INGEST_EXTERNAL)" ;;
         *)
-            echo "[ERROR] unknown step: $step"
+            echo "$(t MP_PIPELINE_STATE_ERROR_UNKNOWN_STEP "$step")"
             pipeline_set "$project" "$step" failed
             return 1
             ;;
@@ -149,18 +149,18 @@ resume_pipeline() {
         state="$(pipeline_get "$project" "$step" || echo pending)"
 
         if [[ "$state" != "done" ]]; then
-            echo "[RESUME] $step"
+            echo "$(t MP_PIPELINE_STATE_RESUME "$step")"
             if run_step "$project" "$step"; then
                 return 0
             else
                 local rc=$?
-                echo "[ERROR] resume step failed: $step (code $rc)"
+                echo "$(t MP_PIPELINE_STATE_ERROR_RESUME_STEP_FAILED_CODE "$step" "$rc")"
                 return "$rc"
             fi
         fi
     done
 
-    echo "[OK] complete"
+    echo "$(t MP_PIPELINE_STATE_OK_COMPLETE)"
 }
 
 full_pipeline() {
@@ -186,7 +186,7 @@ full_pipeline() {
     pipeline_set "$project" status done
     pipeline_unlock "$project"
 
-    echo "[OK] full pipeline done"
+    echo "$(t MP_PIPELINE_STATE_OK_FULL_PIPELINE_DONE)"
 }
 
 retry_step() {
@@ -216,11 +216,11 @@ pipeline_status() {
     video_mlt_file="$project_path/video/${project}_video.mlt"
     short_mlt_file="$project_path/short/${project}_short.mlt"
 
-    echo -e "${COLOR_BOLD}Pipeline status:${COLOR_RESET}"
+    echo -e "$(t MP_PIPELINE_STATE_PIPELINE_STATUS "${COLOR_BOLD}" "${COLOR_RESET}")"
 
     for step in "${PIPELINE_STEPS[@]}"; do
         local state
-        local label="$step"
+        local label="$(t "MP_STEP_${step^^}")"
         local real_file=""
 
         state="$(pipeline_get "$project" "$step")"
@@ -228,11 +228,11 @@ pipeline_status() {
 
         case "$step" in
             video_mlt)
-                label="video mlt"
+                label="$(t MP_STEP_VIDEO_MLT)"
                 real_file="$video_mlt_file"
                 ;;
             short_mlt)
-                label="short mlt"
+                label="$(t MP_STEP_SHORT_MLT)"
                 real_file="$short_mlt_file"
                 ;;
         esac
@@ -243,7 +243,7 @@ pipeline_status() {
                 pipeline_set "$project" "$step" done
             fi
 
-            out+="${COLOR_GREEN}✔ $label (exists)${COLOR_RESET}\n"
+            out+="${COLOR_GREEN}✔ $(t MP_PIPELINE_LABEL_EXISTS "$label")${COLOR_RESET}\n"
             continue
         fi
 
@@ -255,19 +255,19 @@ pipeline_status() {
                 out+="${COLOR_YELLOW}⟳ $label${COLOR_RESET}\n"
                 ;;
             running)
-                out+="${COLOR_CYAN}▶ $label (running)${COLOR_RESET}\n"
+                out+="${COLOR_CYAN}▶ $(t MP_PIPELINE_LABEL_RUNNING "$label")${COLOR_RESET}\n"
                 ;;
             skipped)
-                out+="${COLOR_BLUE}— $label (skipped)${COLOR_RESET}\n"
+                out+="${COLOR_BLUE}— $(t MP_PIPELINE_LABEL_SKIPPED "$label")${COLOR_RESET}\n"
                 ;;
             failed)
-                out+="${COLOR_RED}✖ $label (failed)${COLOR_RESET}\n"
+                out+="${COLOR_RED}✖ $(t MP_PIPELINE_LABEL_FAILED "$label")${COLOR_RESET}\n"
                 ;;
             missing)
-                out+="${COLOR_MAGENTA}⚠ $label (state missing)${COLOR_RESET}\n"
+                out+="${COLOR_MAGENTA}⚠ $(t MP_PIPELINE_LABEL_MISSING "$label")${COLOR_RESET}\n"
                 ;;
             *)
-                out+="${COLOR_MAGENTA}⚠ $label (unknown: $state)${COLOR_RESET}\n"
+                out+="${COLOR_MAGENTA}⚠ $(t MP_PIPELINE_LABEL_UNKNOWN "$label" "$state")${COLOR_RESET}\n"
                 ;;
         esac
     done

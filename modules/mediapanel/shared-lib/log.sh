@@ -70,8 +70,8 @@ log() {
 
     should_log "$level" || return 0
 
-
-    local logfile="${LOG_FILE:-$LOG_DIR/mediapanel.log}"
+    local module="${MODULE_NAME:-unknown_module}"
+    local logfile="${LOG_FILE:-$LOG_DIR/${module}.log}"
 
     rotate_logs "$logfile"
 

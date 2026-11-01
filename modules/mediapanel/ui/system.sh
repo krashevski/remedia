@@ -28,22 +28,22 @@ mediapanel_install_youtube_api() {
     local confirm
 
     echo
-    echo 'YouTube API Python dependencies'
-    echo "Virtual environment: $venv_dir"
-    echo 'Packages: google-api-python-client, google-auth-oauthlib, google-auth-httplib2'
-    echo 'Installation downloads packages from PyPI; no sudo required.'
+    echo "$(t MP_SYS_YOUTUBE_API_PYTHON_DEPENDENCIES)"
+    echo "$(t MP_SYS_VIRTUAL_ENVIRONMENT "$venv_dir")"
+    echo "$(t MP_SYS_PACKAGES_GOOGLE_API_PYTHON_CLIENT_GOOGLE_AUTH_OAUTHLIB_GOOGLE_AUTH_HTT)"
+    echo "$(t MP_SYS_INSTALLATION_DOWNLOADS_PACKAGES_FROM_PYPI_NO_SUDO_REQUIRED)"
     echo
-    read -rp 'Install/upgrade dependencies? [y/N]: ' confirm || return 0
-    [[ "$confirm" =~ ^[YyДд]$ ]] || { echo 'Cancelled.'; return 0; }
+    read -rp "$(t MP_SYS_INSTALL_UPGRADE_DEPENDENCIES_Y_N)" confirm || return 0
+    [[ "$confirm" =~ ^[YyДдИи]$ ]] || { echo "$(t MP_SYS_CANCELLED)"; return 0; }
 
     if [[ ! -x "$py" ]]; then
         if ! python3 -m venv "$venv_dir"; then
-            echo '[ERROR] Cannot create venv. Install python3-venv using your package manager.'
+            echo "$(t MP_SYS_ERROR_CANNOT_CREATE_VENV_INSTALL_PYTHON3_VENV_USING_YOUR_PACKAGE_MANAG)"
             return 1
         fi
     fi
     if ! "$py" -m pip --version >/dev/null 2>&1; then
-        echo '[ERROR] pip missing in the YouTube virtual environment.'
+        echo "$(t MP_SYS_ERROR_PIP_MISSING_IN_THE_YOUTUBE_VIRTUAL_ENVIRONMENT)"
         return 1
     fi
     "$py" -m pip install \
@@ -52,7 +52,7 @@ mediapanel_install_youtube_api() {
         google-auth-httplib2 || return 1
 
     "$py" -c 'import googleapiclient, google_auth_oauthlib, google_auth_httplib2' || return 1
-    echo '[OK] YouTube API dependencies installed and importable.'
+    echo "$(t MP_SYS_OK_YOUTUBE_API_DEPENDENCIES_INSTALLED_AND_IMPORTABLE)"
 }
 
 # OAuth setup is modular: no network calls on system status refresh.
@@ -61,8 +61,8 @@ if [[ -f "$YOUTUBE_SETUP_MODULE" ]]; then
     # shellcheck source=modules/mediapanel/ui/youtube_api_setup.sh
     source "$YOUTUBE_SETUP_MODULE"
 else
-    mediapanel_youtube_api_status() { echo 'YouTube API: setup module missing'; }
-    mediapanel_youtube_setup_menu() { echo '[ERROR] YouTube setup module missing'; return 1; }
+    mediapanel_youtube_api_status() { echo "$(t MP_SYS_YOUTUBE_SETUP_MISSING)"; }
+    mediapanel_youtube_setup_menu() { echo "$(t MP_SYS_ERROR_YOUTUBE_SETUP_MISSING)"; return 1; }
 fi
 
 # =========================
@@ -74,19 +74,19 @@ mediapanel_require_runtime() {
     : "${PROJECT_DIR:?missing PROJECT_DIR}"
 
     if ! declare -f state_get >/dev/null; then
-        echo "[FATAL] state system not loaded"
+        echo "$(t MP_SYS_FATAL_STATE_SYSTEM_NOT_LOADED)"
         return 1
     fi
 }
 
 mediapanel_check_dependencies() {
     command -v ffmpeg >/dev/null || {
-        echo "[WARN] ffmpeg not installed"
+        echo "$(t MP_SYS_WARN_FFMPEG_NOT_INSTALLED)"
         return 1
     }
 
     command -v find >/dev/null || {
-        echo "[FATAL] coreutils missing"
+        echo "$(t MP_SYS_FATAL_COREUTILS_MISSING)"
         return 1
     }
 
@@ -94,10 +94,10 @@ mediapanel_check_dependencies() {
 }
 
 mediapanel_system_info() {
-    echo "[MediaPanel System]"
-    echo "REMEDIA_VAR=$REMEDIA_VAR"
-    echo "PROJECT_DIR=$PROJECT_DIR"
-    echo "ACTIVE_PROJECT=$(state_get active_project)"
+    echo "$(t MP_SYS_MEDIAPANEL_SYSTEM)"
+    echo "$(t MP_SYS_REMEDIA_VAR "$REMEDIA_VAR")"
+    echo "$(t MP_SYS_PROJECT_DIR "$PROJECT_DIR")"
+    echo "$(t MP_SYS_ACTIVE_PROJECT "$(state_get active_project)")"
 }
 
 phone_status() {
@@ -114,7 +114,7 @@ safe_log_file() {
 
     # 1. переменная не задана
     if [[ -z "${file:-}" ]]; then
-        echo "[LOG] LOG_FILE is not set"
+        echo "$(t MP_SYS_LOG_LOG_FILE_IS_NOT_SET)"
         return 1
     fi
 
@@ -123,14 +123,14 @@ safe_log_file() {
     dir="$(dirname "$file")"
 
     if [[ ! -d "$dir" ]]; then
-        echo "[LOG] log directory missing: $dir"
+        echo "$(t MP_SYS_LOG_LOG_DIRECTORY_MISSING "$dir")"
         return 1
     fi
 
     # 3. файл существует?
     if [[ ! -f "$file" ]]; then
-        echo "[LOG] log file not created yet: $file"
-        echo "[LOG] (run ingest / pipeline first)"
+        echo "$(t MP_SYS_LOG_LOG_FILE_NOT_CREATED_YET "$file")"
+        echo "$(t MP_SYS_LOG_RUN_INGEST_PIPELINE_FIRST)"
         return 1
     fi
 
@@ -161,12 +161,12 @@ install_shotcut_filter_sets() {
     local filename
 
     [[ -d "$source_dir" ]] || {
-        echo "[ERROR] Remedia filter sets not found: $source_dir"
+        echo "$(t MP_SYS_ERROR_REMEDIA_FILTER_SETS_NOT_FOUND "$source_dir")"
         return 1
     }
 
     mkdir -p "$target_dir" || {
-        echo "[ERROR] Cannot create Shotcut filter-set directory:"
+        echo "$(t MP_SYS_ERROR_CANNOT_CREATE_SHOTCUT_FILTER_SET_DIRECTORY)"
         echo "        $target_dir"
         return 1
     }
@@ -177,26 +177,26 @@ install_shotcut_filter_sets() {
         filename="${file##*/}"
 
         if [[ -e "$target_dir/$filename" ]]; then
-            echo "[SKIP] $filename already exists"
+            echo "$(t MP_SYS_SKIP_ALREADY_EXISTS "$filename")"
             ((skipped++))
             continue
         fi
 
         if cp -- "$file" "$target_dir/$filename"; then
-            echo "[OK] imported: $filename"
+            echo "$(t MP_SYS_OK_IMPORTED "$filename")"
             ((copied++))
         else
-            echo "[ERROR] failed to import: $filename"
+            echo "$(t MP_SYS_ERROR_FAILED_TO_IMPORT "$filename")"
             return 1
         fi
     done
 
     echo
-    echo "[OK] Filter-set import completed"
-    echo "     Imported: $copied"
-    echo "     Existing: $skipped"
+    echo "$(t MP_SYS_OK_FILTER_SET_IMPORT_COMPLETED)"
+    echo "$(t MP_SYS_IMPORTED "$copied")"
+    echo "$(t MP_SYS_EXISTING "$skipped")"
     echo
-    echo "[INFO] Restart Shotcut to load the filter sets."
+    echo "$(t MP_SYS_INFO_RESTART_SHOTCUT_TO_LOAD_THE_FILTER_SETS)"
 }
 
 show_shotcut_config_status() {
@@ -204,17 +204,17 @@ show_shotcut_config_status() {
     local filter_dir="$HOME/.var/app/$shotcut_app/data/Meltytech/Shotcut/filter-sets"
     local filter_count=0
 
-    echo "Shotcut:"
+    echo "$(t MP_SYS_SHOTCUT)"
 
     # Проверка установки Shotcut Flatpak
     if ! command -v flatpak >/dev/null 2>&1; then
-        echo -e "   Flatpak: ${COLOR_RED}not installed${COLOR_RESET}"
-        echo -e "   Subtitles module (Whisper): ${COLOR_RED}unavailable${COLOR_RESET}"
+        echo -e "$(t MP_SYS_FLATPAK_NOT_INSTALLED "${COLOR_RED}" "${COLOR_RESET}")"
+        echo -e "$(t MP_SYS_SUBTITLES_MODULE_WHISPER_UNAVAILABLE "${COLOR_RED}" "${COLOR_RESET}")"
     elif ! flatpak info "$shotcut_app" >/dev/null 2>&1; then
-        echo -e "   Flatpak: ${COLOR_RED}Shotcut not installed${COLOR_RESET}"
-        echo -e "   Subtitles module (Whisper): ${COLOR_RED}unavailable${COLOR_RESET}"
+        echo -e "$(t MP_SYS_FLATPAK_SHOTCUT_NOT_INSTALLED "${COLOR_RED}" "${COLOR_RESET}")"
+        echo -e "$(t MP_SYS_SUBTITLES_MODULE_WHISPER_UNAVAILABLE "${COLOR_RED}" "${COLOR_RESET}")"
     else
-        echo -e "   Flatpak: ${COLOR_GREEN}installed${COLOR_RESET}"
+        echo -e "$(t MP_SYS_FLATPAK_INSTALLED "${COLOR_GREEN}" "${COLOR_RESET}")"
 
         # Проверка установленного в Shotcut модуля Whisper
         if timeout 10 \
@@ -223,9 +223,9 @@ show_shotcut_config_status() {
                 "$shotcut_app" \
                 --help >/dev/null 2>&1
         then
-            echo -e "   Subtitles module (Whisper): ${COLOR_GREEN}installed${COLOR_RESET}"
+            echo -e "$(t MP_SYS_SUBTITLES_MODULE_WHISPER_INSTALLED "${COLOR_GREEN}" "${COLOR_RESET}")"
         else
-            echo -e "   Subtitles module (Whisper): ${COLOR_YELLOW}not installed${COLOR_RESET}"
+            echo -e "$(t MP_SYS_SUBTITLES_MODULE_WHISPER_NOT_INSTALLED "${COLOR_YELLOW}" "${COLOR_RESET}")"
         fi
     fi
 
@@ -245,9 +245,9 @@ show_shotcut_config_status() {
     fi
 
     if (( filter_count > 0 )); then
-        echo -e "   Filter sets: ${COLOR_GREEN}$filter_count installed${COLOR_RESET}"
+        echo -e "$(t MP_SYS_FILTER_SETS_INSTALLED "${COLOR_GREEN}" "$filter_count" "${COLOR_RESET}")"
     else
-        echo -e "   Filter sets: ${COLOR_YELLOW}not installed${COLOR_RESET}"
+        echo -e "$(t MP_SYS_FILTER_SETS_NOT_INSTALLED "${COLOR_YELLOW}" "${COLOR_RESET}")"
     fi
 }
 
@@ -255,7 +255,7 @@ show_shotcut_config_status() {
 mediapanel_shotcut_nvenc_run() {
     local action="${1:-doctor}" code=0
     if [[ "$action" != doctor && "$action" != heal ]]; then
-        echo "[ERROR] unsupported Shotcut NVENC action: $action"
+        echo "$(t MP_SYS_ERROR_UNSUPPORTED_SHOTCUT_NVENC_ACTION "$action")"
         return 2
     fi
     if remedia system nvidia-flatpak-nvenc "$action"; then
@@ -266,10 +266,10 @@ mediapanel_shotcut_nvenc_run() {
     MEDIAPANEL_SHOTCUT_NVENC_CODE="$code"
     MEDIAPANEL_SHOTCUT_NVENC_TIME="$(date '+%H:%M:%S')"
     echo
-    echo "[Shotcut Flatpak NVENC] action=$action exit=$code"
+    echo "$(t MP_SYS_SHOTCUT_FLATPAK_NVENC_ACTION_EXIT "$action" "$code")"
     if (( code == 14 )); then
-        echo 'Choose the installation explicitly with the CLI, for example:'
-        echo "  remedia system nvidia-flatpak-nvenc $action --scope=system"
+        echo "$(t MP_SYS_CHOOSE_THE_INSTALLATION_EXPLICITLY_WITH_THE_CLI_FOR_EXAMPLE)"
+        echo "$(t MP_SYS_REMEDIA_SYSTEM_NVIDIA_FLATPAK_NVENC_SCOPE_SYSTEM "$action")"
     fi
     # A diagnostic failure must not close the MediaPanel UI.
     return 0
@@ -280,16 +280,16 @@ mediapanel_shotcut_nvenc_status() {
     local checked="${MEDIAPANEL_SHOTCUT_NVENC_TIME:-}"
     case "$code" in
         unchecked)
-            echo '   NVENC: not checked (6: Doctor, 7: Heal)'
+            echo "$(t MP_SYS_NVENC_NOT_CHECKED_6_DOCTOR_7_HEAL)"
             ;;
         0)
-            echo "   NVENC: last test PASSED at $checked (h264_nvenc, 640x360)"
+            echo "$(t MP_SYS_NVENC_LAST_TEST_PASSED_AT_H264_NVENC_640X360 "$checked")"
             ;;
         1)
-            echo "   NVENC: last action cancelled/failed at $checked; run Doctor"
+            echo "$(t MP_SYS_NVENC_LAST_ACTION_CANCELLED_FAILED_AT_RUN_DOCTOR "$checked")"
             ;;
         *)
-            echo "   NVENC: last diagnosis $code at $checked (details: Doctor)"
+            echo "$(t MP_SYS_NVENC_LAST_DIAGNOSIS_AT_DETAILS_DOCTOR "$code" "$checked")"
             ;;
     esac
 }
@@ -299,28 +299,27 @@ mediapanel_subtitle_languages_menu() {
     local -a selected=()
     while true; do
         echo
-        echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-        echo "                 ${COLOR_BOLD}${COLOR_CYAN}SUBTITLE LANGUAGES"
-        echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
+        echo '===================================================='
+        echo "$(t MP_SYS_SUBTITLE_LANGUAGES)"
+        echo '===================================================='
         mediapanel_subtitle_languages_status || return 1
         echo
-        echo 'Enter 1-4 language codes in preferred order.'
-        echo 'Examples: ru kk en   |   en ja de fr'
-        echo 'The first language is the default for subtitle generation.'
-        echo 'Auto detect is always available in the generation menu.'
+        echo "$(t MP_SYS_ENTER_1_4_LANGUAGE_CODES_IN_PREFERRED_ORDER)"
+        echo "$(t MP_SYS_EXAMPLES_RU_KK_EN_EN_JA_DE_FR)"
+        echo "$(t MP_SYS_THE_FIRST_LANGUAGE_IS_THE_DEFAULT_FOR_SUBTITLE_GENERATION)"
+        echo "$(t MP_SYS_AUTO_DETECT_IS_ALWAYS_AVAILABLE_IN_THE_GENERATION_MENU)"
         echo
-        echo "l) List supported languages"
-        echo "r) Restore defaults (ru kk en)"
+        echo "$(t MP_SYS_L_LIST_SUPPORTED_LANGUAGES)"
+        echo "$(t MP_SYS_R_RESTORE_DEFAULTS_RU_KK_EN)"
+        echo "$(t MP_SYS_0_BACK_WITHOUT_SAVING)"
         echo
-        echo  -e "${COLOR_YELLOW}0) Back without saving${COLOR_RESET}"
-        echo
-        read -r -p 'Languages> ' input || return 0
+        read -r -p "$(t MP_SYS_LANGUAGES)" input || return 0
         input="${input,,}"
         case "$input" in
             0|'') return 0 ;;
             l)
                 for code in "${!MEDIAPANEL_SUBTITLE_LANGUAGE_NAMES[@]}"; do
-                    printf ' %-3s  %s\n' "$code" "${MEDIAPANEL_SUBTITLE_LANGUAGE_NAMES[$code]}"
+                    printf ' %-3s  %s\n' "$code" "$(mediapanel_subtitle_language_name "$code")"
                 done | LC_ALL=C sort -k2
                 continue
                 ;;
@@ -331,10 +330,10 @@ mediapanel_subtitle_languages_menu() {
                 ;;
         esac
         if ! mediapanel_subtitle_languages_save "${selected[@]}"; then
-            echo '[ERROR] Settings were not saved.'
+            echo "$(t MP_SYS_ERROR_SETTINGS_WERE_NOT_SAVED)"
             continue
         fi
-        echo '[OK] Subtitle languages saved.'
+        echo "$(t MP_SYS_OK_SUBTITLE_LANGUAGES_SAVED)"
         return 0
     done
 }
@@ -357,17 +356,17 @@ system_status() {
             projects_count=$(find "$PROJECT_DIR" -mindepth 1 -maxdepth 1 -type d | wc -l)
 
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-        echo -e "                 ${COLOR_BOLD}${COLOR_CYAN}SYSTEM STATUS${COLOR_RESET}"
+        echo -e "$(t MP_SYS_SYSTEM_STATUS "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
         echo
-        echo " GPU:      $GPU"
+        echo "$(t MP_SYS_GPU "$GPU")"
         # NVENC status belongs to the Shotcut block below.
         echo
-        echo " Projects: $projects_count"
+        echo "$(t MP_SYS_PROJECTS "$projects_count")"
         if [[ -n "$active" ]]; then
-            echo -e " Active project: ${COLOR_GREEN}${active}${COLOR_RESET}"
+            echo -e "$(t MP_SYS_ACTIVE_PROJECT_2 "${COLOR_GREEN}" "${active}" "${COLOR_RESET}")"
         else
-            echo -e " Active project: ${COLOR_RED}none${COLOR_RESET}"
+            echo -e "$(t MP_SYS_ACTIVE_PROJECT_NONE "${COLOR_RED}" "${COLOR_RESET}")"
         fi
         echo
         df -h "$FAST_STORAGE" "$SLOW_STORAGE" "$BACKUP_STORAGE" 2>/dev/null
@@ -379,21 +378,21 @@ system_status() {
         echo
         mediapanel_youtube_api_status
         echo
-        echo -e "${COLOR_BOLD}MENU:${COLOR_RESET}"
+        echo -e "$(t MP_SYS_MENU "${COLOR_BOLD}" "${COLOR_RESET}")"
         echo
-        echo " 1) Refresh"
-        echo " 2) Show system log"
-        echo " 3) Show disk usage"
-        echo " 4) Show GPU info"
-        echo " 5) Import Shotcut filter sets"
-        echo " 6) Shotcut Flatpak NVENC doctor"
-        echo " 7) Shotcut Flatpak NVENC heal"
-        echo " 8) YouTube API Setup"
-        echo " 9) Subtitle languages"
+        echo "$(t MP_SYS_1_REFRESH)"
+        echo "$(t MP_SYS_2_SHOW_SYSTEM_LOG)"
+        echo "$(t MP_SYS_3_SHOW_DISK_USAGE)"
+        echo "$(t MP_SYS_4_SHOW_GPU_INFO)"
+        echo "$(t MP_SYS_5_IMPORT_SHOTCUT_FILTER_SETS)"
+        echo "$(t MP_SYS_6_SHOTCUT_FLATPAK_NVENC_DOCTOR)"
+        echo "$(t MP_SYS_7_SHOTCUT_FLATPAK_NVENC_HEAL)"
+        echo "$(t MP_SYS_8_YOUTUBE_API_SETUP)"
+        echo "$(t MP_SYS_9_SUBTITLE_LANGUAGES)"
         echo
-        echo -e " ${COLOR_YELLOW}0) Back${COLOR_RESET}"
+        echo -e "$(t MP_SYS_0_BACK "${COLOR_YELLOW}" "${COLOR_RESET}")"
         echo
-        read -rp "Choice [1-#]: " choice
+        read -rp "$(t MP_SYS_CHOICE_1)" choice
 
         case "$choice" in
             1)
@@ -404,17 +403,17 @@ system_status() {
                while true; do
                    clear
                    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-                   echo -e "                   ${COLOR_BOLD}${COLOR_CYAN}SYSTEM LOG${COLOR_RESET}"
+                   echo -e "$(t MP_SYS_SYSTEM_LOG "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
                    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
                    echo
-                   echo "1) Last 50 lines"
-                   echo "2) Last 200 lines"
-                   echo "3) Follow (live)"
+                   echo "$(t MP_SYS_1_LAST_50_LINES)"
+                   echo "$(t MP_SYS_2_LAST_200_LINES)"
+                   echo "$(t MP_SYS_3_FOLLOW_LIVE)"
                    echo
-                   echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
+                   echo -e "$(t MP_SYS_0_BACK_2 "${COLOR_YELLOW}" "${COLOR_RESET}")"
                    echo
 
-                   read -rp "log [1-#]> " lchoice
+                   read -rp "$(t MP_SYS_LOG_1)" lchoice
 
                    case "$lchoice" in
                        1)
@@ -422,23 +421,23 @@ system_status() {
                           if safe_log_file "$LOG_FILE"; then
                               tail -n 50 "$LOG_FILE"
                           fi
-                          read -rp "Enter..."
+                          read -rp "$(t MP_SYS_ENTER)"
                           ;;
                        2)
 #                          tail -n 200 "$LOG_FILE"
                           if safe_log_file "$LOG_FILE"; then
                               tail -n 200 "$LOG_FILE"
                           fi
-                          read -rp "Enter..."
+                          read -rp "$(t MP_SYS_ENTER)"
                           ;;
                        3)
 #                          echo "Press Ctrl+C to stop"
 #                          tail -f "$LOG_FILE"
                           if safe_log_file "$LOG_FILE"; then
-                              echo "Press Ctrl+C to stop"
+                              echo "$(t MP_SYS_PRESS_CTRL_C_TO_STOP)"
                               tail -f "$LOG_FILE"
                           else
-                              read -rp "Enter..."
+                              read -rp "$(t MP_SYS_ENTER)"
                           fi
                           ;;
                        0)
@@ -450,10 +449,10 @@ system_status() {
             3)
                 clear
                 echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-                echo -e "                   ${COLOR_BOLD}${COLOR_CYAN}DISK DETAILS${COLOR_RESET}"
+                echo -e "$(t MP_SYS_DISK_DETAILS "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
                 echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
                 echo
-                echo -e "${COLOR_BOLD}Storage usage:${COLOR_RESET}"
+                echo -e "$(t MP_SYS_STORAGE_USAGE "${COLOR_BOLD}" "${COLOR_RESET}")"
                 echo
 
                 printf "%-20s %s\n" " FAST_STORAGE:" "$(safe_du "$FAST_STORAGE")"
@@ -465,40 +464,40 @@ system_status() {
                 printf "%-20s %s\n" " PROJECT_DIR:" "$(safe_du "$PROJECT_DIR")"
 
                 echo
-                echo -e "${COLOR_BOLD}Paths:${COLOR_RESET}"
+                echo -e "$(t MP_SYS_PATHS "${COLOR_BOLD}" "${COLOR_RESET}")"
                 echo
-                echo " FAST_STORAGE   = $FAST_STORAGE"
-                echo " SLOW_STORAGE   = $SLOW_STORAGE"
-                echo " BACKUP_STORAGE = $BACKUP_STORAGE"
-                echo " PROJECT_DIR    = $PROJECT_DIR"
+                echo "$(t MP_SYS_FAST_STORAGE "$FAST_STORAGE")"
+                echo "$(t MP_SYS_SLOW_STORAGE "$SLOW_STORAGE")"
+                echo "$(t MP_SYS_BACKUP_STORAGE "$BACKUP_STORAGE")"
+                echo "$(t MP_SYS_PROJECT_DIR_2 "$PROJECT_DIR")"
                 echo
-                read -rp "Press Enter..."
+                read -rp "$(t MP_SYS_PRESS_ENTER)"
                 ;;
             4)
                 clear
                 echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-                echo -e "                   ${COLOR_BOLD}${COLOR_CYAN}GPU INFO${COLOR_RESET}"
+                echo -e "$(t MP_SYS_GPU_INFO "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
                 echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
                 echo
                 lspci | grep -i vga
                 echo
-                echo "Host FFmpeg encoder list (not a Shotcut Flatpak test):"
+                echo "$(t MP_SYS_HOST_FFMPEG_ENCODER_LIST_NOT_A_SHOTCUT_FLATPAK_TEST)"
                 ffmpeg -encoders 2>/dev/null | grep nvenc ||
-                    echo "Host FFmpeg does not list NVENC; use menu 6 to test Shotcut Flatpak"
+                    echo "$(t MP_SYS_HOST_FFMPEG_DOES_NOT_LIST_NVENC_USE_MENU_6_TO_TEST_SHOTCUT_FLATPAK)"
                 echo
-                read -rp "Press Enter..."
+                read -rp "$(t MP_SYS_PRESS_ENTER)"
                 ;;
             5)
                 install_shotcut_filter_sets
-                read -rp "Press Enter to continue..."
+                read -rp "$(t MP_SYS_PRESS_ENTER_TO_CONTINUE)"
                 ;;
             6)
                 mediapanel_shotcut_nvenc_run doctor
-                read -rp "Press Enter to continue..."
+                read -rp "$(t MP_SYS_PRESS_ENTER_TO_CONTINUE)"
                 ;;
             7)
                 mediapanel_shotcut_nvenc_run heal
-                read -rp "Press Enter to continue..."
+                read -rp "$(t MP_SYS_PRESS_ENTER_TO_CONTINUE)"
                 ;;
             8)
                 mediapanel_youtube_setup_menu
@@ -507,12 +506,12 @@ system_status() {
                 mediapanel_subtitle_languages_menu || true
                 ;;
             0)
-                echo "Back..."
+                echo "$(t MP_SYS_BACK)"
                 return 0   # если это функция
                 # или break  # если это loop внутри скрипта
                 ;;
             *)
-                echo "Invalid option"
+                echo "$(t MP_SYS_INVALID_OPTION)"
                 sleep 1
                 ;;
         esac

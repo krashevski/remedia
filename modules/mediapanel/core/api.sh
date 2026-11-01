@@ -9,7 +9,7 @@ project_create() {
     local project_name
     project_name="$(project_core_create "$@")" || return 1
 
-    echo "[OK] project created: $project_name"
+    echo "$(t MP_API_OK_PROJECT_CREATED "$project_name")"
 }
 
 project_list() {
@@ -24,12 +24,12 @@ set_active_project() {
     local name="$1"
 
     if ! project_exists "$name"; then
-        echo "[ERROR] project not found"
+        echo "$(t MP_API_ERROR_PROJECT_NOT_FOUND)"
         return 1
     fi
 
     state_save "active_project" "$name"
-    echo "[OK] active project: $name"
+    echo "$(t MP_API_OK_ACTIVE_PROJECT "$name")"
 }
 
 get_active_project() {
@@ -43,7 +43,7 @@ activate_project_full() {
     set_active_project "$name" || return 1
     pipeline_init "$name"
 
-    echo "[OK] project ready for pipeline: $name"
+    echo "$(t MP_API_OK_PROJECT_READY_FOR_PIPELINE "$name")"
 }
 
 project_restore() {
@@ -51,13 +51,13 @@ project_restore() {
 
     name="$(project_core_restore "$1")" || return 1
 
-    echo -e "${GREEN}[RESTORE]${RESET} $name"
+    echo -e "$(t MP_API_RESTORE "${GREEN}" "${RESET}" "$name")"
 
     if ! set_active_project "$name"; then
-        echo -e "${RED}[ERROR] failed to activate project${RESET}"
+        echo -e "$(t MP_API_ERROR_FAILED_TO_ACTIVATE_PROJECT "${RED}" "${RESET}")"
         return 1
     fi
 
     pipeline_init "$name"
-    echo -e "${CYAN}[PIPELINE] initialized${RESET}"
+    echo -e "$(t MP_API_PIPELINE_INITIALIZED "${CYAN}" "${RESET}")"
 }

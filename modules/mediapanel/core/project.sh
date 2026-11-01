@@ -35,11 +35,11 @@ project_list() {
 
 trash_list() {
     [[ -d "$TRASH_DIR" ]] || {
-        echo "[INFO] trash empty"
+        echo "$(t MP_UI_INFO_TRASH_EMPTY)"
         return 0
     }
 
-    echo "=== TRASH ==="
+    echo "$(t MP_PROJECT_TRASH)"
 
     local i=1
     while IFS= read -r dir; do
@@ -51,23 +51,23 @@ trash_list() {
 purge_trash_core() {
 
     [[ -n "${TRASH_DIR:-}" && "$TRASH_DIR" != "/" ]] || {
-        echo "[ERROR] invalid TRASH_DIR: ${TRASH_DIR:-empty}"
+        echo "$(t MP_PROJECT_ERROR_INVALID_TRASH_DIR "${TRASH_DIR:-empty}")"
         return 1
     }
 
     [[ -d "$TRASH_DIR" ]] || {
-        echo "[INFO] trash empty"
+        echo "$(t MP_UI_INFO_TRASH_EMPTY)"
         return 0
     }
 
     local fast_root
     fast_root="$(storage_fast)" || {
-        echo "[ERROR] cannot determine FAST storage"
+        echo "$(t MP_PROJECT_ERROR_CANNOT_DETERMINE_FAST_STORAGE)"
         return 1
     }
 
     [[ -n "$fast_root" && "$fast_root" != "/" ]] || {
-        echo "[ERROR] invalid FAST storage path: $fast_root"
+        echo "$(t MP_PROJECT_ERROR_INVALID_FAST_STORAGE_PATH "$fast_root")"
         return 1
     }
 
@@ -77,8 +77,8 @@ purge_trash_core() {
     local fast_project_dir
     local found=0
 
-    echo "[PURGE] TRASH_DIR: $TRASH_DIR"
-    echo "[PURGE] FAST root: $fast_root"
+    echo "$(t MP_PROJECT_PURGE_TRASH_DIR "$TRASH_DIR")"
+    echo "$(t MP_PROJECT_PURGE_FAST_ROOT "$fast_root")"
 
     while IFS= read -r -d '' trash_item; do
         found=1
@@ -96,37 +96,37 @@ purge_trash_core() {
         fast_project_dir="$fast_root/projects/$project"
 
         echo
-        echo "[PURGE] trash entry: $trash_name"
-        echo "[PURGE] original project: $project"
-        echo "[PURGE] project trash: $trash_item"
-        echo "[PURGE] project proxy: $fast_project_dir/proxy"
+        echo "$(t MP_PROJECT_PURGE_TRASH_ENTRY "$trash_name")"
+        echo "$(t MP_PROJECT_PURGE_ORIGINAL_PROJECT "$project")"
+        echo "$(t MP_PROJECT_PURGE_PROJECT_TRASH "$trash_item")"
+        echo "$(t MP_PROJECT_PURGE_PROJECT_PROXY_PROXY "$fast_project_dir")"
     
         # Защита от ошибочного пути.
         case "$fast_project_dir" in
             "$fast_root"/projects/*)
                 ;;
             *)
-                echo "[ERROR] unsafe proxy path: $fast_project_dir"
+                echo "$(t MP_PROJECT_ERROR_UNSAFE_PROXY_PATH "$fast_project_dir")"
                 return 1
                 ;;
         esac
 
         if [[ -e "$fast_project_dir" ]]; then
-            echo "[PURGE] removing FAST project data: $fast_project_dir"
+            echo "$(t MP_PROJECT_PURGE_REMOVING_FAST_PROJECT_DATA "$fast_project_dir")"
 
             rm -rf -- "$fast_project_dir" || {
-                echo "[ERROR] cannot remove: $fast_project_dir"
+                echo "$(t MP_PROJECT_ERROR_CANNOT_REMOVE "$fast_project_dir")"
                 return 1
             }
 
         else
-            echo "[INFO] FAST project data not found: $fast_project_dir"
+            echo "$(t MP_PROJECT_INFO_FAST_PROJECT_DATA_NOT_FOUND "$fast_project_dir")"
         fi
 
-        echo "[PURGE] removing project from trash: $trash_item"
+        echo "$(t MP_PROJECT_PURGE_REMOVING_PROJECT_FROM_TRASH "$trash_item")"
 
         rm -rf -- "$trash_item" || {
-            echo "[ERROR] cannot remove: $trash_item"
+            echo "$(t MP_PROJECT_ERROR_CANNOT_REMOVE "$trash_item")"
             return 1
         }
 
@@ -138,11 +138,11 @@ purge_trash_core() {
     )
 
     if (( found == 0 )); then
-        echo "[INFO] trash empty"
+        echo "$(t MP_UI_INFO_TRASH_EMPTY)"
         return 0
     fi
 
     echo
-    echo "[OK] trash and project proxies purged"
+    echo "$(t MP_PROJECT_OK_TRASH_AND_PROJECT_PROXIES_PURGED)"
 }
 

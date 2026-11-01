@@ -82,17 +82,17 @@ project_core_create() {
 
     if [[ -z "$NAME" ]]; then
         if [[ "${CLI_NO_UI:-0}" == "1" ]]; then
-            echo "[ERROR] name required"
+            echo "$(t MP_PROJECT_CORE_ERROR_NAME_REQUIRED)" >&2
             return 1
         fi
 
-        read -r -p "Enter project name: " NAME
+        read -r -p "$(t MP_PROJECT_CORE_ENTER_PROJECT_NAME)" NAME
     fi
 
     NAME=$(printf "%s" "$NAME" | xargs)
 
     [[ -z "$NAME" ]] && {
-        echo "[ERROR] empty name"
+        echo "$(t MP_PROJECT_CORE_ERROR_EMPTY_NAME)" >&2
         return 1
     }
 
@@ -114,7 +114,7 @@ project_core_create() {
         "$path/short" \
         "$path/video" || {
 
-        echo "[ERROR] failed to create project dirs"
+        echo "$(t MP_PROJECT_CORE_ERROR_FAILED_TO_CREATE_PROJECT_DIRS)" >&2
         return 1
     }
 
@@ -127,11 +127,11 @@ project_core_create() {
 trash_list() {
 
     [[ -d "$TRASH_DIR" ]] || {
-        echo "[INFO] trash empty"
+        echo "$(t MP_UI_INFO_TRASH_EMPTY)"
         return 0
     }
 
-    echo "=== TRASH ==="
+    echo "$(t MP_PROJECT_TRASH)"
 
     find "$TRASH_DIR" \
         -mindepth 1 \
@@ -153,7 +153,7 @@ project_core_delete() {
     : "${STATE_DIR:?STATE_DIR not set}"
 
     [[ -z "$PROJECT" ]] && {
-        echo "[ERROR] --project required"
+        echo "$(t MP_PROJECT_CORE_ERROR_PROJECT_REQUIRED)" >&2
         return 1
     }
 
@@ -163,7 +163,7 @@ project_core_delete() {
     local project_path="$PROJECT_DIR/$PROJECT"
 
     [[ ! -d "$project_path" ]] && {
-        echo "[ERROR] project not found"
+        echo "$(t MP_API_ERROR_PROJECT_NOT_FOUND)"
         return 1
     }
 
@@ -173,7 +173,7 @@ project_core_delete() {
 
     if [[ "$(get_active_project)" == "$PROJECT" ]]; then
         state_save "active_project" ""
-        echo "[INFO] active project cleared"
+        echo "$(t MP_PROJECT_CORE_INFO_ACTIVE_PROJECT_CLEARED)"
     fi
 
     # --------------------------------------------------------
@@ -181,7 +181,7 @@ project_core_delete() {
     # --------------------------------------------------------
 
     if [[ "${YES:-0}" != "1" ]]; then
-        read -rp "Type DELETE to confirm: " confirm
+        read -rp "$(t MP_PROJECT_CORE_TYPE_DELETE_TO_CONFIRM)" confirm
         [[ "$confirm" != "DELETE" ]] && return
     fi
 
@@ -192,7 +192,7 @@ project_core_delete() {
 
     mv "$project_path" "$TRASH_DIR/${PROJECT}_$ts"
 
-    echo "[OK] moved to trash: $PROJECT"
+    echo "$(t MP_PROJECT_CORE_OK_MOVED_TO_TRASH "$PROJECT")"
 }
 
 
@@ -204,7 +204,7 @@ project_core_restore() {
     local entry="${1:-}"
 
     [[ -z "$entry" ]] && {
-        echo "[ERROR] no entry"
+        echo "$(t MP_PROJECT_CORE_ERROR_NO_ENTRY)" >&2
         return 1
     }
 
@@ -212,7 +212,7 @@ project_core_restore() {
     local name="${entry%_*}"
 
     [[ ! -d "$src" ]] && {
-        echo "[ERROR] not found"
+        echo "$(t MP_PROJECT_CORE_ERROR_NOT_FOUND)" >&2
         return 1
     }
 

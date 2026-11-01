@@ -5,7 +5,7 @@
 : "${FAST_STORAGE:?missing FAST_STORAGE}"
 : "${SLOW_STORAGE:?missing SLOW_STORAGE}"
 if [[ -z "${BACKUP_STORAGE:-}" ]]; then
-    echo "[FATAL] BACKUP_STORAGE is empty"
+    echo "$(t MP_SYSTEM_FATAL_BACKUP_STORAGE_IS_EMPTY)"
     return 1
 fi
 : "${PROJECT_DIR:?missing PROJECT_DIR}"
@@ -23,12 +23,12 @@ mediapanel_require_runtime() {
 
 mediapanel_check_dependencies() {
     command -v ffmpeg >/dev/null || {
-        echo "[WARN] ffmpeg not installed"
+        echo "$(t MP_SYS_WARN_FFMPEG_NOT_INSTALLED)"
         return 1
     }
 
     command -v find >/dev/null || {
-        echo "[FATAL] coreutils missing"
+        echo "$(t MP_SYS_FATAL_COREUTILS_MISSING)"
         return 1
     }
 
@@ -36,10 +36,10 @@ mediapanel_check_dependencies() {
 }
 
 mediapanel_system_info() {
-    echo "[MediaPanel System]"
-    echo "REMEDIA_VAR=$REMEDIA_VAR"
-    echo "PROJECT_DIR=$PROJECT_DIR"
-    echo "ACTIVE_PROJECT=$(state_get active_project)"
+    echo "$(t MP_SYS_MEDIAPANEL_SYSTEM)"
+    echo "$(t MP_SYS_REMEDIA_VAR "$REMEDIA_VAR")"
+    echo "$(t MP_SYS_PROJECT_DIR "$PROJECT_DIR")"
+    echo "$(t MP_SYS_ACTIVE_PROJECT "$(state_get active_project)")"
 }
 
 phone_status() {
@@ -70,48 +70,48 @@ system_status() {
             projects_count=$(find "$PROJECT_DIR" -mindepth 1 -maxdepth 1 -type d | wc -l)
 
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${RESET}"
-        echo -e "                 ${COLOR_BOLD}${COLOR_CYAN}SYSTEM STATUS${RESET}"
+        echo -e "$(t MP_SYS_SYSTEM_STATUS "${COLOR_BOLD}" "${COLOR_CYAN}" "${RESET}")"
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${RESET}"
         echo
-        echo " GPU:      $GPU"
+        echo "$(t MP_SYS_GPU "$GPU")"
         case "$NVENC" in
             YES)
                 if [[ "$NVENC" == "YES" ]]; then
-                    echo -e " NVENC:    ${COLOR_GREEN}AVAILABLE (h264/hevc)${RESET}"
+                    echo -e "$(t MP_SYSTEM_NVENC_AVAILABLE_H264_HEVC "${COLOR_GREEN}" "${RESET}")"
                 fi
                 ;;
             NO_FFMPEG)
-                echo -e " NVENC:    ${COLOR_YELLOW}FFmpeg missing NVENC${RESET}"
+                echo -e "$(t MP_SYSTEM_NVENC_FFMPEG_MISSING_NVENC "${COLOR_YELLOW}" "${RESET}")"
                 ;;
             NO_GPU)
-                echo -e " NVENC:    ${COLOR_RED}No NVIDIA GPU${RESET}"
+                echo -e "$(t MP_SYSTEM_NVENC_NO_NVIDIA_GPU "${COLOR_RED}" "${RESET}")"
                 ;;
             *)
-                echo -e " NVENC:    ${COLOR_RED}UNKNOWN${RESET}"
+                echo -e "$(t MP_SYSTEM_NVENC_UNKNOWN "${COLOR_RED}" "${RESET}")"
                 ;;
         esac 
         echo
-        echo " Projects: $projects_count"
+        echo "$(t MP_SYS_PROJECTS "$projects_count")"
         if [[ -n "$active" ]]; then
-            echo -e " Active project: ${COLOR_GREEN}${active}${RESET}"
+            echo -e "$(t MP_SYS_ACTIVE_PROJECT_2 "${COLOR_GREEN}" "${active}" "${RESET}")"
         else
-            echo -e " Active project: ${COLOR_RED}none${RESET}"
+            echo -e "$(t MP_SYS_ACTIVE_PROJECT_NONE "${COLOR_RED}" "${RESET}")"
         fi
         echo
         df -h "$FAST_STORAGE" "$SLOW_STORAGE" "$BACKUP_STORAGE" 2>/dev/null
         echo
         phone_status
         echo
-        echo -e "${COLOR_BOLD}MENU:${RESET}"
+        echo -e "$(t MP_SYS_MENU "${COLOR_BOLD}" "${RESET}")"
         echo
-        echo " 1) Refresh"
-        echo " 2) Show system log"
-        echo " 3) Show disk usage"
-        echo " 4) Show GPU info"
+        echo "$(t MP_SYS_1_REFRESH)"
+        echo "$(t MP_SYS_2_SHOW_SYSTEM_LOG)"
+        echo "$(t MP_SYS_3_SHOW_DISK_USAGE)"
+        echo "$(t MP_SYS_4_SHOW_GPU_INFO)"
         echo
-        echo -e " ${COLOR_CYAN}5) Back${RESET}"
+        echo -e "$(t MP_SYSTEM_5_BACK "${COLOR_CYAN}" "${RESET}")"
         echo
-        read -rp "Choice [1-5]: " choice
+        read -rp "$(t MP_SYSTEM_CHOICE_1_5)" choice
 
         case "$choice" in
             1)
@@ -122,29 +122,29 @@ system_status() {
                while true; do
                    clear
                    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${RESET}"
-                   echo -e "                   ${COLOR_BOLD}${COLOR_CYAN}SYSTEM LOG${RESET}"
+                   echo -e "$(t MP_SYS_SYSTEM_LOG "${COLOR_BOLD}" "${COLOR_CYAN}" "${RESET}")"
                    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${RESET}"
                    echo
-                   echo "1) Last 50 lines"
-                   echo "2) Last 200 lines"
-                   echo "3) Follow (live)"
+                   echo "$(t MP_SYS_1_LAST_50_LINES)"
+                   echo "$(t MP_SYS_2_LAST_200_LINES)"
+                   echo "$(t MP_SYS_3_FOLLOW_LIVE)"
                    echo
-                   echo -e "${COLOR_CYAN}4) Back${RESET}"
+                   echo -e "$(t MP_SYSTEM_4_BACK "${COLOR_CYAN}" "${RESET}")"
                    echo
 
-                   read -rp "log [1-4]> " lchoice
+                   read -rp "$(t MP_SYSTEM_LOG_1_4)" lchoice
 
                    case "$lchoice" in
                        1)
                           tail -n 50 "$LOG_FILE"
-                          read -rp "Enter..."
+                          read -rp "$(t MP_SYS_ENTER)"
                           ;;
                        2)
                           tail -n 200 "$LOG_FILE"
-                          read -rp "Enter..."
+                          read -rp "$(t MP_SYS_ENTER)"
                           ;;
                        3)
-                          echo "Press Ctrl+C to stop"
+                          echo "$(t MP_SYS_PRESS_CTRL_C_TO_STOP)"
                           tail -f "$LOG_FILE"
                           ;;
                        4)
@@ -156,10 +156,10 @@ system_status() {
             3)
                 clear
                 echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${RESET}"
-                echo -e "                   ${COLOR_BOLD}${COLOR_CYAN}DISK DETAILS${RESET}"
+                echo -e "$(t MP_SYS_DISK_DETAILS "${COLOR_BOLD}" "${COLOR_CYAN}" "${RESET}")"
                 echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${RESET}"
                 echo
-                echo -e "${COLOR_BOLD}Storage usage:${RESET}"
+                echo -e "$(t MP_SYS_STORAGE_USAGE "${COLOR_BOLD}" "${RESET}")"
                 echo
                 
                 printf "%-20s %s\n" "FAST_STORAGE:" "$(get_dir_size_cached "$FAST_STORAGE" || echo 'ERR')"
@@ -168,34 +168,34 @@ system_status() {
                 printf "%-20s %s\n" "PROJECT_DIR:" "$(get_dir_size_cached "$PROJECT_DIR" || echo 'ERR')"
                 
                 echo
-                echo -e "${COLOR_BOLD}Paths:${RESET}"
+                echo -e "$(t MP_SYS_PATHS "${COLOR_BOLD}" "${RESET}")"
                 echo
-                echo " FAST_STORAGE   = $FAST_STORAGE"
-                echo " SLOW_STORAGE   = $SLOW_STORAGE"
-                echo " BACKUP_STORAGE = $BACKUP_STORAGE"
-                echo " PROJECT_DIR    = $PROJECT_DIR"
+                echo "$(t MP_SYS_FAST_STORAGE "$FAST_STORAGE")"
+                echo "$(t MP_SYS_SLOW_STORAGE "$SLOW_STORAGE")"
+                echo "$(t MP_SYS_BACKUP_STORAGE "$BACKUP_STORAGE")"
+                echo "$(t MP_SYS_PROJECT_DIR_2 "$PROJECT_DIR")"
                 echo
-                read -rp "Press Enter..."
+                read -rp "$(t MP_UI_PRESS_ENTER)"
                 ;;
             4)
                 clear
                 echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${RESET}"
-                echo -e "                   ${COLOR_BOLD}${COLOR_CYAN}GPU INFO${RESET}"
+                echo -e "$(t MP_SYS_GPU_INFO "${COLOR_BOLD}" "${COLOR_CYAN}" "${RESET}")"
                 echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${RESET}"
                 echo
                 lspci | grep -i vga
                 echo
-                ffmpeg -encoders 2>/dev/null | grep nvenc || echo "NVENC not available"
+                ffmpeg -encoders 2>/dev/null | grep nvenc || echo "$(t MP_SYSTEM_NVENC_NOT_AVAILABLE)"
                 echo
-                read -rp "Press Enter..."
+                read -rp "$(t MP_UI_PRESS_ENTER)"
                 ;;
             5)
-                echo "Back..."
+                echo "$(t MP_SYS_BACK)"
                 return 0   # если это функция
                 # или break  # если это loop внутри скрипта
                 ;;         
             *)
-                echo "Invalid option"
+                echo "$(t MP_UI_INVALID_OPTION)"
                 sleep 1
                 ;;
         esac

@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+# Remedia runtime i18n, Bash >= 4.3. Sourcing performs no file I/O.
+# Dictionaries are data, not executable shell scripts.
+
+if declare -F i18n_load >/dev/null && declare -F i18n_read_file >/dev/null; then
+    return 0
+fi
+
+declare -gA I18N=() I18N_EN=() I18N_MODULE_LANGS=()
+declare -ga I18N_PATHS=()
+
+i18n_normalize_locale() {
+    local locale="${1:-en}"
+    locale="${locale,,}"
+    locale="${locale%%[_.@-]*}"
+    [[ "$locale" == kz ]] && locale=kk
+    if [[ "$locale" == c || "$locale" == posix || ! "$locale" =~ ^[a-z]{2,3}$ ]]; then
+        locale=en
+    fi
+    printf '%s\n' "$locale"
+}
+
+# Decode the small quoted-string grammar used in *.env, never eval/source.
+# Result is returned in I18N_DECODED to preserve trailing newlines.
+i18n_decode_value() {
+    local raw="$1" quote ch escaped=0 i value=''
+    quote="${raw:0:1}"
+    [[ ${#raw} -ge 2 && ( "$quote" == '"' || "$quote" == "'" ) && "${raw: -1}" == "$quote" ]] || return 1
+    raw="${raw:1:${#raw}-2}"
+    for ((i=0; i<${#raw}; i++)); do
+        ch="${raw:i:1}"
+        if (( escaped )); then
+            case "$ch" in
+                n) value+=$'\n' ;;
+                t) value+=$'\t' ;;
+                r) value+=$'\r' ;;
+                '"'|'\') value+="$ch" ;;
+                *) return 1 ;;
+            esac
+            escaped=0
+        elif [[ "$quote" == '"' && "$ch" == '\' ]]; then
+            escaped=1
+        elif [[ "$ch" == "$quote" ]]; then
+            return 1
+        else
+            value+="$ch"
+        fi
+    done
+    (( escaped == 0 )) || return 1
+    I18N_DECODED="$value"
+}
+
+i18n_read_file() {
+    local file="$1" destination="$2" line key raw number=0
+    local -n dictionary="$destination"
+    local -A seen=()
+    local I18N_DECODED=''
+    [[ -f "$file" && -r "$file" ]] || {
+        printf '[i18n] Cannot read dictionary: %s\n' "$file" >&2
+        return 1
+    }
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        number=$((number + 1))
+        line="${line%$'\r'}"
+        [[ "$line" =~ ^[[:space:]]*(#.*)?$ ]] && continue
+        if [[ ! "$line" =~ ^([A-Z][A-Z0-9_]*)=(.*)$ ]]; then
+            printf '[i18n] Invalid assignment: %s:%s\n' "$file" "$number" >&2
+            return 1
+        fi
+        key="${BASH_REMATCH[1]}" raw="${BASH_REMATCH[2]}"
+        if [[ -n "${seen[$key]:-}" ]] || ! i18n_decode_value "$raw"; then
+            printf '[i18n] Duplicate key or invalid value: %s:%s\n' "$file" "$number" >&2
+            return 1
+        fi
+        seen[$key]=1
+        dictionary[$key]="$I18N_DECODED"
+    done < "$file"
+}
+
+# Rebuild all registered modules transactionally: do not leave partial state.
+i18n_reload() {
+    local -a paths=("$@")
+    (( ${#paths[@]} )) || paths=("${I18N_PATHS[@]}")
+    local -A english=() selected=() languages=() owners=()
+    local -A module_en=() module_selected=()
+    local directory key candidate language override system
+    override="$(i18n_normalize_locale "${REM_MEDIA_LANG:-${LANG:-en}}")"
+    system="$(i18n_normalize_locale "${LANG:-en}")"
+    for directory in "${paths[@]}"; do
+        module_en=() module_selected=()
+        i18n_read_file "$directory/en.env" module_en || return 1
+        language=en
+        for candidate in "$override" "$system" en; do
+            if [[ -f "$directory/$candidate.env" && -r "$directory/$candidate.env" ]]; then
+                language="$candidate"
+                break
+            fi
+        done
+        if [[ "$language" != en ]]; then
+            i18n_read_file "$directory/$language.env" module_selected || return 1
+        fi
+        for key in "${!module_en[@]}"; do
+            if [[ -n "${owners[$key]:-}" && "${owners[$key]}" != "$directory" ]]; then
+                printf '[i18n] Key collision: %s (%s, %s)\n' "$key" "${owners[$key]}" "$directory" >&2
+                return 1
+            fi
+            owners[$key]="$directory"
+            english[$key]="${module_en[$key]}"
+        done
+        for key in "${!module_selected[@]}"; do
+            if [[ -z "${module_en[$key]+present}" ]]; then
+                printf '[i18n] Key missing from English dictionary: %s (%s)\n' "$key" "$directory" >&2
+                return 1
+            fi
+            selected[$key]="${module_selected[$key]}"
+        done
+        languages[$directory]="$language"
+    done
+    I18N=() I18N_EN=() I18N_MODULE_LANGS=()
+    for key in "${!english[@]}"; do I18N_EN[$key]="${english[$key]}"; done
+    for key in "${!selected[@]}"; do I18N[$key]="${selected[$key]}"; done
+    for key in "${!languages[@]}"; do I18N_MODULE_LANGS[$key]="${languages[$key]}"; done
+    I18N_PATHS=("${paths[@]}")
+}
+
+i18n_load() {
+    local directory="${1:?missing i18n directory}" existing
+    # Strip trailing slash; callers provide absolute installation paths.
+    directory="${directory%/}"
+    [[ -n "$directory" ]] || directory=/
+    for existing in "${I18N_PATHS[@]}"; do
+        [[ "$existing" != "$directory" ]] || return 0
+    done
+    i18n_reload "${I18N_PATHS[@]}" "$directory"
+}
+
+# t KEY [argument ...]: literal positional placeholders {1} ... {9}.
+# Arguments are never printf formats and are never recursively expanded.
+t() {
+    local key="${1:-}" value remaining prefix token index output=''
+    [[ "$key" =~ ^[A-Z][A-Z0-9_]*$ ]] || { printf '%s\n' "$key"; return 1; }
+    shift
+    local -a arguments=("$@")
+    value="${I18N[$key]:-${I18N_EN[$key]:-$key}}"
+    remaining="$value"
+    while [[ "$remaining" == *\{[1-9]\}* ]]; do
+        prefix="${remaining%%\{[1-9]\}*}"
+        output+="$prefix"
+        remaining="${remaining:${#prefix}}"
+        token="${remaining:0:3}"
+        index="${token:1:1}"
+        if (( index <= ${#arguments[@]} )); then
+            output+="${arguments[$((index - 1))]}"
+        else
+            output+="$token"
+        fi
+        remaining="${remaining:3}"
+    done
+    printf '%s\n' "$output$remaining"
+}

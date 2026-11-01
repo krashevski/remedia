@@ -9,7 +9,7 @@ require_active_project() {
     p="$(get_active_project)"
 
     [[ -n "$p" ]] || {
-        echo "[ERROR] no active project selected"
+        echo "$(t MP_PRODUCTION_ERROR_NO_ACTIVE_PROJECT_SELECTED)" >&2
         return 1
     }
 
@@ -28,11 +28,11 @@ require_ingest_done() {
     fi
 
     if [[ "${PIPELINE_STRICT:-0}" == "0" ]]; then
-        echo "[WARN] ingest missing (loose mode allowed)"
+        echo "$(t MP_PRODUCTION_WARN_INGEST_MISSING_LOOSE_MODE_ALLOWED)"
         return 0
     fi
 
-    echo "[BLOCKED] ingest required"
+    echo "$(t MP_PRODUCTION_BLOCKED_INGEST_REQUIRED)"
     return 1
 }
 
@@ -66,14 +66,14 @@ generate_proxy() {
     local project
     project="$(require_active_project)" || return 1
 
-    echo "[Production] generating proxy for $project"
+    echo "$(t MP_PRODUCTION_PRODUCTION_GENERATING_PROXY_FOR "$project")"
 
     log_project "$project" "Proxy generation started"
 
     local project_path="$PROJECT_DIR/$project"
     [[ -d "$project_path" ]] || {
-        echo "[ERROR] project not found"
-        mediapanel_log_error "$project" "No video files in $src"
+        echo "$(t MP_API_ERROR_PROJECT_NOT_FOUND)"
+        mediapanel_log_error "$project" "$(t MP_PRODUCTION_NO_VIDEO_FILES_IN "$src")"
         return 1
     }
 
@@ -89,7 +89,7 @@ generate_proxy() {
     shopt -u nullglob
 
     (( ${#files[@]} == 0 )) && {
-        echo "[WARN] no video files found"
+        echo "$(t MP_PRODUCTION_WARN_NO_VIDEO_FILES_FOUND)"
         return 1
     }
 
@@ -108,7 +108,7 @@ generate_proxy() {
     log_project "$project" "Proxy generation completed"
 
     echo
-    echo "[OK] proxy generated for $project"
+    echo "$(t MP_PRODUCTION_OK_PROXY_GENERATED_FOR "$project")"
 }
 
 
@@ -120,7 +120,7 @@ audio_cleanup() {
     local project
     project="$(require_active_project)" || return 1
 
-    echo "[Production] audio cleanup for $project"
+    echo "$(t MP_PRODUCTION_PRODUCTION_AUDIO_CLEANUP_FOR "$project")"
     log_project "$project" "Audio cleanup started"
 
     local project_path="$PROJECT_DIR/$project"
@@ -143,8 +143,8 @@ audio_cleanup() {
     local total=${#files[@]}
 
     (( total == 0 )) && {
-        echo "[WARN] no media files"
-        mediapanel_log_error "$project" "No media files for audio cleanup"
+        echo "$(t MP_PRODUCTION_WARN_NO_MEDIA_FILES)"
+        mediapanel_log_error "$project" "$(t MP_PRODUCTION_NO_MEDIA_FILES_FOR_AUDIO_CLEANUP)"
         return 1
     }
 
@@ -160,7 +160,7 @@ audio_cleanup() {
         echo "[$count/$total] $name"
 
         if [[ -f "$output" ]]; then
-            echo "[SKIP] exists"
+            echo "$(t MP_PRODUCTION_SKIP_EXISTS)"
             ((count++))
             continue
         fi
@@ -177,7 +177,7 @@ audio_cleanup() {
     log_project "$project" "Audio cleanup completed ($total files)"
 
     echo
-    echo "[OK] audio cleaned"
+    echo "$(t MP_PRODUCTION_OK_AUDIO_CLEANED)"
 }
 
 # =========================
@@ -191,7 +191,7 @@ audio_cleanup() {
     local mlt="$video_dir/${project_name}_video.mlt"
 
     mkdir -p "$video_dir" || {
-        echo "[ERROR] failed to create video directory:"
+        echo "$(t MP_PRODUCTION_ERROR_FAILED_TO_CREATE_VIDEO_DIRECTORY)"
         echo "        $video_dir"
         return 1
     }
@@ -201,19 +201,19 @@ audio_cleanup() {
     # -------------------------------------------------
 
     if [[ -e "$mlt" || -L "$mlt" ]]; then
-        echo "[INFO] video MLT project already exists:"
+        echo "$(t MP_PRODUCTION_INFO_VIDEO_MLT_PROJECT_ALREADY_EXISTS)"
         echo "       $mlt"
-        echo "[INFO] creation skipped to protect the existing project"
+        echo "$(t MP_PRODUCTION_INFO_CREATION_SKIPPED_TO_PROTECT_THE_EXISTING_PROJECT)"
         return 2
     fi
 
     [[ -d "$project_path/edit" ]] || {
-        echo "[ERROR] edit directory not found: $project_path/edit"
+        echo "$(t MP_PRODUCTION_ERROR_EDIT_DIRECTORY_NOT_FOUND_EDIT "$project_path")"
         return 1
     }
 
     command -v ffprobe >/dev/null 2>&1 || {
-        echo "[ERROR] ffprobe not found"
+        echo "$(t MP_PRODUCTION_ERROR_FFPROBE_NOT_FOUND)"
         return 1
     }
 
@@ -238,13 +238,13 @@ audio_cleanup() {
     n="${#files[@]}"
 
     (( n > 0 )) || {
-        echo "[ERROR] no MP4 files found in $project_path/edit"
+        echo "$(t MP_PRODUCTION_ERROR_NO_MP4_FILES_FOUND_IN_EDIT "$project_path")"
         return 1
     }
 
-    echo "[Production] creating MLT from edit"
-    echo "[Production] project: $project_name"
-    echo "[Production] files:   $n"
+    echo "$(t MP_PRODUCTION_PRODUCTION_CREATING_MLT_FROM_EDIT)"
+    echo "$(t MP_PRODUCTION_PRODUCTION_PROJECT "$project_name")"
+    echo "$(t MP_PRODUCTION_PRODUCTION_FILES "$n")"
 
     # -------------------------------------------------
     # Detect project profile from first edit clip
@@ -306,17 +306,17 @@ audio_cleanup() {
     )"
 
     [[ "$mlt_width" =~ ^[0-9]+$ ]] || {
-        echo "[ERROR] invalid width detected: $mlt_width"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_WIDTH_DETECTED "$mlt_width")"
         return 1
     }
 
     [[ "$mlt_height" =~ ^[0-9]+$ ]] || {
-        echo "[ERROR] invalid height detected: $mlt_height"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_HEIGHT_DETECTED "$mlt_height")"
         return 1
     }
 
     [[ "$first_fps" =~ ^[0-9]+/[0-9]+$ ]] || {
-        echo "[ERROR] invalid frame rate detected: $first_fps"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_FRAME_RATE_DETECTED "$first_fps")"
         return 1
     }
 
@@ -336,55 +336,55 @@ audio_cleanup() {
     IFS=':' read -r mlt_dar_num mlt_dar_den <<< "$mlt_dar"
 
     [[ "$mlt_fps_num" =~ ^[0-9]+$ ]] || {
-        echo "[ERROR] invalid FPS numerator: $mlt_fps_num"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_FPS_NUMERATOR "$mlt_fps_num")"
         return 1
     }
 
     [[ "$mlt_fps_den" =~ ^[0-9]+$ ]] || {
-        echo "[ERROR] invalid FPS denominator: $mlt_fps_den"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_FPS_DENOMINATOR "$mlt_fps_den")"
         return 1
     }
 
     [[ "$mlt_sar_num" =~ ^[0-9]+$ ]] || {
-        echo "[ERROR] invalid SAR numerator: $mlt_sar_num"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_SAR_NUMERATOR "$mlt_sar_num")"
         return 1
     }
 
     [[ "$mlt_sar_den" =~ ^[0-9]+$ ]] || {
-        echo "[ERROR] invalid SAR denominator: $mlt_sar_den"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_SAR_DENOMINATOR "$mlt_sar_den")"
         return 1
     }
 
     [[ "$mlt_dar_num" =~ ^[0-9]+$ ]] || {
-        echo "[ERROR] invalid DAR numerator: $mlt_dar_num"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_DAR_NUMERATOR "$mlt_dar_num")"
         return 1
     }
 
     [[ "$mlt_dar_den" =~ ^[0-9]+$ ]] || {
-        echo "[ERROR] invalid DAR denominator: $mlt_dar_den"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_DAR_DENOMINATOR "$mlt_dar_den")"
         return 1
     }
 
     (( mlt_fps_den > 0 )) || {
-        echo "[ERROR] invalid FPS denominator: $mlt_fps_den"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_FPS_DENOMINATOR "$mlt_fps_den")"
         return 1
     }
 
     (( mlt_sar_den > 0 )) || {
-        echo "[ERROR] invalid SAR denominator: $mlt_sar_den"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_SAR_DENOMINATOR "$mlt_sar_den")"
         return 1
     }
 
     (( mlt_dar_den > 0 )) || {
-        echo "[ERROR] invalid DAR denominator: $mlt_dar_den"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_DAR_DENOMINATOR "$mlt_dar_den")"
         return 1
     }
 
-    echo "[Production] profile from first clip:"
-    echo "  resolution: ${mlt_width}x${mlt_height}"
-    echo "  frame rate: ${mlt_fps_num}/${mlt_fps_den}"
-    echo "  sample aspect: ${mlt_sar_num}:${mlt_sar_den}"
-    echo "  display aspect: ${mlt_dar_num}:${mlt_dar_den}"
+    echo "$(t MP_PRODUCTION_PRODUCTION_PROFILE_FROM_FIRST_CLIP)"
+    echo "$(t MP_PRODUCTION_RESOLUTION_X "${mlt_width}" "${mlt_height}")"
+    echo "$(t MP_PRODUCTION_FRAME_RATE "${mlt_fps_num}" "${mlt_fps_den}")"
+    echo "$(t MP_PRODUCTION_SAMPLE_ASPECT "${mlt_sar_num}" "${mlt_sar_den}")"
+    echo "$(t MP_PRODUCTION_DISPLAY_ASPECT "${mlt_dar_num}" "${mlt_dar_den}")"
 
     # -------------------------------------------------
     # Calculate total duration
@@ -400,12 +400,12 @@ audio_cleanup() {
                 -of default=noprint_wrappers=1:nokey=1 \
                 "$file"
         )" || {
-            echo "[ERROR] ffprobe failed: $file"
+            echo "$(t MP_PRODUCTION_ERROR_FFPROBE_FAILED "$file")"
             return 1
         }
 
         [[ "$duration" =~ ^[0-9]+([.][0-9]+)?$ ]] || {
-            echo "[ERROR] invalid duration: $file"
+            echo "$(t MP_PRODUCTION_ERROR_INVALID_DURATION "$file")"
             return 1
         }
 
@@ -439,7 +439,7 @@ audio_cleanup() {
         }'
     )"
 
-    echo "[Production] total duration: $total_tc"
+    echo "$(t MP_PRODUCTION_PRODUCTION_TOTAL_DURATION "$total_tc")"
 
     # -------------------------------------------------
     # Create MLT
@@ -699,13 +699,13 @@ EOF
 EOF
 
     [[ -s "$mlt" ]] || {
-        echo "[ERROR] failed to create MLT project"
+        echo "$(t MP_PRODUCTION_ERROR_FAILED_TO_CREATE_MLT_PROJECT)"
         return 1
     }
 
-    echo "[OK] video MLT project created: $mlt"
-    echo "[OK] timeline clips: $n"
-    echo "[OK] timeline duration: $total_tc"
+    echo "$(t MP_PRODUCTION_OK_VIDEO_MLT_PROJECT_CREATED "$mlt")"
+    echo "$(t MP_PRODUCTION_OK_TIMELINE_CLIPS "$n")"
+    echo "$(t MP_PRODUCTION_OK_TIMELINE_DURATION "$total_tc")"
 
     return 0
 }
@@ -721,7 +721,7 @@ create_mlt_from_scenes() {
     local mlt="$short_dir/${project_name}_short.mlt"
 
     mkdir -p "$short_dir" || {
-        echo "[ERROR] failed to create short directory:"
+        echo "$(t MP_PRODUCTION_ERROR_FAILED_TO_CREATE_SHORT_DIRECTORY)"
         echo "        $short_dir"
         return 1
     }
@@ -731,19 +731,19 @@ create_mlt_from_scenes() {
     # -------------------------------------------------
 
     if [[ -e "$mlt" || -L "$mlt" ]]; then
-        echo "[INFO] short MLT project already exists:"
+        echo "$(t MP_PRODUCTION_INFO_SHORT_MLT_PROJECT_ALREADY_EXISTS)"
         echo "       $mlt"
-        echo "[INFO] creation skipped to protect the existing project"
+        echo "$(t MP_PRODUCTION_INFO_CREATION_SKIPPED_TO_PROTECT_THE_EXISTING_PROJECT)"
         return 2
     fi
 
     [[ -d "$project_path/scenes" ]] || {
-        echo "[ERROR] scenes directory not found: $project_path/scenes"
+        echo "$(t MP_PRODUCTION_ERROR_SCENES_DIRECTORY_NOT_FOUND_SCENES "$project_path")"
         return 1
     }
 
     command -v ffprobe >/dev/null 2>&1 || {
-        echo "[ERROR] ffprobe not found"
+        echo "$(t MP_PRODUCTION_ERROR_FFPROBE_NOT_FOUND)"
         return 1
     }
 
@@ -770,13 +770,13 @@ create_mlt_from_scenes() {
     n="${#files[@]}"
 
     (( n > 0 )) || {
-        echo "[ERROR] no MP4 files found in $project_path/scenes"
+        echo "$(t MP_PRODUCTION_ERROR_NO_MP4_FILES_FOUND_IN_SCENES "$project_path")"
         return 1
     }
 
-    echo "[Production] creating MLT from scenes"
-    echo "[Production] project: $project_name"
-    echo "[Production] files:   $n"
+    echo "$(t MP_PRODUCTION_PRODUCTION_CREATING_MLT_FROM_SCENES)"
+    echo "$(t MP_PRODUCTION_PRODUCTION_PROJECT "$project_name")"
+    echo "$(t MP_PRODUCTION_PRODUCTION_FILES "$n")"
 
     # -------------------------------------------------
     # Create UHD 4K profile using FPS from first scene
@@ -808,9 +808,9 @@ create_mlt_from_scenes() {
     )"
 
     [[ "$first_fps" =~ ^[0-9]+/[0-9]+$ ]] || {
-        echo "[ERROR] invalid frame rate detected:"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_FRAME_RATE_DETECTED_2)"
         echo "        $first_fps"
-        echo "[ERROR] first scene: $first_file"
+        echo "$(t MP_PRODUCTION_ERROR_FIRST_SCENE "$first_file")"
         return 1
     }
 
@@ -819,31 +819,31 @@ create_mlt_from_scenes() {
         mlt_fps_den <<< "$first_fps"
 
     [[ "$mlt_fps_num" =~ ^[0-9]+$ ]] || {
-        echo "[ERROR] invalid FPS numerator: $mlt_fps_num"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_FPS_NUMERATOR "$mlt_fps_num")"
         return 1
     }
 
     [[ "$mlt_fps_den" =~ ^[0-9]+$ ]] || {
-        echo "[ERROR] invalid FPS denominator: $mlt_fps_den"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_FPS_DENOMINATOR "$mlt_fps_den")"
         return 1
     }
 
     (( mlt_fps_num > 0 )) || {
-        echo "[ERROR] FPS numerator must be greater than zero"
+        echo "$(t MP_PRODUCTION_ERROR_FPS_NUMERATOR_MUST_BE_GREATER_THAN_ZERO)"
         return 1
     }
 
     (( mlt_fps_den > 0 )) || {
-        echo "[ERROR] FPS denominator must be greater than zero"
+        echo "$(t MP_PRODUCTION_ERROR_FPS_DENOMINATOR_MUST_BE_GREATER_THAN_ZERO)"
         return 1
     }
 
-    echo "[Production] Short project profile:"
-    echo "  resolution:    ${mlt_width}x${mlt_height}"
-    echo "  frame rate:    ${mlt_fps_num}/${mlt_fps_den}"
-    echo "  sample aspect: ${mlt_sar_num}:${mlt_sar_den}"
-    echo "  display aspect: ${mlt_dar_num}:${mlt_dar_den}"
-    echo "  FPS source:    $(basename "$first_file")"
+    echo "$(t MP_PRODUCTION_PRODUCTION_SHORT_PROJECT_PROFILE)"
+    echo "$(t MP_PRODUCTION_RESOLUTION_X_2 "${mlt_width}" "${mlt_height}")"
+    echo "$(t MP_PRODUCTION_FRAME_RATE_2 "${mlt_fps_num}" "${mlt_fps_den}")"
+    echo "$(t MP_PRODUCTION_SAMPLE_ASPECT "${mlt_sar_num}" "${mlt_sar_den}")"
+    echo "$(t MP_PRODUCTION_DISPLAY_ASPECT "${mlt_dar_num}" "${mlt_dar_den}")"
+    echo "$(t MP_PRODUCTION_FPS_SOURCE "$(basename "$first_file")")"
 
     # -------------------------------------------------
     # Calculate total duration
@@ -859,12 +859,12 @@ create_mlt_from_scenes() {
                 -of default=noprint_wrappers=1:nokey=1 \
                 "$file"
         )" || {
-            echo "[ERROR] ffprobe failed: $file"
+            echo "$(t MP_PRODUCTION_ERROR_FFPROBE_FAILED "$file")"
             return 1
         }
 
         [[ "$duration" =~ ^[0-9]+([.][0-9]+)?$ ]] || {
-            echo "[ERROR] invalid duration: $file"
+            echo "$(t MP_PRODUCTION_ERROR_INVALID_DURATION "$file")"
             return 1
         }
 
@@ -898,7 +898,7 @@ create_mlt_from_scenes() {
         }'
     )"
 
-    echo "[Production] total duration: $total_tc"
+    echo "$(t MP_PRODUCTION_PRODUCTION_TOTAL_DURATION "$total_tc")"
 
     # -------------------------------------------------
     # Create MLT
@@ -1076,13 +1076,13 @@ EOF
 EOF
 
     [[ -s "$mlt" ]] || {
-        echo "[ERROR] failed to create MLT project"
+        echo "$(t MP_PRODUCTION_ERROR_FAILED_TO_CREATE_MLT_PROJECT)"
         return 1
     }
 
-    echo "[OK] short MLT project created: $mlt"
-    echo "[OK] playlist clips: $n"
-    echo "[OK] timeline is empty"
+    echo "$(t MP_PRODUCTION_OK_SHORT_MLT_PROJECT_CREATED "$mlt")"
+    echo "$(t MP_PRODUCTION_OK_PLAYLIST_CLIPS "$n")"
+    echo "$(t MP_PRODUCTION_OK_TIMELINE_IS_EMPTY)"
 
     return 0
 }
@@ -1095,7 +1095,7 @@ auto_sync_audio() {
     local project
     project="$(require_active_project)" || return 1
 
-    echo "[Production] syncing audio for $project"
+    echo "$(t MP_PRODUCTION_PRODUCTION_SYNCING_AUDIO_FOR "$project")"
     log_project "$project" "Audio sync started"
 
     local project_path="$PROJECT_DIR/$project"
@@ -1116,8 +1116,8 @@ auto_sync_audio() {
     local total=${#videos[@]}
 
     (( total == 0 )) && {
-        echo "[WARN] no videos"
-        mediapanel_log_error "$project" "No videos for sync"
+        echo "$(t MP_PRODUCTION_WARN_NO_VIDEOS)"
+        mediapanel_log_error "$project" "$(t MP_PRODUCTION_NO_VIDEOS_FOR_SYNC)"
         return 1
     }
 
@@ -1135,8 +1135,8 @@ auto_sync_audio() {
         echo "[$count/$total] $name"
 
         if [[ ! -f "$clean_audio" ]]; then
-            echo "[SKIP] no cleaned audio"
-            mediapanel_log_error "$project" "Missing cleaned audio for $base"
+            echo "$(t MP_PRODUCTION_SKIP_NO_CLEANED_AUDIO)"
+            mediapanel_log_error "$project" "$(t MP_PRODUCTION_MISSING_CLEANED_AUDIO_FOR "$base")"
             ((count++))
             continue
         fi
@@ -1157,7 +1157,7 @@ auto_sync_audio() {
     log_project "$project" "Audio sync completed"
 
     echo
-    echo "[OK] audio synced"
+    echo "$(t MP_PRODUCTION_OK_AUDIO_SYNCED)"
 }
 
 # =========================
@@ -1168,7 +1168,7 @@ auto_sync_audio() {
     local project
     project="$(require_active_project)" || return 1
 
-    echo "[Production] syncing audio for $project"
+    echo "$(t MP_PRODUCTION_PRODUCTION_SYNCING_AUDIO_FOR "$project")"
     log_project "$project" "Audio sync started"
 
     local project_path="$PROJECT_DIR/$project"
@@ -1189,8 +1189,8 @@ auto_sync_audio() {
     local total=${#videos[@]}
 
     (( total == 0 )) && {
-        echo "[WARN] no videos"
-        mediapanel_log_error "$project" "No videos for sync"
+        echo "$(t MP_PRODUCTION_WARN_NO_VIDEOS)"
+        mediapanel_log_error "$project" "$(t MP_PRODUCTION_NO_VIDEOS_FOR_SYNC)"
         return 1
     }
 
@@ -1208,8 +1208,8 @@ auto_sync_audio() {
         echo "[$count/$total] $name"
 
         if [[ ! -f "$clean_audio" ]]; then
-            echo "[SKIP] no cleaned audio"
-            mediapanel_log_error "$project" "Missing cleaned audio for $base"
+            echo "$(t MP_PRODUCTION_SKIP_NO_CLEANED_AUDIO)"
+            mediapanel_log_error "$project" "$(t MP_PRODUCTION_MISSING_CLEANED_AUDIO_FOR "$base")"
             ((count++))
             continue
         fi
@@ -1230,7 +1230,7 @@ auto_sync_audio() {
     log_project "$project" "Audio sync completed"
 
     echo
-    echo "[OK] audio synced"
+    echo "$(t MP_PRODUCTION_OK_AUDIO_SYNCED)"
 }
 
 # =========================
@@ -1241,59 +1241,160 @@ batch_scene_split() {
     local project
     project="$(require_active_project)" || return 1
 
-    echo "[Production] scene split for $project"
-    log_project "$project" "Scene split started"
+    echo "$(t MP_PRODUCTION_PRODUCTION_SCENE_SPLIT_FOR "$project")"
+    log_project "$project" "Scene split started (content detection)"
 
     local project_path="$PROJECT_DIR/$project"
     local src="$project_path/edit"
     local dst="$project_path/scenes"
-
-    mkdir -p "$dst"
-
-    mapfile -d '' videos < <(
-        find "$src" -type f \( \
-            -iname "*.mp4" -o \
-            -iname "*.mov" -o \
-            -iname "*.mkv" \
-        \) -print0
-    )
-
-    local total=${#videos[@]}
-
-    (( total == 0 )) && {
-        echo "[WARN] no videos to split"
-        log_project "$project" "No scene changes detected, fallback frame created"
+    local threshold="${MP_SCENE_THRESHOLD:-0.30}"
+    local min_duration="${MP_SCENE_MIN_SECONDS:-2}"
+    local threads="${MP_SCENE_THREADS:-2}"
+    local tool
+    for tool in ffmpeg ffprobe awk; do
+        command -v "$tool" >/dev/null 2>&1 || {
+            printf '[ERROR] %s\n' "$tool" >&2
+            log_project "$project" "Scene split: required command missing: $tool"
+            return 1
+        }
+    done
+    # Validate before interpolating configuration into FFmpeg filter expressions.
+    if ! LC_ALL=C awk -v t="$threshold" -v m="$min_duration" -v n="$threads" '
+        BEGIN {
+            number="^[0-9]+([.][0-9]+)?$"
+            exit !(t ~ number && t > 0 && t < 1 &&
+                   m ~ number && m > 0 && n ~ /^[1-9][0-9]*$/ && n <= 64)
+        }'; then
+        printf '[ERROR] MP_SCENE_THRESHOLD / MP_SCENE_MIN_SECONDS / MP_SCENE_THREADS\n' >&2
+        return 1
+    fi
+    [[ -d "$src" ]] || {
+        echo "$(t MP_PRODUCTION_ERROR_EDIT_DIRECTORY_NOT_FOUND_EDIT "$project_path")" >&2
         return 1
     }
+    mkdir -p "$dst" || return 1
 
-    local count=1
+    local -a videos=()
+    mapfile -d '' videos < <(
+        find "$src" -type f \( \
+            -iname "*.mp4" -o -iname "*.mov" -o -iname "*.mkv" \
+        \) -print0 | sort -z
+    )
+    local total=${#videos[@]}
+    if (( total == 0 )); then
+        echo "$(t MP_PRODUCTION_WARN_NO_VIDEOS_TO_SPLIT)"
+        log_project "$project" "No videos found in edit directory"
+        return 1
+    fi
 
+    local count=0 failures=0 video name base pattern_base outdir work duration cuts fps delta
     for video in "${videos[@]}"; do
-
-        local name base outdir
-        name=$(basename "$video")
+        count=$((count + 1))
+        name="$(basename "$video")"
         base="${name%.*}"
+        pattern_base="${base//%/%%}"
         outdir="$dst/$base"
+        printf '[%s/%s] %s\n' "$count" "$total" "$name"
 
-        mkdir -p "$outdir"
+        # Existing scenes may already be referenced by a Shotcut project.
+        # Refuse replacement, including files with the same stem/other extension.
+        if [[ -e "$outdir" || -L "$outdir" ]]; then
+            printf '[ERROR] %s\n' "$outdir" >&2
+            log_project "$project" "Scene split refused: destination already exists: $outdir (move it before rerunning)"
+            failures=$((failures + 1))
+            continue
+        fi
 
-        echo "[$count/$total] $name"
+        # Keep incomplete outputs outside scenes/, where MLT discovery runs.
+        work="$(mktemp -d "$project_path/.scene-split-XXXXXXXX")" || return 1
+        if ! duration="$(LC_ALL=C ffprobe -v error -select_streams v:0 \
+            -show_entries stream=duration -of default=nw=1:nk=1 "$video")" ||
+            ! LC_ALL=C awk -v d="$duration" 'BEGIN { exit !(d ~ /^[0-9]+([.][0-9]+)?$/ && d > 0) }'; then
+            duration="$(LC_ALL=C ffprobe -v error -show_entries format=duration \
+                -of default=nw=1:nk=1 "$video")"
+        fi
+        if ! LC_ALL=C awk -v d="$duration" 'BEGIN { exit !(d ~ /^[0-9]+([.][0-9]+)?$/ && d > 0) }'; then
+            echo "$(t MP_PRODUCTION_ERROR_INVALID_DURATION "$video")" >&2
+            rm -rf -- "$work"
+            failures=$((failures + 1))
+            continue
+        fi
 
-        ffmpeg -i "$video" \
-            -c copy \
-            -f segment \
-            -segment_time 10 \
-            -reset_timestamps 1 \
-            "$outdir/${base}_scene_%03d.mp4"
+        # Decode every frame, but compare reduced images to limit analysis cost.
+        # Normalize timestamps so detected times and the encoder share origin 0.
+        if ! LC_ALL=C ffmpeg -hide_banner -nostdin -v error -threads "$threads" \
+            -i "$video" -an -sn -dn -filter_threads 1 \
+            -vf "setpts=PTS-STARTPTS,scale=320:-2,select='gt(scene,$threshold)',metadata=mode=print:file=-" \
+            -f null - > "$work/detected.txt"; then
+            printf '[ERROR] %s\n' "$name" >&2
+            log_project "$project" "Scene detection failed: $name"
+            rm -rf -- "$work"
+            failures=$((failures + 1))
+            continue
+        fi
 
-        ((count++))
-        log_project "$project" "Splitting scenes: $name"
+        # Suppress clusters of detections and very short leading/trailing pieces.
+        cuts="$(LC_ALL=C awk -v min="$min_duration" -v end="$duration" '
+            /pts_time:/ {
+                value=$0; sub(/^.*pts_time:/, "", value); sub(/[[:space:]].*$/, "", value)
+                if (value ~ /^[0-9]+([.][0-9]+)?$/ && value-last >= min && end-value >= min) {
+                    printf "%s%.6f", sep, value; sep=","; last=value
+                }
+            }
+        ' "$work/detected.txt")"
+        log_project "$project" "Scene detection: $name; threshold=$threshold; min_seconds=$min_duration; cuts=${cuts:-none}"
+
+        local rc=0
+        if [[ -n "$cuts" ]]; then
+            fps="$(ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate \
+                -of default=nw=1:nk=1 "$video")"
+            delta="$(LC_ALL=C awk -v fps="$fps" 'BEGIN {
+                split(fps, a, "/"); if (a[1]+0 > 0 && a[2]+0 > 0) printf "%.9f", a[2]/(2*a[1]); else print "0"
+            }')"
+            # Re-encode in one pass and force keyframes at detected cuts.
+            # Stream copy cannot guarantee boundaries at non-keyframes.
+            LC_ALL=C ffmpeg -hide_banner -nostdin -v warning -n -threads "$threads" \
+                -i "$video" -map 0:v:0 -map '0:a:0?' -sn -dn \
+                -vf 'setpts=PTS-STARTPTS' -af 'asetpts=PTS-STARTPTS' \
+                -filter_threads 1 -c:v libx264 -threads:v "$threads" \
+                -preset veryfast -crf 18 -pix_fmt yuv420p \
+                -force_key_frames "$cuts" -c:a aac -b:a 192k \
+                -f segment -segment_times "$cuts" -segment_time_delta "$delta" \
+                -reset_timestamps 1 -segment_format_options movflags=+faststart \
+                "$work/${pattern_base}_scene_%03d.mp4" || rc=$?
+        else
+            # A continuous take stays whole; remux without generation loss.
+            LC_ALL=C ffmpeg -hide_banner -nostdin -v warning -n \
+                -i "$video" -map 0:v:0 -map '0:a:0?' -sn -dn \
+                -c copy -movflags +faststart "$work/${base}_scene_000.mp4" || rc=$?
+        fi
+
+        if (( rc != 0 )) || [[ ! -s "$work/${base}_scene_000.mp4" ]]; then
+            printf '[ERROR] %s\n' "$name" >&2
+            log_project "$project" "Scene split failed: $name (FFmpeg exit $rc)"
+            rm -rf -- "$work"
+            failures=$((failures + 1))
+            continue
+        fi
+        rm -f -- "$work/detected.txt"
+        # -T prevents nesting if a competing invocation creates the destination.
+        if ! mv -T -n -- "$work" "$outdir" || [[ -d "$work" ]]; then
+            printf '[ERROR] %s\n' "$outdir" >&2
+            log_project "$project" "Scene split: could not publish output: $outdir"
+            rm -rf -- "$work"
+            failures=$((failures + 1))
+            continue
+        fi
+        log_project "$project" "Scene split completed: $name"
     done
 
+    if (( failures > 0 )); then
+        log_project "$project" "Scene split incomplete: $failures of $total files failed or were protected"
+        return 1
+    fi
     log_project "$project" "Scene split completed"
-
     echo
-    echo "[OK] scenes created"
+    echo "$(t MP_PRODUCTION_OK_SCENES_CREATED)"
 }
 
 # =========================
@@ -1313,11 +1414,11 @@ create_mlt() {
         "$project_path/video" \
         "$project_path/short" || {
 
-        echo "[ERROR] failed to create Shotcut project directories"
+        echo "$(t MP_PRODUCTION_ERROR_FAILED_TO_CREATE_SHOTCUT_PROJECT_DIRECTORIES)"
         return 1
     }
 
-    echo "[Production] creating Shotcut projects for $project"
+    echo "$(t MP_PRODUCTION_PRODUCTION_CREATING_SHOTCUT_PROJECTS_FOR "$project")"
     log_project "$project" "MLT creation started"
 
     create_mlt_from_edit "$project" "$project_path"
@@ -1328,17 +1429,17 @@ create_mlt() {
 
     # Код 2 означает: MLT уже существует и защищён.
     if (( rc_video != 0 && rc_video != 2 )); then
-        echo "[ERROR] failed to create video MLT project"
+        echo "$(t MP_PRODUCTION_ERROR_FAILED_TO_CREATE_VIDEO_MLT_PROJECT)"
         return 1
     fi
 
     if (( rc_short != 0 && rc_short != 2 )); then
-        echo "[ERROR] failed to create short MLT project"
+        echo "$(t MP_PRODUCTION_ERROR_FAILED_TO_CREATE_SHORT_MLT_PROJECT)"
         return 1
     fi
 
     log_project "$project" "Shotcut projects ready"
-    echo "[OK] Shotcut projects are ready"
+    echo "$(t MP_PRODUCTION_OK_SHOTCUT_PROJECTS_ARE_READY)"
 }
 
 # =========================
@@ -1405,16 +1506,16 @@ launch_shotcut() {
 
     echo
     echo "===================================================="
-    echo "               LAUNCH SHOTCUT"
+    echo "$(t MP_PRODUCTION_LAUNCH_SHOTCUT)"
     echo "===================================================="
     echo
-    echo "Project: $project"
+    echo "$(t MP_EXPORT_PROJECT "$project")"
     echo
 
     if (( ${#mlt_files[@]} == 0 )); then
-        echo "[WARN] No Shotcut MLT projects found."
+        echo "$(t MP_PRODUCTION_WARN_NO_SHOTCUT_MLT_PROJECTS_FOUND)"
         echo
-        echo "Checked:"
+        echo "$(t MP_PRODUCTION_CHECKED)"
         echo "  $project_dir/video"
         echo "  $project_dir/short"
 
@@ -1425,35 +1526,37 @@ launch_shotcut() {
         return 0
     fi
 
-    echo "Available Shotcut projects:"
+    echo "$(t MP_EXPORT_RENDER_AVAILABLE_SHOTCUT_PROJECTS)"
     echo
 
     for i in "${!mlt_files[@]}"; do
 
         if [[ "${mlt_types[$i]}" == "video" ]]; then
-            printf " %d) [VIDEO] %s\n" \
+            printf " %d) [%s] %s\n" \
                 "$((i + 1))" \
+                "$(t MP_KIND_VIDEO)" \
                 "$(basename "${mlt_files[$i]}")"
         else
-            printf " %d) [SHORT] %s\n" \
+            printf " %d) [%s] %s\n" \
                 "$((i + 1))" \
+                "$(t MP_KIND_SHORT)" \
                 "$(basename "${mlt_files[$i]}")"
         fi
 
     done
 
     echo
-    echo " 0) Back"
+    echo "$(t MP_PRODUCTION_0_BACK)"
     echo
 
-    read -r -p "Select: " choice
+    read -r -p "$(t MP_PRODUCTION_SELECT)" choice
 
     # --------------------------------------------------------
     # VALIDATE SELECTION
     # --------------------------------------------------------
 
     [[ "$choice" =~ ^[0-9]+$ ]] || {
-        echo "[ERROR] invalid selection"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_SELECTION)"
         return 1
     }
 
@@ -1462,7 +1565,7 @@ launch_shotcut() {
     fi
 
     if (( choice < 1 || choice > ${#mlt_files[@]} )); then
-        echo "[ERROR] invalid selection"
+        echo "$(t MP_PRODUCTION_ERROR_INVALID_SELECTION)"
         return 1
     fi
 
@@ -1478,9 +1581,9 @@ launch_shotcut() {
     # --------------------------------------------------------
 
     echo
-    echo "[Production] launching Shotcut for $project"
-    echo "[Production] project type: $project_type"
-    echo "[Production] opening MLT project:"
+    echo "$(t MP_PRODUCTION_PRODUCTION_LAUNCHING_SHOTCUT_FOR "$project")"
+    echo "$(t MP_PRODUCTION_PRODUCTION_PROJECT_TYPE "$project_type")"
+    echo "$(t MP_PRODUCTION_PRODUCTION_OPENING_MLT_PROJECT)"
     echo "  $project_mlt"
 
     log_project \
@@ -1506,8 +1609,8 @@ launch_shotcut() {
         rc=$?
 
     else
-        echo "[ERROR] Shotcut not found"
-        mediapanel_log_error "$project" "Shotcut not found"
+        echo "$(t MP_PRODUCTION_ERROR_SHOTCUT_NOT_FOUND)"
+        mediapanel_log_error "$project" "$(t MP_PRODUCTION_SHOTCUT_NOT_FOUND)"
         return 1
     fi
 
@@ -1516,7 +1619,7 @@ launch_shotcut() {
     # --------------------------------------------------------
 
     if (( rc != 0 )); then
-        echo "[ERROR] Shotcut exited with code: $rc"
+        echo "$(t MP_PRODUCTION_ERROR_SHOTCUT_EXITED_WITH_CODE "$rc")"
 
         log_error \
             "$project" \

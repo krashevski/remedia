@@ -9,7 +9,7 @@ run_ingest_ui() {
 
     # ========= GUARD =========
     if [[ -z "$result" ]]; then
-        echo "ERROR: empty result"
+        echo "$(t MP_UI_ERROR_EMPTY_RESULT)"
         return 1
     fi
 
@@ -20,14 +20,14 @@ run_ingest_ui() {
     error=$(echo "$result" | awk -F'"error":"' '{print $2}' | cut -d'"' -f1)
 
     echo "=========================="
-    echo "INGEST COMPLETE"
+    echo "$(t MP_UI_INGEST_COMPLETE)"
     echo "--------------------------"
-    echo "OK:     $ok"
-    echo "FAIL:   $fail"
-    echo "SKIP:   $skip"
-    echo "TOTAL:  $total"
-    echo "ERROR:  ${error:-none}"
-    read -rp "Press Enter to continue..."
+    echo "$(t MP_UI_OK "$ok")"
+    echo "$(t MP_UI_FAIL "$fail")"
+    echo "$(t MP_UI_SKIP "$skip")"
+    echo "$(t MP_UI_TOTAL "$total")"
+    echo "$(t MP_UI_ERROR "${error:-$(t MP_UI_NONE)}")"
+    read -rp "$(t MP_UI_PRESS_ENTER_TO_CONTINUE)"
 }
 
 get_step_status() {
@@ -93,7 +93,7 @@ open_terminal() {
     elif command -v xterm >/dev/null 2>&1; then
         xterm -e "$cmd"
     else
-        echo "[WARN] No terminal found, running inline"
+        echo "$(t MP_UI_WARN_NO_TERMINAL_FOUND_RUNNING_INLINE)"
         bash -c "$cmd"
     fi
 }
@@ -103,8 +103,8 @@ ffmpeg_help() {
 }
 
 pause() {
-    log_info "Waiting user confirmation..."
-    read -rp "Press Enter to continue..."
+    log_info "$(t MP_UI_WAITING_CONFIRMATION)"
+    read -rp "$(t MP_UI_PRESS_ENTER_TO_CONTINUE)"
 }
 
 # =========================
@@ -113,36 +113,10 @@ pause() {
 show_stabilization_guide() {
     clear || true
 
-    cat <<'EOF'
-
-====================================================
-                   Stabilization
-====================================================
-1.  Stabilization (Stabilize filter) use only for clips or segments where it is truly necessary.
-    Stabilization alters the frame geometry: it compensates for camera shake and may involve zooming in and cropping the edges.
-    It is best performed before final image processing.
-
-    IMPORTANT:
-    If you intend to stabilize specific segments, do not merge them back together after cutting.
-
-2. Navigate the MediaPanel UI menu:
-
-    1) System status
-        -> 5) Import Shotcut filter sets
-
-3. Open the following in Shotcut:
-
-    Filters → + → Sets
-
-    You should see an entry appear there, for example:
-
-    Stabilizer_Gimbal
-
-====================================================
-EOF
+    t MP_UI_GUIDE_STABILIZATION
 
     echo
-    read -r -p "Press Enter to continue..."
+    read -r -p "$(t MP_UI_PRESS_ENTER_TO_CONTINUE)"
 }
 
 # =========================
@@ -151,31 +125,10 @@ EOF
 show_set_filters_guide() {
     clear || true
 
-    cat <<'EOF'
-====================================================
-                   SET FILTERS
-====================================================
-
-1. Navigate the MediaPanel UI menu:
-
-    1) System status
-        -> 5) Import Shotcut filter sets
-
-2. Open the following in Shotcut:
-
-    Filters → + → Sets
-
-    You should see an entry appear there, for example:
-
-    Oppo_Reno_11F_Concert
-
-3. Apply the filter set to the entire video track.
-
-====================================================
-EOF
+    t MP_UI_GUIDE_FILTER_SETS
 
     echo
-    read -r -p "Press Enter to continue..."
+    read -r -p "$(t MP_UI_PRESS_ENTER_TO_CONTINUE)"
 }
 
 main_menu() {
@@ -185,28 +138,28 @@ main_menu() {
         clear || true
 
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-        echo -e "              ${COLOR_BOLD}${COLOR_CYAN}REMEDIA MEDIAPANEL UI${COLOR_RESET}"
+        echo -e "$(t MP_UI_REMEDIA_MEDIAPANEL_UI "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
         echo
 
         if [[ -n "$active" ]]; then
-            echo -e "${COLOR_BOLD}Active project: ${COLOR_GREEN}${active}${COLOR_RESET}"
+            echo -e "$(t MP_UI_ACTIVE_PROJECT "${COLOR_BOLD}" "${COLOR_GREEN}" "${active}" "${COLOR_RESET}")"
         else
-            echo -e "${COLOR_BOLD}Active project: ${COLOR_RED}none${COLOR_RESET}"
+            echo -e "$(t MP_UI_ACTIVE_PROJECT_NONE "${COLOR_BOLD}" "${COLOR_RED}" "${COLOR_RESET}")"
         fi
 
         echo
-        echo "1) System status"
-        echo "2) Projects"
-        echo "3) Footage ingest from phone"
-        echo "4) Production"
-        echo "5) Export"
-        echo "6) Tools"   # ← ДОБАВИЛИ
+        echo "$(t MP_UI_1_SYSTEM_STATUS)"
+        echo "$(t MP_UI_2_PROJECTS)"
+        echo "$(t MP_UI_3_FOOTAGE_INGEST_FROM_PHONE)"
+        echo "$(t MP_UI_4_PRODUCTION)"
+        echo "$(t MP_UI_5_EXPORT)"
+        echo "$(t MP_UI_6_TOOLS)"   # ← ДОБАВИЛИ
         echo
-        echo -e "${COLOR_YELLOW}0) Exit${COLOR_RESET}"
+        echo -e "$(t MP_UI_0_EXIT "${COLOR_YELLOW}" "${COLOR_RESET}")"
         echo
 
-        read -rp "Choice [1-#]: " choice || continue
+        read -rp "$(t MP_UI_CHOICE_1)" choice || continue
 
         case "$choice" in
             1) system_status ;;
@@ -216,7 +169,7 @@ main_menu() {
             5) export_menu ;;
             6) tools_menu ;;   # ← ВМЕСТО video_tools_menu
             0) exit 0 ;;
-            *) echo "Invalid option" ;;
+            *) echo "$(t MP_UI_INVALID_OPTION)" ;;
         esac
     done
 }
@@ -228,33 +181,33 @@ projects_menu() {
         echo
         clear || true
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-        echo -e "                   ${COLOR_BOLD}${COLOR_CYAN}Projects${COLOR_RESET}"
+        echo -e "$(t MP_UI_PROJECTS "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
         echo
         if [[ -n "$active" ]]; then
-            echo -e "${COLOR_BOLD}Active project: ${COLOR_GREEN}${active}${COLOR_RESET}"
+            echo -e "$(t MP_UI_ACTIVE_PROJECT "${COLOR_BOLD}" "${COLOR_GREEN}" "${active}" "${COLOR_RESET}")"
         else
-            echo -e "${COLOR_BOLD}Active project: ${COLOR_RED}none${COLOR_RESET}"
+            echo -e "$(t MP_UI_ACTIVE_PROJECT_NONE "${COLOR_BOLD}" "${COLOR_RED}" "${COLOR_RESET}")"
         fi
         echo
-        echo "1) Select project"
-        echo "2) Create"
-        echo "3) List"
-        echo "4) Delete"
-        echo "5) Restore project"
-        echo "6) Purge trash"
+        echo "$(t MP_UI_1_SELECT_PROJECT)"
+        echo "$(t MP_UI_2_CREATE)"
+        echo "$(t MP_UI_3_LIST)"
+        echo "$(t MP_UI_4_DELETE)"
+        echo "$(t MP_UI_5_RESTORE_PROJECT)"
+        echo "$(t MP_UI_6_PURGE_TRASH)"
         echo
-        echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
+        echo -e "$(t MP_UI_0_BACK "${COLOR_YELLOW}" "${COLOR_RESET}")"
         echo
-        read -rp "Choice [1-#]> " choice
+        read -rp "$(t MP_UI_CHOICE_1_2)" choice
 
         case "$choice" in
             1)
-                echo "Select project:"
+                echo "$(t MP_UI_SELECT_PROJECT)"
                 mapfile -t projects < <(project_list_raw)
 
                 if (( ${#projects[@]} == 0 )); then
-                    echo "[INFO] no projects"
+                    echo "$(t MP_UI_INFO_NO_PROJECTS)"
                     continue
                 fi
 
@@ -262,23 +215,23 @@ projects_menu() {
                     printf "%2d) %s\n" "$((i+1))" "${projects[$i]}"
                 done
 
-                read -rp "choice #)> " idx
+                read -rp "$(t MP_UI_CHOICE)" idx
                 if ! [[ "$idx" =~ ^[0-9]+$ ]]; then
-                    echo "[ERROR] invalid number"
+                    echo "$(t MP_UI_ERROR_INVALID_NUMBER)"
                     continue
                 fi
 
                 (( idx-- ))
 
                 if (( idx < 0 || idx >= ${#projects[@]} )); then
-                    echo "[ERROR] out of range"
+                    echo "$(t MP_UI_ERROR_OUT_OF_RANGE)"
                     continue
                 fi
 
                 activate_project_full "${projects[$idx]}"
                 ;;
             2)
-                read -rp "Project name: " name
+                read -rp "$(t MP_UI_PROJECT_NAME)" name
                 CLI_NAME="$name"
                 CLI_NO_UI=0
                 project_create
@@ -287,18 +240,18 @@ projects_menu() {
                 echo
                 project_list
                 echo
-                read -rp "Press Enter to continue..."
+                read -rp "$(t MP_UI_PRESS_ENTER_TO_CONTINUE)"
                 ;;
             4)
                 echo
-                echo "Available projects:"
+                echo "$(t MP_UI_AVAILABLE_PROJECTS)"
                 project_list
                 echo
 
-                read -rp "Project to delete: " name
+                read -rp "$(t MP_UI_PROJECT_TO_DELETE)" name
 
                 [[ -z "$name" ]] && {
-                    echo "[INFO] cancelled"
+                    echo "$(t MP_UI_INFO_CANCELLED)"
                     return
                 }
 
@@ -308,14 +261,14 @@ projects_menu() {
                 ;;
              5)
                 echo
-                echo "Available deleted projects:"
+                echo "$(t MP_UI_AVAILABLE_DELETED_PROJECTS)"
                 mapfile -t trash < <(
                     find "$TRASH_DIR" -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | sort
                 )
 
                 if (( ${#trash[@]} == 0 )); then
-                    echo "[INFO] trash empty"
-                    read -rp "Press Enter..."
+                    echo "$(t MP_UI_INFO_TRASH_EMPTY)"
+                    read -rp "$(t MP_UI_PRESS_ENTER)"
                     continue
                 fi
 
@@ -325,30 +278,30 @@ projects_menu() {
                     ((i++))
                 done
                 echo
-                read -rp "choice #)> " idx
+                read -rp "$(t MP_UI_CHOICE)" idx
 
                 [[ ! "$idx" =~ ^[0-9]+$ ]] && {
-                    echo "[ERROR] invalid number"
-                    read -rp "Press Enter..."
+                    echo "$(t MP_UI_ERROR_INVALID_NUMBER)"
+                    read -rp "$(t MP_UI_PRESS_ENTER)"
                     continue
                 }
 
                 ((idx--))
 
                 (( idx < 0 || idx >= ${#trash[@]} )) && {
-                    echo "[ERROR] out of range"
-                    read -rp "Press Enter..."
+                    echo "$(t MP_UI_ERROR_OUT_OF_RANGE)"
+                    read -rp "$(t MP_UI_PRESS_ENTER)"
                     continue
                 }
 
                 project_restore "${trash[$idx]}"
                 echo
-                read -rp "Press Enter..."
+                read -rp "$(t MP_UI_PRESS_ENTER)"
                 ;;
             6) purge_trash ;;
             0) return ;;   # ← ВАЖНО
             *)
-                echo "Invalid option"
+                echo "$(t MP_UI_INVALID_OPTION)"
                 ;;
         esac
     done
@@ -364,34 +317,34 @@ production_menu() {
         clear || true
 
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-        echo -e "               ${COLOR_BOLD}${COLOR_CYAN}Smart Production${COLOR_RESET}"
+        echo -e "$(t MP_UI_SMART_PRODUCTION "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
         echo
 
         if [[ -n "$active" ]]; then
-            echo -e ${COLOR_BOLD}"Project: ${COLOR_GREEN}${active}${COLOR_RESET}"
+            echo -e "$(t MP_UI_PROJECT "${COLOR_BOLD}" "${COLOR_GREEN}" "${active}" "${COLOR_RESET}")"
         else
-            echo -e "${COLOR_BOLD}Project: ${COLOR_RED}none${COLOR_RESET}"
+            echo -e "$(t MP_UI_PROJECT_NONE "${COLOR_BOLD}" "${COLOR_RED}" "${COLOR_RESET}")"
         fi
         echo
         pipeline_status "$active"
-        echo "1) Generate proxy"
-        echo "2) Audio cleanup"
-        echo "3) Auto sync audio"
-        echo "4) Batch scene split"
-        echo "5) Create Shotcut project file (.mlt)"
-        echo "6) Full pipeline"
-        echo "7) Resume pipeline"
-        echo "8) Launch Shotcut"
-        echo "9) Stabilization"
-        echo "10) Set filters"
-        echo "11) Generate subtitles"
-        echo "12) Render Export (generate videos)"
+        echo "$(t MP_UI_1_GENERATE_PROXY)"
+        echo "$(t MP_UI_2_AUDIO_CLEANUP)"
+        echo "$(t MP_UI_3_AUTO_SYNC_AUDIO)"
+        echo "$(t MP_UI_4_BATCH_SCENE_SPLIT)"
+        echo "$(t MP_UI_5_CREATE_SHOTCUT_PROJECT_FILE_MLT)"
+        echo "$(t MP_UI_6_FULL_PIPELINE)"
+        echo "$(t MP_UI_7_RESUME_PIPELINE)"
+        echo "$(t MP_UI_8_LAUNCH_SHOTCUT)"
+        echo "$(t MP_UI_9_STABILIZATION)"
+        echo "$(t MP_UI_10_SET_FILTERS)"
+        echo "$(t MP_UI_11_GENERATE_SUBTITLES)"
+        echo "$(t MP_UI_12_RENDER_EXPORT_GENERATE_VIDEOS)"
         echo
-        echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
+        echo -e "$(t MP_UI_0_BACK "${COLOR_YELLOW}" "${COLOR_RESET}")"
         echo
 
-        read -rp "Choice [1-#]> " choice
+        read -rp "$(t MP_UI_CHOICE_1_2)" choice
 
         case "$choice" in
             1)
@@ -407,7 +360,7 @@ production_menu() {
             6) full_pipeline || true ;;
             7)
                if ! resume_pipeline; then
-                   echo "[ERROR] pipeline resume failed"
+                   echo "$(t MP_UI_ERROR_PIPELINE_RESUME_FAILED)"
                fi
                ;;
             8) launch_shotcut || true ;;
@@ -421,14 +374,14 @@ production_menu() {
 
             11)
                generate_subtitles
-               read -rp "Press Enter to continue..."
+               read -rp "$(t MP_UI_PRESS_ENTER_TO_CONTINUE)"
                ;;
             12)
-                export_render || log_error "Render export failed"
+                export_render || log_error "$(t MP_UI_RENDER_FAILED)"
                 pause
                 ;;
             0) return ;;
-            *) echo "Invalid option" ;;
+            *) echo "$(t MP_UI_INVALID_OPTION)" ;;
         esac
     done
 }
@@ -440,59 +393,59 @@ export_menu() {
         clear || true
 
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-        echo -e "                 ${COLOR_BOLD}${COLOR_CYAN}Export${COLOR_RESET}"
+        echo -e "$(t MP_UI_EXPORT "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
         echo
                 if [[ -n "$active" ]]; then
-            echo -e "${COLOR_BOLD}Active project: ${COLOR_GREEN}${active}${COLOR_RESET}"
+            echo -e "$(t MP_UI_ACTIVE_PROJECT "${COLOR_BOLD}" "${COLOR_GREEN}" "${active}" "${COLOR_RESET}")"
         else
-            echo -e "${COLOR_BOLD}Active project: ${COLOR_RED}none${COLOR_RESET}"
+            echo -e "$(t MP_UI_ACTIVE_PROJECT_NONE "${COLOR_BOLD}" "${COLOR_RED}" "${COLOR_RESET}")"
         fi
         echo
-        echo "1) Manual YouTube upload"
-        echo "2) Export YouTube"
-        echo "3) Process YouTube Queue"
-        echo "4) YouTube Queue Status"
-        echo "5) Archive Project"
-        echo "6) Archive YouTube Queue Jobs"
+        echo "$(t MP_UI_1_MANUAL_YOUTUBE_UPLOAD)"
+        echo "$(t MP_UI_2_EXPORT_YOUTUBE)"
+        echo "$(t MP_UI_3_PROCESS_YOUTUBE_QUEUE)"
+        echo "$(t MP_UI_4_YOUTUBE_QUEUE_STATUS)"
+        echo "$(t MP_UI_5_ARCHIVE_PROJECT)"
+        echo "$(t MP_UI_6_ARCHIVE_YOUTUBE_QUEUE_JOBS)"
         echo
-        echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
+        echo -e "$(t MP_UI_0_BACK "${COLOR_YELLOW}" "${COLOR_RESET}")"
         echo
 
-        read -rp "Choice [1-#]> " choice
+        read -rp "$(t MP_UI_CHOICE_1_2)" choice
 
         case "$choice" in
 
             1)
                 manual_youtube_upload ||
-                    log_error "Manual YouTube upload failed"
+                    log_error "$(t MP_UI_YOUTUBE_UPLOAD_FAILED)"
                 ;;
 
             2)
                 export_youtube_queue ||
-                    log_error "Export YouTube failed"
+                    log_error "$(t MP_UI_YOUTUBE_EXPORT_FAILED)"
                 ;;
 
             3)
                 process_youtube_queue ||
-                    log_error "YouTube queue processing failed"
+                    log_error "$(t MP_UI_YOUTUBE_QUEUE_FAILED)"
                 pause
                 ;;
 
             4)
                 youtube_queue_status ||
-                    log_error "YouTube queue status failed"
+                    log_error "$(t MP_UI_YOUTUBE_STATUS_FAILED)"
                 pause
                 ;;
 
             5)
                 archive_project ||
-                    log_error "Project archive failed"
+                    log_error "$(t MP_UI_ARCHIVE_FAILED)"
                 pause
                 ;;
 
             6)  archive_youtube_queue_job ||
-                    log_error "YouTube queue archive failed"
+                    log_error "$(t MP_UI_YOUTUBE_ARCHIVE_FAILED)"
                 pause
                 ;;
 
@@ -501,7 +454,7 @@ export_menu() {
                 ;;
 
             *)
-                echo "Invalid option"
+                echo "$(t MP_UI_INVALID_OPTION)"
                 pause
                 ;;
         esac
@@ -511,25 +464,25 @@ export_menu() {
 purge_trash() {
 
     echo
-    echo -e "${COLOR_RED}WARNING:${COLOR_RESET} This will permanently delete ALL trash projects."
+    echo -e "$(t MP_UI_WARNING_THIS_WILL_PERMANENTLY_DELETE_ALL_TRASH_PROJECTS "${COLOR_RED}" "${COLOR_RESET}")"
     echo
 
-    read -rp " Type PURGE to confirm: " confirm
+    read -rp "$(t MP_UI_TYPE_PURGE_TO_CONFIRM)" confirm
     confirm=${confirm^^}
 
     [[ "$confirm" != "PURGE" ]] && {
-        echo " Cancelled."
+        echo "$(t MP_UI_CANCELLED)"
         pause
         return
     }
 
     echo
-    echo "  Cleaning trash..."
+    echo "$(t MP_UI_CLEANING_TRASH)"
 
     purge_trash_core   # ← ВАЖНО
 
     echo
-    echo -e " ${COLOR_GREEN}✓${COLOR_RESET} Trash cleaned."
+    echo -e "$(t MP_UI_TRASH_CLEANED "${COLOR_GREEN}" "${COLOR_RESET}")"
 
     pause
 }
@@ -540,25 +493,25 @@ tools_menu() {
         clear || true
 
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
-        echo -e "                  ${COLOR_BOLD}${COLOR_CYAN}Tools${COLOR_RESET}"
+        echo -e "$(t MP_UI_TOOLS "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
         echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
         echo
 
-        echo "1) Video tools"
-        echo "2) Graphics tools"
-        echo "3) Audio tools"
+        echo "$(t MP_UI_1_VIDEO_TOOLS)"
+        echo "$(t MP_UI_2_GRAPHICS_TOOLS)"
+        echo "$(t MP_UI_3_AUDIO_TOOLS)"
         echo
-        echo -e "${COLOR_YELLOW}0) Back${COLOR_RESET}"
+        echo -e "$(t MP_UI_0_BACK "${COLOR_YELLOW}" "${COLOR_RESET}")"
         echo
 
-        read -rp "Choice [1-#]> " choice
+        read -rp "$(t MP_UI_CHOICE_1_2)" choice
 
         case "$choice" in
             1) video_tools_menu ;;
             2) graphics_tools_menu ;;
             3) audio_tools_menu;;
             0) return ;;
-            *) echo "Invalid option" ;;
+            *) echo "$(t MP_UI_INVALID_OPTION)" ;;
         esac
     done
 }
@@ -626,15 +579,15 @@ build_menu() {
         done
 
         echo
-        echo -e "${COLOR_YELLOW} 0) Back${COLOR_RESET}"
+        echo -e "$(t MP_UI_0_BACK_2 "${COLOR_YELLOW}" "${COLOR_RESET}")"
         echo
         appmap[0]="back"
 
-        read -rp "Choice [1-#]> " choice
+        read -rp "$(t MP_UI_CHOICE_1_2)" choice
 
         # защита от мусора
         if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
-            echo "Invalid option"
+            echo "$(t MP_UI_INVALID_OPTION)"
             sleep 1
             continue
         fi
@@ -657,10 +610,10 @@ build_menu() {
             func:*)
                 local fn="${appmap[$choice]#func:}"
                 "$fn"
-                read -rp "Press Enter to continue..."
+                read -rp "$(t MP_UI_PRESS_ENTER_TO_CONTINUE)"
                 ;;
             "")
-                echo "Invalid option"
+                echo "$(t MP_UI_INVALID_OPTION)"
                 sleep 1
                 ;;
         esac
@@ -668,23 +621,23 @@ build_menu() {
 }
 
 video_tools_menu() {
-    build_menu "VIDEO TOOLS" \
+    build_menu "$(t MP_UI_VIDEO_TOOLS)" \
         "Shotcut||flatpak:org.shotcut.Shotcut" \
         "OBS Studio|cmd:obs|flatpak:com.obsproject.Studio" \
         "VLC Media Player|cmd:vlc|flatpak:org.videolan.VLC" \
-        "Open video…|func:open_video_dialog|" \
-        "ffmpeg help|func:ffmpeg_help|"
+        "$(t MP_UI_OPEN_VIDEO)|func:open_video_dialog|" \
+        "$(t MP_UI_FFMPEG_HELP)|func:ffmpeg_help|"
 }
 
 graphics_tools_menu() {
-    build_menu "GRAPHICS TOOLS" \
+    build_menu "$(t MP_UI_GRAPHICS_TOOLS)" \
         "GIMP|cmd:gimp|flatpak:org.gimp.GIMP" \
         "Inkscape|cmd:inkscape|flatpak:org.inkscape.Inkscape" \
         "Krita|cmd:krita|flatpak:org.kde.krita"
 }
 
 audio_tools_menu() {
-    build_menu "AUDIO TOOLS" \
+    build_menu "$(t MP_UI_AUDIO_TOOLS)" \
         "Audacity|cmd:audacity|flatpak:org.audacityteam.Audacity" \
         "Ardour|cmd:ardour|flatpak:org.ardour.Ardour" \
         "LMMS|cmd:lmms|flatpak:io.lmms.LMMS"

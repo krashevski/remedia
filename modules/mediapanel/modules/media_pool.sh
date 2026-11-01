@@ -51,7 +51,7 @@ detect_phone() {
 
 ui_log() {
     local msg="${1:-}"
-    echo -e "[MEDIA] $msg" >&2
+    echo -e "$(t MP_MEDIA_POOL_MEDIA "$msg")" >&2
 }
 
 ui_banner() {
@@ -71,8 +71,8 @@ prepare_ingest_queue() {
 
     TOTAL_FILES="${#QUEUE[@]}"
 
-    ui_banner "INGEST QUEUE READY"
-    ui_log "Total files: $TOTAL_FILES"
+    ui_banner "$(t MP_MEDIA_POOL_INGEST_QUEUE_READY)"
+    ui_log "$(t MP_MEDIA_POOL_TOTAL_FILES "$TOTAL_FILES")"
     return 0
 }
 
@@ -97,6 +97,8 @@ hash_file() {
 }
 
 rebuild_state() {
+    # Keep journal parser variables from overwriting the caller's hash/project.
+    local ts hash event rest payload project
 
     declare -gA STATE_HASH=()
     declare -gA STATE_FILE=()
@@ -139,7 +141,7 @@ rebuild_state() {
 
     done < "$JOURNAL"
 
-    echo "[DEBUG] total hashes: ${#STATE_HASH[@]}"
+    echo "$(t MP_MEDIA_POOL_DEBUG_TOTAL_HASHES "${#STATE_HASH[@]}")" >&2
 }
 
 media_index_load() {
@@ -166,7 +168,7 @@ media_register() {
 
     MEDIA_INDEX["$hash"]=1
 
-    echo "[MEDIA] registered: $(basename "$file")" >&2
+    echo "$(t MP_MEDIA_POOL_MEDIA_REGISTERED "$(basename "$file")")" >&2
 }
 
 media_import_phone() {
@@ -180,13 +182,13 @@ media_import_phone() {
         find "$phone_dir" -type f \( -iname "*.mp4" -o -iname "*.mov" \) -print0
     )
 
-    echo "[MEDIA] scanning ${#files[@]} files" >&2
+    echo "$(t MP_MEDIA_POOL_MEDIA_SCANNING_FILES "${#files[@]}")" >&2
 
     for f in "${files[@]}"; do
         media_register "$f" "$project" || true
     done
 
-    echo "[MEDIA] import done" >&2
+    echo "$(t MP_MEDIA_POOL_MEDIA_IMPORT_DONE)" >&2
 }
 
 copy_with_retry() {
@@ -195,10 +197,10 @@ copy_with_retry() {
     local tmp="${dst}.tmp.$$"
 
     for i in 1 2 3; do
-        ui_log "copy attempt $i → $(basename "$src")"
+        ui_log "$(t MP_MEDIA_POOL_COPY_ATTEMPT "$i" "$(basename "$src")")"
 
         if cp "$src" "$tmp" >/dev/null 2>&1 && mv "$tmp" "$dst"; then
-            ui_log "copied ✓ $(basename "$dst")"
+            ui_log "$(t MP_MEDIA_POOL_COPIED "$(basename "$dst")")"
             return 0
         fi
 
@@ -206,7 +208,7 @@ copy_with_retry() {
         sleep 1
     done
 
-    ui_log "copy failed ✗ $(basename "$src")"
+    ui_log "$(t MP_MEDIA_POOL_COPY_FAILED "$(basename "$src")")"
     return 1
 }
 
@@ -224,12 +226,12 @@ media_materialize() {
             ;;
 
         REMOTE)
-            echo "[MEDIA] not ingested yet"
+            echo "$(t MP_MEDIA_POOL_MEDIA_NOT_INGESTED_YET)" >&2
             return 1
             ;;
 
         FAILED)
-            echo "[MEDIA] failed state"
+            echo "$(t MP_MEDIA_POOL_MEDIA_FAILED_STATE)" >&2
             return 1
             ;;
     esac
@@ -238,7 +240,7 @@ media_materialize() {
 media_list() {
     rebuild_state
 
-    echo "=== MEDIA POOL v2 ==="
+    echo "$(t MP_MEDIA_POOL_MEDIA_POOL_V2)"
 
     for h in "${!STATE_HASH[@]}"; do
 
@@ -256,20 +258,20 @@ cleanup_raw() {
 
     if [[ -f "$raw_file" ]]; then
         rm -f "$raw_file"
-        ui_log "RAW cleaned 🧹 $(basename "$raw_file")"
+        ui_log "$(t MP_MEDIA_POOL_RAW_CLEANED "$(basename "$raw_file")")"
     fi
 }
 
 cleanup_raw_batch() {
-    ui_log "Cleaning RAW cache..."
+    ui_log "$(t MP_MEDIA_POOL_CLEANING_RAW_CACHE)"
     
     [[ -d "$RAW_DIR" ]] || {
-        ui_log "RAW dir missing, skip cleanup"
+        ui_log "$(t MP_MEDIA_POOL_RAW_DIR_MISSING_SKIP_CLEANUP)"
         return 0
     }
 
     find "$RAW_DIR" -type f -mtime +0 -print -delete | while read -r f; do
-        ui_log "deleted $(basename "$f")"
+        ui_log "$(t MP_MEDIA_POOL_DELETED "$(basename "$f")")"
     done
 }
 
@@ -278,7 +280,7 @@ ingest_to_raw() {
     local name
     name="$(basename "$src")"
     
-    echo "[RAW] ingest: $name" >&2
+    echo "$(t MP_MEDIA_POOL_RAW_INGEST "$name")" >&2
 
     local dst="$RAW_DIR/$name"
 
@@ -292,7 +294,7 @@ ingest_to_raw() {
     for i in 1 2 3; do
         if copy_with_retry "$src" "$dst"; then
             echo "$dst"
-            ui_log "RAW ingest: $(basename "$f")"
+            ui_log "$(t MP_MEDIA_POOL_RAW_INGEST_2 "$(basename "$f")")"
             return 0
         fi
         sleep 1
@@ -321,7 +323,7 @@ ingest_from_phone_v3() {
     if ! declare -F pipeline_load >/dev/null ||
        ! declare -F pipeline_get >/dev/null ||
        ! declare -F pipeline_set >/dev/null; then
-        ui_log "pipeline_state.sh must be loaded before ingest"
+        ui_log "$(t MP_MEDIA_POOL_PIPELINE_STATE_SH_MUST_BE_LOADED_BEFORE_INGEST)"
         printf '%s\n' '{"ok":0,"fail":0,"skip":0,"total":0,"error":"pipeline_state_unavailable","runtime_ms":0}'
         return 0
     fi
@@ -377,7 +379,7 @@ ingest_from_phone_v3() {
                 ((++skip))
                 ((++existing))
             else
-                ui_log "existing file differs or is empty: $name"
+                ui_log "$(t MP_MEDIA_POOL_EXISTING_FILE_DIFFERS_OR_IS_EMPTY "$name")"
                 ((++fail))
             fi
             continue

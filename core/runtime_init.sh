@@ -73,6 +73,8 @@ source "$REMEDIA_LIB/core/utils/colors.sh"
 source "$REMEDIA_LIB/core/utils/log.sh"
 source "$REMEDIA_LIB/core/utils/debug.sh"
 source "$REMEDIA_LIB/core/config.sh"
+# Translation API only; module dictionaries load after runtime_init/load_config.
+source "$REMEDIA_LIB/core/i18n.sh"
 source "$REMEDIA_LIB/core/user_context.sh"
 source "$REMEDIA_LIB/core/storage.sh"
 

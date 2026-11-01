@@ -9,6 +9,12 @@
 
 # SYSTEM_DEPS_PATH="${SYSTEM_DEPS_PATH:-$REMEDIA_LIB/modules/mediapanel/core/system_deps.sh}"
 
+# Shared language preferences; ui/ui.sh does not need modification.
+if ! declare -F mediapanel_subtitle_languages_load >/dev/null; then
+    # shellcheck source=modules/mediapanel/core/subtitle_languages.sh
+    source "$(dirname -- "${BASH_SOURCE[0]}")/../core/subtitle_languages.sh" || return 1
+fi
+
 # =========================
 # YOUTUBE API RUNTIME
 # =========================
@@ -223,6 +229,7 @@ show_shotcut_config_status() {
         fi
     fi
 
+    mediapanel_subtitle_languages_status
     mediapanel_shotcut_nvenc_status
 
     # Количество импортированных наборов фильтров
@@ -287,6 +294,51 @@ mediapanel_shotcut_nvenc_status() {
     esac
 }
 
+mediapanel_subtitle_languages_menu() {
+    local input code
+    local -a selected=()
+    while true; do
+        echo
+        echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
+        echo "                 ${COLOR_BOLD}${COLOR_CYAN}SUBTITLE LANGUAGES"
+        echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
+        mediapanel_subtitle_languages_status || return 1
+        echo
+        echo 'Enter 1-4 language codes in preferred order.'
+        echo 'Examples: ru kk en   |   en ja de fr'
+        echo 'The first language is the default for subtitle generation.'
+        echo 'Auto detect is always available in the generation menu.'
+        echo
+        echo "l) List supported languages"
+        echo "r) Restore defaults (ru kk en)"
+        echo
+        echo  -e "${COLOR_YELLOW}0) Back without saving${COLOR_RESET}"
+        echo
+        read -r -p 'Languages> ' input || return 0
+        input="${input,,}"
+        case "$input" in
+            0|'') return 0 ;;
+            l)
+                for code in "${!MEDIAPANEL_SUBTITLE_LANGUAGE_NAMES[@]}"; do
+                    printf ' %-3s  %s\n' "$code" "${MEDIAPANEL_SUBTITLE_LANGUAGE_NAMES[$code]}"
+                done | LC_ALL=C sort -k2
+                continue
+                ;;
+            r) selected=(ru kk en) ;;
+            *)
+                input="${input//,/ }"
+                read -r -a selected <<< "$input"
+                ;;
+        esac
+        if ! mediapanel_subtitle_languages_save "${selected[@]}"; then
+            echo '[ERROR] Settings were not saved.'
+            continue
+        fi
+        echo '[OK] Subtitle languages saved.'
+        return 0
+    done
+}
+
 system_status() {
     while true; do
         active="$(get_active_project)"
@@ -337,6 +389,7 @@ system_status() {
         echo " 6) Shotcut Flatpak NVENC doctor"
         echo " 7) Shotcut Flatpak NVENC heal"
         echo " 8) YouTube API Setup"
+        echo " 9) Subtitle languages"
         echo
         echo -e " ${COLOR_YELLOW}0) Back${COLOR_RESET}"
         echo
@@ -449,6 +502,9 @@ system_status() {
                 ;;
             8)
                 mediapanel_youtube_setup_menu
+                ;;
+            9)
+                mediapanel_subtitle_languages_menu || true
                 ;;
             0)
                 echo "Back..."

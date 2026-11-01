@@ -5,6 +5,10 @@ import os
 import sys
 from pathlib import Path
 
+# This UI script shares the core adapter and the module's existing dictionaries.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "core"))
+from remedia_i18n import t, message_error, exception_text
+
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.readonly",
@@ -13,7 +17,7 @@ SCOPES = [
 
 def main():
     if len(sys.argv) != 3 or sys.argv[1] not in {"authorize", "check", "test"}:
-        raise ValueError("usage: youtube_oauth.py {authorize|check|test} CONFIG_DIR")
+        raise message_error(ValueError, "MP_OAUTH_USAGE")
     action, config_dir = sys.argv[1], Path(sys.argv[2]).expanduser()
     client = config_dir / "client_secrets.json"
     token_file = config_dir / "token.json"
@@ -22,7 +26,7 @@ def main():
 
     if action == "authorize":
         if not client.is_file():
-            raise FileNotFoundError("Install client_secrets.json first")
+            raise message_error(FileNotFoundError, "MP_OAUTH_INSTALL_CLIENT")
         from google_auth_oauthlib.flow import InstalledAppFlow
         flow = InstalledAppFlow.from_client_secrets_file(str(client), SCOPES)
         creds = flow.run_local_server(host="localhost", port=0, open_browser=True)
@@ -39,14 +43,14 @@ def main():
         finally:
             if os.path.exists(temp_name):
                 os.unlink(temp_name)
-        print("[OK] OAuth authorization completed; token stored securely.")
+        print(t("MP_OAUTH_AUTHORIZED"))
         return
 
     if not token_file.is_file():
-        raise FileNotFoundError("OAuth token missing; authorize first")
+        raise message_error(FileNotFoundError, "MP_OAUTH_TOKEN_MISSING")
     creds = Credentials.from_authorized_user_file(str(token_file))
     if not set(SCOPES).issubset(set(creds.scopes or [])):
-        raise ValueError("Token lacks required YouTube scopes; reauthorize")
+        raise message_error(ValueError, "MP_OAUTH_SCOPES_MISSING")
     if not creds.valid:
         if creds.expired and creds.refresh_token:
             creds.refresh(Request())
@@ -61,24 +65,24 @@ def main():
             finally:
                 if os.path.exists(temp_name):
                     os.unlink(temp_name)
-            print("[OK] Access token refreshed.")
+            print(t("MP_OAUTH_REFRESHED"))
         else:
-            raise RuntimeError("Token invalid or expired, no usable refresh token; reauthorize")
-    print("[OK] OAuth token valid (local expiry and scopes checked).")
+            raise message_error(RuntimeError, "MP_OAUTH_TOKEN_INVALID")
+    print(t("MP_OAUTH_TOKEN_VALID"))
     if action == "test":
         from googleapiclient.discovery import build
         svc = build("youtube", "v3", credentials=creds, cache_discovery=False)
         result = svc.channels().list(part="snippet", mine=True, maxResults=1).execute()
         items = result.get("items", [])
         if not items:
-            raise RuntimeError("No accessible YouTube channel returned for this account")
-        print("[OK] YouTube API connection: " + items[0].get("snippet", {}).get("title", "(unnamed channel)"))
-        print("[INFO] Read-only connection test; no video uploaded.")
+            raise message_error(RuntimeError, "MP_OAUTH_NO_CHANNEL")
+        print(t("MP_OAUTH_CONNECTED", items[0].get("snippet", {}).get("title", t("MP_OAUTH_UNNAMED_CHANNEL"))))
+        print(t("MP_OAUTH_READ_ONLY"))
 
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f"[ERROR] {type(e).__name__}: {e}", file=sys.stderr)
+        print(t("MP_OAUTH_ERROR", type(e).__name__, exception_text(e)), file=sys.stderr)
         sys.exit(1)

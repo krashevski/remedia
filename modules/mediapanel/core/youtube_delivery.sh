@@ -12,7 +12,7 @@ youtube_worker_python() {
     local python_bin="${REMEDIA_YOUTUBE_PYTHON:-$HOME/.local/share/remedia/youtube-venv/bin/python}"
 
     if [[ ! -x "$python_bin" ]]; then
-        log_error "YouTube Python environment not found: $python_bin"
+        log_error "$(t MP_YOUTUBE_DELIVERY_YOUTUBE_PYTHON_ENVIRONMENT_NOT_FOUND "$python_bin")" >&2
         return 1
     fi
 
@@ -50,16 +50,30 @@ youtube_queue_status() {
 
     echo
     echo "===================================================="
-    echo "                 YOUTUBE QUEUE STATUS"
+    echo "$(t MP_YOUTUBE_DELIVERY_YOUTUBE_QUEUE_STATUS)"
     echo "===================================================="
     echo
 
     if [[ ! -d "$queue_dir" ]]; then
-        echo "YouTube delivery queue does not exist."
+        echo "$(t MP_YOUTUBE_DELIVERY_YOUTUBE_DELIVERY_QUEUE_DOES_NOT_EXIST)"
         return 0
     fi
 
+    MP_I18N_EMPTY="$(t MP_QUEUE_EMPTY)" \
+    MP_I18N_NO_MEDIA="$(t MP_QUEUE_NO_MEDIA)" \
+    MP_I18N_ERROR="$(t MP_QUEUE_ERROR)" \
+    MP_I18N_TOTAL="$(t MP_QUEUE_TOTAL)" \
+    MP_I18N_COMPLETED="$(t MP_QUEUE_COMPLETED)" \
+    MP_I18N_QUEUED="$(t MP_QUEUE_QUEUED)" \
+    MP_I18N_FAILED="$(t MP_QUEUE_FAILED)" \
+    MP_I18N_INVALID="$(t MP_QUEUE_INVALID)" \
+    MP_I18N_OTHER="$(t MP_QUEUE_OTHER)" \
+    MP_I18N_MORE="$(t MP_QUEUE_MORE)" \
     python3 - "$queue_dir" <<'PY'
+import os, re
+def ui_text(key, *args):
+    text = os.environ["MP_I18N_" + key]
+    return re.sub(r"\{([1-9])\}", lambda m: str(args[int(m[1])-1]) if int(m[1]) <= len(args) else m[0], text)
 import json
 import sys
 from collections import Counter
@@ -69,7 +83,7 @@ queue = Path(sys.argv[1])
 jobs = sorted(queue.glob("*.json"))
 
 if not jobs:
-    print("Delivery queue is empty.")
+    print(ui_text("EMPTY"))
     raise SystemExit(0)
 
 summary = Counter()
@@ -94,7 +108,7 @@ for index, path in enumerate(jobs, start=1):
 
         print(
             f" {index}) [{status}] "
-            f"{names[0] if names else '(no media)'}"
+            f"{names[0] if names else ui_text('NO_MEDIA')}"
         )
 
         for name in names[1:]:
@@ -105,25 +119,25 @@ for index, path in enumerate(jobs, start=1):
 
     except (OSError, ValueError, TypeError) as exc:
         print(f" {index}) [INVALID] {path.name}")
-        print(f"    Error: {exc}")
+        print(ui_text("ERROR", exc))
         print()
         summary["invalid"] += 1
 
 print("-" * 52)
-print(f"Total jobs: {len(jobs)}")
-print(f"  Completed: {summary['completed']}")
-print(f"  Queued:    {summary['queued']}")
-print(f"  Failed:    {summary['failed']}")
+print(ui_text("TOTAL", len(jobs)))
+print(ui_text("COMPLETED", summary['completed']))
+print(ui_text("QUEUED", summary['queued']))
+print(ui_text("FAILED", summary['failed']))
 
 if summary["invalid"]:
-    print(f"  Invalid:   {summary['invalid']}")
+    print(ui_text("INVALID", summary['invalid']))
 
 other = sum(
     count for status, count in summary.items()
     if status not in ("completed", "queued", "failed", "invalid")
 )
 if other:
-    print(f"  Other:     {other}")
+    print(ui_text("OTHER", other))
 
 print("=" * 52)
 PY
@@ -142,7 +156,7 @@ process_youtube_queue() {
     python_bin="$(youtube_worker_python)" || return 1
 
     if [[ ! -d "$queue_dir" ]]; then
-        log_warn "YouTube delivery queue does not exist"
+        log_warn "$(t MP_YOUTUBE_DELIVERY_YOUTUBE_DELIVERY_QUEUE_DOES_NOT_EXIST_2)"
         return 0
     fi
 
@@ -157,7 +171,12 @@ process_youtube_queue() {
     local -a entries=()
 
     mapfile -d '' -t entries < <(
+        MP_I18N_MORE="$(t MP_QUEUE_MORE)" \
         python3 - "$queue_dir" <<'PY'
+import os, re
+def ui_text(key, *args):
+    text = os.environ["MP_I18N_" + key]
+    return re.sub(r"\{([1-9])\}", lambda m: str(args[int(m[1])-1]) if int(m[1]) <= len(args) else m[0], text)
 import json
 import sys
 from pathlib import Path
@@ -192,7 +211,7 @@ for path in sorted(queue_dir.glob("*.json")):
         label = names[0]
 
         if len(names) > 1:
-            label += f" (+{len(names) - 1} more)"
+            label += ui_text("MORE", len(names) - 1)
 
         display = f"[{status.upper()}] {label}"
 
@@ -217,13 +236,13 @@ PY
 
     if (( ${#jobs[@]} == 0 )); then
         echo
-        echo "No queued or failed YouTube jobs."
+        echo "$(t MP_YOUTUBE_DELIVERY_NO_QUEUED_OR_FAILED_YOUTUBE_JOBS)"
         return 0
     fi
 
     echo
     echo "===================================================="
-    echo "                 PROCESS YOUTUBE QUEUE"
+    echo "$(t MP_YOUTUBE_DELIVERY_PROCESS_YOUTUBE_QUEUE)"
     echo "===================================================="
     echo
 
@@ -232,23 +251,23 @@ PY
     done
 
     echo
-    echo "0) Cancel"
+    echo "$(t MP_SUB_CANCEL_OPTION)"
     echo
 
-    read -rp "Select job: " choice
+    read -rp "$(t MP_YOUTUBE_DELIVERY_SELECT_JOB)" choice
 
     [[ "$choice" == "0" ]] && return 0
 
     if ! [[ "$choice" =~ ^[0-9]+$ ]] ||
        (( 10#$choice < 1 || 10#$choice > ${#jobs[@]} )); then
-        log_error "Invalid job selection"
+        log_error "$(t MP_YOUTUBE_DELIVERY_INVALID_JOB_SELECTION)"
         return 1
     fi
 
     job="${jobs[$((10#$choice - 1))]}"
 
     echo
-    echo "Selected job:"
+    echo "$(t MP_YOUTUBE_DELIVERY_SELECTED_JOB)"
     echo "  $(basename "$job")"
     echo
 
@@ -269,25 +288,25 @@ PY
 
     case "$job_status" in
         completed)
-            log_info "Job already completed"
+            log_info "$(t MP_YOUTUBE_DELIVERY_JOB_ALREADY_COMPLETED)"
             return 0
             ;;
         queued|failed)
             ;;
         *)
-            log_warn "Job requires review: $job_status"
+            log_warn "$(t MP_YOUTUBE_DELIVERY_JOB_REQUIRES_REVIEW "$job_status")"
             return 1
             ;;
     esac
 
-    echo "WARNING: This operation uploads media to YouTube."
-    echo "Visibility is determined by each media JSON file."
+    echo "$(t MP_YOUTUBE_DELIVERY_WARNING_THIS_OPERATION_UPLOADS_MEDIA_TO_YOUTUBE)"
+    echo "$(t MP_YOUTUBE_DELIVERY_VISIBILITY_IS_DETERMINED_BY_EACH_MEDIA_JSON_FILE)"
     echo
 
-    read -rp "Type UPLOAD to confirm: " confirm
+    read -rp "$(t MP_YOUTUBE_DELIVERY_TYPE_UPLOAD_TO_CONFIRM)" confirm
 
     if [[ "$confirm" != "UPLOAD" ]]; then
-        log_info "YouTube delivery cancelled"
+        log_info "$(t MP_YOUTUBE_DELIVERY_YOUTUBE_DELIVERY_CANCELLED)"
         return 0
     fi
 
@@ -303,17 +322,22 @@ archive_youtube_queue_job() {
     local -a jobs=()
     queue_dir="$(youtube_delivery_queue_dir)" || return 1
     archive_dir="$(dirname -- "$queue_dir")/archived-jobs"
-    [[ -d "$queue_dir" ]] || { printf 'Queue directory not found.\n'; return 0; }
+    [[ -d "$queue_dir" ]] || { t MP_QUEUE_DIRECTORY_MISSING; return 0; }
 
     mapfile -d '' -t jobs < <(find "$queue_dir" -maxdepth 1 -type f ! -type l -name '*.json' -print0 | sort -z)
-    ((${#jobs[@]})) || { printf 'No jobs to archive.\n'; return 0; }
+    ((${#jobs[@]})) || { t MP_QUEUE_NO_ARCHIVE_JOBS; return 0; }
     printf '\n====================================================\n'
-    printf '               ARCHIVE YOUTUBE JOB\n'
+    t MP_QUEUE_ARCHIVE_TITLE
     printf '====================================================\n\n'
     local i
     for i in "${!jobs[@]}"; do
         printf '%2d) ' "$((i+1))"
+        MP_I18N_MORE="$(t MP_QUEUE_MORE)" \
         python3 - "${jobs[i]}" <<'PY'
+import os, re
+def ui_text(key, *args):
+    text = os.environ["MP_I18N_" + key]
+    return re.sub(r"\{([1-9])\}", lambda m: str(args[int(m[1])-1]) if int(m[1]) <= len(args) else m[0], text)
 import json, sys
 from pathlib import Path
 try:
@@ -323,20 +347,20 @@ try:
     items=job.get('items', [])
     if not isinstance(items,list): items=[]
     names=[Path(x['media_file']).name for x in items if isinstance(x,dict) and isinstance(x.get('media_file'),str)]
-    print(f'[{status}] {names[0] if names else Path(sys.argv[1]).name}' + (f' (+{len(names)-1} more)' if len(names)>1 else ''))
+    print(f'[{status}] {names[0] if names else Path(sys.argv[1]).name}' + (ui_text('MORE', len(names)-1) if len(names)>1 else ''))
 except (ValueError, OSError, TypeError):
     print('[INVALID] ' + Path(sys.argv[1]).name)
 PY
     done
-    printf '\n0) Cancel\n\n'
-    read -r -p 'Select job: ' selection || return 0
+    t MP_QUEUE_CANCEL
+    read -r -p "$(t MP_YOUTUBE_DELIVERY_SELECT_JOB)" selection || return 0
     [[ "$selection" == 0 ]] && return 0
     [[ "$selection" =~ ^[0-9]+$ ]] && ((${#selection} < 10)) && ((10#$selection >= 1 && 10#$selection <= ${#jobs[@]})) || {
-        printf '[ERROR] Invalid job selection.\n' >&2; return 1;
+        t MP_QUEUE_INVALID_SELECTION >&2; return 1;
     }
     job="${jobs[$((10#$selection - 1))]}"
     # Restrict to regular files and prevent symlink substitution.
-    [[ -f "$job" && ! -L "$job" ]] || { printf '[ERROR] Job file changed.\n' >&2; return 1; }
+    [[ -f "$job" && ! -L "$job" ]] || { t MP_QUEUE_FILE_CHANGED >&2; return 1; }
     status="$(python3 - "$job" <<'PY'
 import json,sys
 try:
@@ -348,10 +372,10 @@ PY
 )" || return 1
     case "$status" in
         completed|queued|failed) ;;
-        *) printf '[BLOCKED] Job status %s cannot be archived.\n' "$status"; return 1 ;;
+        *) t MP_QUEUE_BLOCKED "$status"; return 1 ;;
     esac
-    printf '\nSelected: %s\nStatus: %s\n' "$(basename -- "$job")" "$status"
-    printf 'Referenced media:\n'
+    t MP_QUEUE_SELECTED_STATUS "$(basename -- "$job")" "$status"
+    t MP_QUEUE_REFERENCED_MEDIA
     python3 - "$job" <<'PY'
 import json,sys
 from pathlib import Path
@@ -360,24 +384,24 @@ for x in j.get('items',[]):
     if isinstance(x,dict) and isinstance(x.get('media_file'),str):
         print('  - ' + Path(x['media_file']).name)
 PY
-    printf '\nOnly the job JSON will move. Media and metadata will be untouched.\n'
+    t MP_QUEUE_ONLY_JSON
     if [[ "$status" != completed ]]; then
-        printf '[WARNING] %s job is not completed. Archiving removes it from processing queue.\n' "$status"
-        read -r -p 'Type REMOVE_FROM_QUEUE to acknowledge: ' extra || return 0
-        [[ "$extra" == REMOVE_FROM_QUEUE ]] || { printf 'Cancelled.\n'; return 0; }
+        t MP_QUEUE_INCOMPLETE "$status"
+        read -r -p "$(t MP_YOUTUBE_DELIVERY_TYPE_REMOVE_FROM_QUEUE_TO_ACKNOWLEDGE)" extra || return 0
+        [[ "$extra" == REMOVE_FROM_QUEUE ]] || { t MP_QUEUE_CANCELLED; return 0; }
     fi
-    read -r -p 'Type ARCHIVE to confirm: ' confirm || return 0
-    [[ "$confirm" == ARCHIVE ]] || { printf 'Cancelled.\n'; return 0; }
+    read -r -p "$(t MP_YOUTUBE_DELIVERY_TYPE_ARCHIVE_TO_CONFIRM)" confirm || return 0
+    [[ "$confirm" == ARCHIVE ]] || { t MP_QUEUE_CANCELLED; return 0; }
     # Refuse to overwrite any existing archived job.
     mkdir -p -m 700 -- "$archive_dir" || return 1
     local destination="$archive_dir/$(basename -- "$job")"
-    [[ ! -e "$destination" && ! -L "$destination" ]] || { printf '[ERROR] Archive target already exists.\n' >&2; return 1; }
+    [[ ! -e "$destination" && ! -L "$destination" ]] || { t MP_QUEUE_TARGET_EXISTS >&2; return 1; }
     # GNU mv --no-clobber prevents overwriting an existing file.
     mv -n -- "$job" "$destination" || return 1
     if [[ -e "$job" || ! -f "$destination" ]]; then
-        printf '[ERROR] Archive did not complete.\n' >&2
+        t MP_QUEUE_ARCHIVE_FAILED >&2
         return 1
     fi
     chmod 600 -- "$destination" || return 1
-    printf '[OK] Archived job: %s\n' "$destination"
+    t MP_QUEUE_ARCHIVED "$destination"
 }

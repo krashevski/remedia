@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Read-only compact archive preflight for Shotcut MLT dependencies."""
+from remedia_i18n import t, value_error, runtime_error, exception_text, ArgumentParser
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -7,12 +8,12 @@ from pathlib import Path
 
 def main():
     if len(sys.argv) < 3:
-        print('Usage: archive_mlt_check.py PROJECT_DIR KEEP_DIR [KEEP_DIR ...]', file=sys.stderr)
+        print(t('MP_PY_USAGE_ARCHIVE_MLT_CHECK_PY_PROJECT_DIR_KEEP_DIR_KEEP_DIR'), file=sys.stderr)
         return 2
 
     project = Path(sys.argv[1]).resolve()
     if not project.is_dir():
-        print(f'[ERROR] Project directory does not exist: {project}', file=sys.stderr)
+        print(t('MP_PY_ERROR_PROJECT_DIRECTORY_DOES_NOT_EXIST', project), file=sys.stderr)
         return 2
     keep = set(sys.argv[2:])
     pipeline_names = {f'{project.name}_short.mlt', f'{project.name}_video.mlt'}
@@ -26,7 +27,7 @@ def main():
         try:
             tree = ET.parse(mlt)
         except (ET.ParseError, OSError) as exc:
-            missing.append((str(mlt.relative_to(project)), 'invalid/unreadable MLT XML: ' + str(exc)))
+            missing.append((str(mlt.relative_to(project)), t('MP_PY_INVALID_UNREADABLE_MLT_XML', str(exc))))
             continue
         for prop in tree.iter('property'):
             if prop.attrib.get('name') not in keys or not prop.text:
@@ -73,25 +74,25 @@ def main():
             elif not rel.parts or rel.parts[0] not in keep:
                 excluded.append((mlt.name, str(rel)))
 
-    print(f'[MLT] Checked {len(mlts)} project files')
+    print(t('MP_PY_MLT_CHECKED_PROJECT_FILES', len(mlts)))
     if skipped_scenes:
-        print(f'[INFO] Pipeline scene references skipped: {skipped_scenes} (require regeneration)')
+        print(t('MP_PY_INFO_PIPELINE_SCENE_REFERENCES_SKIPPED_REQUIRE_REGENERATION', skipped_scenes))
     if resolved_stab:
-        print(f'[OK] Shotcut .stab references resolved beside MLT: {resolved_stab}')
+        print(t('MP_PY_OK_SHOTCUT_STAB_REFERENCES_RESOLVED_BESIDE_MLT', resolved_stab))
     for label, rows in (('MISSING', missing), ('EXCLUDED', excluded), ('EXTERNAL', external)):
         if rows:
-            print(f'[{label}] {len(rows)} references:')
+            print(t('MP_PY_REFERENCES', label, len(rows)))
             for name, target in rows[:30]:
-                print(f'  {name} -> {target}')
+                print(t('MP_PY_MESSAGE', name, target))
             if len(rows) > 30:
-                print(f'  ... and {len(rows) - 30} more')
+                print(t('MP_PY_AND_MORE', len(rows) - 30))
     if missing or excluded or external:
-        print('[WARN] Use Full archive or repair project dependencies before compact archiving.')
+        print(t('MP_PY_WARN_USE_FULL_ARCHIVE_OR_REPAIR_PROJECT_DEPENDENCIES_BEFORE_COMPA'))
         return 1
-    print('[OK] Checked retained media dependencies are satisfied.')
+    print(t('MP_PY_OK_CHECKED_RETAINED_MEDIA_DEPENDENCIES_ARE_SATISFIED'))
     if skipped_scenes:
-        print('[WARN] Original pipeline MLTs require scene regeneration after restore.')
-    print('[INFO] Custom filter dependencies and exact pipeline reproducibility are not proven.')
+        print(t('MP_PY_WARN_ORIGINAL_PIPELINE_MLTS_REQUIRE_SCENE_REGENERATION_AFTER_REST'))
+    print(t('MP_PY_INFO_CUSTOM_FILTER_DEPENDENCIES_AND_EXACT_PIPELINE_REPRODUCIBILIT'))
     return 0
 
 

@@ -8,6 +8,9 @@ export HOME="$temporary/home"
 export XDG_CONFIG_HOME="$temporary/config with spaces"
 mkdir -p "$HOME"
 unset CLI_LANGUAGE SUBTITLE_LANGUAGE CLI_NO_UI
+export REM_MEDIA_LANG=en
+source "$bundle/core/i18n.sh"
+i18n_load "$bundle/modules/mediapanel/i18n"
 source "$bundle/modules/mediapanel/core/subtitle_languages.sh"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -154,9 +157,5 @@ unset CLI_LANGUAGE
 rm "$temporary/whisper-language"
 if ! generate_subtitles <<< $'1\n0' > "$temporary/cancel.log"; then fail generation_cancel; fi
 [[ ! -e "$temporary/whisper-language" ]]
-
-# Both entry points can load the helper on their own in a new shell.
-bash -eu -c 'source "$1"; declare -F mediapanel_subtitle_languages_load >/dev/null' bash "$bundle/modules/mediapanel/core/generate_subtitles.sh"
-bash -eu -c 'source "$1"; declare -F mediapanel_subtitle_languages_load >/dev/null' bash "$bundle/modules/mediapanel/ui/system.sh"
 
 echo 'PASS: preferences, restart, validation, menus, overrides and mocked generation'

@@ -80,21 +80,21 @@ generate_subtitles() {
 
     if (( ${#mlt_files[@]} == 0 )); then
         echo
-        echo "[ERROR] No Shotcut MLT projects found."
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_NO_SHOTCUT_MLT_PROJECTS_FOUND)"
         echo
-        echo "Searched:"
+        echo "$(t MP_GENERATE_SUBTITLES_SEARCHED)"
         echo "  $video_dir"
         echo "  $short_dir"
         echo
 
         mediapanel_log_error "$project" \
-            "No Shotcut MLT projects found for subtitle generation"
+            "$(t MP_GENERATE_SUBTITLES_NO_SHOTCUT_MLT_PROJECTS_FOUND_FOR_SUBTITLE_GENERATION)"
 
         return 1
     fi
 
     echo
-    echo "Available Shotcut projects:"
+    echo "$(t MP_EXPORT_RENDER_AVAILABLE_SHOTCUT_PROJECTS)"
     echo "------------------------------------------------"
 
     local i=1
@@ -104,13 +104,13 @@ generate_subtitles() {
     for file in "${mlt_files[@]}"; do
         case "$file" in
             "$video_dir"/*)
-                label="VIDEO"
+                label="$(t MP_KIND_VIDEO)"
                 ;;
             "$short_dir"/*)
-                label="SHORT"
+                label="$(t MP_KIND_SHORT)"
                 ;;
             *)
-                label="MLT"
+                label="$(t MP_KIND_MLT)"
                 ;;
          esac
 
@@ -123,12 +123,12 @@ generate_subtitles() {
      done
 
      echo "------------------------------------------------"
-     echo "Select ONE project for subtitle generation."
-     echo "Enter 0 to return."
+     echo "$(t MP_GENERATE_SUBTITLES_SELECT_ONE_PROJECT_FOR_SUBTITLE_GENERATION)"
+     echo "$(t MP_EXPORT_RENDER_ENTER_0_TO_RETURN)"
      echo
 
      local choice=""
-     read -rp "Selection: " choice
+     read -rp "$(t MP_EXPORT_SELECTION)" choice
 
     if [[ "$choice" == "0" ]]; then
         return 0
@@ -137,10 +137,10 @@ generate_subtitles() {
     if ! [[ "$choice" =~ ^[0-9]+$ ]] ||
         (( choice < 1 || choice > ${#mlt_files[@]} )); then
 
-        echo "[ERROR] Invalid selection: $choice"
+        echo "$(t MP_EXPORT_RENDER_ERROR_INVALID_SELECTION "$choice")"
 
         mediapanel_log_error "$project" \
-             "Invalid subtitle MLT selection: $choice"
+             "$(t MP_GENERATE_SUBTITLES_INVALID_SUBTITLE_MLT_SELECTION "$choice")"
 
         return 1
     fi
@@ -148,7 +148,7 @@ generate_subtitles() {
     mlt="${mlt_files[$((choice - 1))]}"
 
     echo
-    echo "Selected:"
+    echo "$(t MP_GENERATE_SUBTITLES_SELECTED)"
     echo "  $(basename "$mlt")"
     echo
 
@@ -179,7 +179,7 @@ generate_subtitles() {
     language_name="$(mediapanel_subtitle_language_name "$language")" || return 1
 
     mkdir -p "$subtitles_dir" || {
-        echo "[ERROR] Cannot create subtitles directory:"
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_CANNOT_CREATE_SUBTITLES_DIRECTORY)"
         echo "        $subtitles_dir"
         return 1
     }
@@ -191,18 +191,18 @@ generate_subtitles() {
 
     echo
     echo "=================================================="
-    echo " MEDIAPANEL GENERATE SUBTITLES"
+    echo "$(t MP_GENERATE_SUBTITLES_MEDIAPANEL_GENERATE_SUBTITLES)"
     echo "=================================================="
-    echo "Project : $project"
-    echo "MLT     : $mlt"
-    echo "WAV     : $wav"
-    echo "Model   : $model"
-    echo "Language: $language_name ($language)"
-    echo "Output  : $srt_final"
+    echo "$(t MP_EXPORT_RENDER_PROJECT "$project")"
+    echo "$(t MP_EXPORT_RENDER_MLT_2 "$mlt")"
+    echo "$(t MP_GENERATE_SUBTITLES_WAV "$wav")"
+    echo "$(t MP_GENERATE_SUBTITLES_MODEL "$model")"
+    echo "$(t MP_GENERATE_SUBTITLES_LANGUAGE "$language_name" "$language")"
+    echo "$(t MP_EXPORT_RENDER_OUTPUT "$srt_final")"
     echo "=================================================="
     echo
 
-    log_info "=== Generate Subtitles started ==="
+    log_info "$(t MP_GENERATE_SUBTITLES_GENERATE_SUBTITLES_STARTED)"
     log_project "$project" "Subtitle generation started"
 
 
@@ -212,11 +212,11 @@ generate_subtitles() {
 
     if [[ ! -d "$project_path" ]]; then
 
-        echo "[ERROR] Project directory not found:"
+        echo "$(t MP_EXPORT_RENDER_ERROR_PROJECT_DIRECTORY_NOT_FOUND)"
         echo "        $project_path"
 
         mediapanel_log_error "$project" \
-            "Project directory not found: $project_path"
+            "$(t MP_EXPORT_PROJECT_DIRECTORY_NOT_FOUND "$project_path")"
 
         return 1
     fi
@@ -236,22 +236,22 @@ generate_subtitles() {
 
     if [[ ! -f "$mlt" ]]; then
 
-        echo "[ERROR] Main MLT project not found:"
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_MAIN_MLT_PROJECT_NOT_FOUND)"
         echo "        $mlt"
 
         mediapanel_log_error "$project" \
-            "Main MLT project not found: $mlt"
+            "$(t MP_GENERATE_SUBTITLES_MAIN_MLT_PROJECT_NOT_FOUND "$mlt")"
 
         return 1
     fi
 
     if [[ ! -r "$mlt" ]]; then
 
-        echo "[ERROR] Main MLT project is not readable:"
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_MAIN_MLT_PROJECT_IS_NOT_READABLE)"
         echo "        $mlt"
 
         mediapanel_log_error "$project" \
-            "Main MLT project is not readable: $mlt"
+            "$(t MP_GENERATE_SUBTITLES_MAIN_MLT_PROJECT_IS_NOT_READABLE "$mlt")"
 
         return 1
     fi
@@ -263,22 +263,22 @@ generate_subtitles() {
 
     if [[ ! -f "$model" ]]; then
 
-        echo "[ERROR] Whisper model not found:"
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_WHISPER_MODEL_NOT_FOUND)"
         echo "        $model"
 
         mediapanel_log_error "$project" \
-            "Whisper model not found: $model"
+            "$(t MP_GENERATE_SUBTITLES_WHISPER_MODEL_NOT_FOUND "$model")"
 
         return 1
     fi
 
     if [[ ! -r "$model" ]]; then
 
-        echo "[ERROR] Whisper model is not readable:"
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_WHISPER_MODEL_IS_NOT_READABLE)"
         echo "        $model"
 
         mediapanel_log_error "$project" \
-            "Whisper model is not readable: $model"
+            "$(t MP_GENERATE_SUBTITLES_WHISPER_MODEL_IS_NOT_READABLE "$model")"
 
         return 1
     fi
@@ -295,7 +295,7 @@ generate_subtitles() {
 
         MELT_CMD=(melt)
 
-        log_info "MLT engine: system melt"
+        log_info "$(t MP_EXPORT_RENDER_MLT_ENGINE_SYSTEM_MELT)"
 
     elif command -v flatpak >/dev/null 2>&1 \
         && flatpak info org.shotcut.Shotcut >/dev/null 2>&1; then
@@ -311,17 +311,17 @@ generate_subtitles() {
             org.shotcut.Shotcut
         )
 
-        log_info "MLT engine: Shotcut Flatpak melt"
-        log_info "Flatpak filesystem: $project_path:rw"
+        log_info "$(t MP_EXPORT_RENDER_MLT_ENGINE_SHOTCUT_FLATPAK_MELT)"
+        log_info "$(t MP_GENERATE_SUBTITLES_FLATPAK_FILESYSTEM_RW "$project_path")"
 
     else
 
-        echo "[ERROR] melt not found."
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_MELT_NOT_FOUND)"
         echo
-        echo "Install MLT or Shotcut Flatpak."
+        echo "$(t MP_GENERATE_SUBTITLES_INSTALL_MLT_OR_SHOTCUT_FLATPAK)"
         echo
 
-        mediapanel_log_error "$project" "melt not found"
+        mediapanel_log_error "$project" "$(t MP_EXPORT_RENDER_MELT_NOT_FOUND)"
 
         return 1
     fi
@@ -333,9 +333,9 @@ generate_subtitles() {
 
     if ! "${MELT_CMD[@]}" -version >/dev/null 2>&1; then
 
-        echo "[ERROR] melt is not executable"
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_MELT_IS_NOT_EXECUTABLE)"
 
-        mediapanel_log_error "$project" "melt is not executable"
+        mediapanel_log_error "$project" "$(t MP_EXPORT_RENDER_MELT_IS_NOT_EXECUTABLE)"
 
         return 1
     fi
@@ -347,7 +347,7 @@ generate_subtitles() {
             head -n 1
     )"
 
-    log_info "MLT: $melt_version"
+    log_info "$(t MP_EXPORT_RENDER_MLT "$melt_version")"
 
 
     # ========================================================
@@ -361,7 +361,7 @@ generate_subtitles() {
 
         WHISPER_CMD=(whisper-cli)
 
-        log_info "Whisper: system whisper-cli"
+        log_info "$(t MP_GENERATE_SUBTITLES_WHISPER_SYSTEM_WHISPER_CLI)"
 
     elif command -v flatpak >/dev/null 2>&1 \
         && flatpak info org.shotcut.Shotcut >/dev/null 2>&1; then
@@ -377,17 +377,17 @@ generate_subtitles() {
             org.shotcut.Shotcut
         )
 
-        log_info "Whisper: Shotcut Flatpak whisper-cli"
-        log_info "Flatpak filesystem: $project_path:rw"
+        log_info "$(t MP_GENERATE_SUBTITLES_WHISPER_SHOTCUT_FLATPAK_WHISPER_CLI)"
+        log_info "$(t MP_GENERATE_SUBTITLES_FLATPAK_FILESYSTEM_RW "$project_path")"
 
     else
 
-        echo "[ERROR] whisper-cli not found."
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_WHISPER_CLI_NOT_FOUND)"
         echo
-        echo "Expected Shotcut Flatpak whisper-cli."
+        echo "$(t MP_GENERATE_SUBTITLES_EXPECTED_SHOTCUT_FLATPAK_WHISPER_CLI)"
         echo
 
-        mediapanel_log_error "$project" "whisper-cli not found"
+        mediapanel_log_error "$project" "$(t MP_GENERATE_SUBTITLES_WHISPER_CLI_NOT_FOUND)"
 
         return 1
     fi
@@ -399,10 +399,10 @@ generate_subtitles() {
 
     if ! "${WHISPER_CMD[@]}" --help >/dev/null 2>&1; then
 
-        echo "[ERROR] whisper-cli is not executable"
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_WHISPER_CLI_IS_NOT_EXECUTABLE)"
 
         mediapanel_log_error "$project" \
-            "whisper-cli is not executable"
+            "$(t MP_GENERATE_SUBTITLES_WHISPER_CLI_IS_NOT_EXECUTABLE)"
 
         return 1
     fi
@@ -414,24 +414,24 @@ generate_subtitles() {
     # ========================================================
 
     echo
-    echo "[1/4] Rendering audio from MLT..."
+    echo "$(t MP_GENERATE_SUBTITLES_1_4_RENDERING_AUDIO_FROM_MLT)"
     echo
 
-    log_info "Rendering subtitle WAV from: $mlt"
+    log_info "$(t MP_GENERATE_SUBTITLES_RENDERING_SUBTITLE_WAV_FROM "$mlt")"
 
     if [[ -f "$wav" ]]; then
 
-        echo "[WARN] Existing WAV will be replaced:"
+        echo "$(t MP_GENERATE_SUBTITLES_WARN_EXISTING_WAV_WILL_BE_REPLACED)"
         echo "       $wav"
 
-        log_info "Removing existing subtitle WAV"
+        log_info "$(t MP_GENERATE_SUBTITLES_REMOVING_EXISTING_SUBTITLE_WAV)"
 
         rm -f "$wav" || {
 
-            echo "[ERROR] Cannot remove existing WAV"
+            echo "$(t MP_GENERATE_SUBTITLES_ERROR_CANNOT_REMOVE_EXISTING_WAV)"
 
             mediapanel_log_error "$project" \
-                "Cannot remove existing subtitle WAV"
+                "$(t MP_GENERATE_SUBTITLES_CANNOT_REMOVE_EXISTING_SUBTITLE_WAV)"
 
             return 1
         }
@@ -465,12 +465,12 @@ generate_subtitles() {
     if (( rc != 0 )); then
 
         echo
-        echo "[ERROR] Audio rendering failed."
-        echo "        Exit code: $rc"
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_AUDIO_RENDERING_FAILED)"
+        echo "$(t MP_GENERATE_SUBTITLES_EXIT_CODE "$rc")"
         echo
 
         mediapanel_log_error "$project" \
-            "Subtitle WAV rendering failed (exit code $rc)"
+            "$(t MP_GENERATE_SUBTITLES_SUBTITLE_WAV_RENDERING_FAILED_EXIT_CODE "$rc")"
 
         rm -f "$wav"
 
@@ -485,11 +485,11 @@ generate_subtitles() {
     if [[ ! -s "$wav" ]]; then
 
         echo
-        echo "[ERROR] WAV was not created or is empty."
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_WAV_WAS_NOT_CREATED_OR_IS_EMPTY)"
         echo
 
         mediapanel_log_error "$project" \
-            "Subtitle WAV missing or empty"
+            "$(t MP_GENERATE_SUBTITLES_SUBTITLE_WAV_MISSING_OR_EMPTY)"
 
         rm -f "$wav"
 
@@ -501,7 +501,7 @@ generate_subtitles() {
         "Subtitle WAV created: $(basename "$wav")"
 
     echo
-    echo "[OK] WAV created:"
+    echo "$(t MP_GENERATE_SUBTITLES_OK_WAV_CREATED)"
     echo "     $wav"
     echo
 
@@ -512,11 +512,11 @@ generate_subtitles() {
     # ========================================================
 
     echo
-    echo "[2/4] Running Whisper large-v3..."
+    echo "$(t MP_GENERATE_SUBTITLES_2_4_RUNNING_WHISPER_LARGE_V3)"
     echo
 
-    log_info "Whisper model: $model"
-    log_info "Whisper language: $language_name ($language)"
+    log_info "$(t MP_GENERATE_SUBTITLES_WHISPER_MODEL "$model")"
+    log_info "$(t MP_GENERATE_SUBTITLES_WHISPER_LANGUAGE "$language_name" "$language")"
 
     # Always create a fresh SRT.
     rm -f "$srt_new"
@@ -535,12 +535,12 @@ generate_subtitles() {
     if (( rc != 0 )); then
 
         echo
-        echo "[ERROR] Whisper transcription failed."
-        echo "        Exit code: $rc"
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_WHISPER_TRANSCRIPTION_FAILED)"
+        echo "$(t MP_GENERATE_SUBTITLES_EXIT_CODE "$rc")"
         echo
 
         mediapanel_log_error "$project" \
-            "Whisper transcription failed (exit code $rc)"
+            "$(t MP_GENERATE_SUBTITLES_WHISPER_TRANSCRIPTION_FAILED_EXIT_CODE "$rc")"
 
         rm -f "$srt_new"
 
@@ -555,11 +555,11 @@ generate_subtitles() {
     if [[ ! -s "$srt_new" ]]; then
 
         echo
-        echo "[ERROR] Whisper did not create subtitles_new.srt."
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_WHISPER_DID_NOT_CREATE_SUBTITLES_NEW_SRT)"
         echo
 
         mediapanel_log_error "$project" \
-            "Whisper produced no SRT"
+            "$(t MP_GENERATE_SUBTITLES_WHISPER_PRODUCED_NO_SRT)"
 
         return 1
     fi
@@ -569,7 +569,7 @@ generate_subtitles() {
         "Whisper transcription completed: subtitles_new.srt"
 
     echo
-    echo "[OK] Whisper transcription completed"
+    echo "$(t MP_GENERATE_SUBTITLES_OK_WHISPER_TRANSCRIPTION_COMPLETED)"
     echo "     $srt_new"
     echo
 
@@ -580,23 +580,23 @@ generate_subtitles() {
     # ========================================================
 
     echo
-    echo "[3/4] Creating SRT backup..."
+    echo "$(t MP_GENERATE_SUBTITLES_3_4_CREATING_SRT_BACKUP)"
     echo
 
 
     cp -f "$srt_new" "$srt_bak" || {
 
-        echo "[ERROR] Failed to create backup:"
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_FAILED_TO_CREATE_BACKUP)"
         echo "        $srt_bak"
 
         mediapanel_log_error "$project" \
-            "Failed to create subtitles_new.srt.bak"
+            "$(t MP_GENERATE_SUBTITLES_FAILED_TO_CREATE_SUBTITLES_NEW_SRT_BAK)"
 
         return 1
     }
 
 
-    echo "[OK] Backup created:"
+    echo "$(t MP_GENERATE_SUBTITLES_OK_BACKUP_CREATED)"
     echo "     $srt_bak"
 
     log_project "$project" \
@@ -623,7 +623,7 @@ generate_subtitles() {
     # ========================================================
 
     echo
-    echo "[4/4] Removing exact adjacent duplicate subtitles..."
+    echo "$(t MP_GENERATE_SUBTITLES_4_4_REMOVING_EXACT_ADJACENT_DUPLICATE_SUBTITLES)"
     echo
 
 
@@ -633,10 +633,10 @@ generate_subtitles() {
         mktemp "${subtitles_dir}/.subtitles_final.XXXXXX"
     )" || {
 
-        echo "[ERROR] Cannot create temporary SRT"
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_CANNOT_CREATE_TEMPORARY_SRT)"
 
         mediapanel_log_error "$project" \
-            "Cannot create temporary SRT file"
+            "$(t MP_GENERATE_SUBTITLES_CANNOT_CREATE_TEMPORARY_SRT_FILE)"
 
         return 1
     }
@@ -718,11 +718,11 @@ generate_subtitles() {
         rm -f "$tmp_srt"
 
         echo
-        echo "[ERROR] Failed to process SRT."
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_FAILED_TO_PROCESS_SRT)"
         echo
 
         mediapanel_log_error "$project" \
-            "Failed to remove adjacent duplicate subtitles"
+            "$(t MP_GENERATE_SUBTITLES_FAILED_TO_REMOVE_ADJACENT_DUPLICATE_SUBTITLES)"
 
         return 1
     fi
@@ -737,12 +737,12 @@ generate_subtitles() {
         rm -f "$tmp_srt"
 
         echo
-        echo "[ERROR] Processed SRT is empty."
-        echo "        Original subtitles were preserved."
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_PROCESSED_SRT_IS_EMPTY)"
+        echo "$(t MP_GENERATE_SUBTITLES_ORIGINAL_SUBTITLES_WERE_PRESERVED)"
         echo
 
         mediapanel_log_error "$project" \
-            "Processed subtitles_final.srt would be empty"
+            "$(t MP_GENERATE_SUBTITLES_PROCESSED_SUBTITLES_FINAL_SRT_WOULD_BE_EMPTY)"
 
         return 1
     fi
@@ -757,12 +757,12 @@ generate_subtitles() {
         rm -f "$tmp_srt"
 
         echo
-        echo "[ERROR] Cannot create:"
+        echo "$(t MP_GENERATE_SUBTITLES_ERROR_CANNOT_CREATE)"
         echo "        $srt_final"
         echo
 
         mediapanel_log_error "$project" \
-            "Cannot install subtitles_final.srt"
+            "$(t MP_GENERATE_SUBTITLES_CANNOT_INSTALL_SUBTITLES_FINAL_SRT)"
 
         return 1
     }
@@ -804,17 +804,17 @@ generate_subtitles() {
 
     echo
     echo "=================================================="
-    echo " SUBTITLE GENERATION COMPLETED"
+    echo "$(t MP_GENERATE_SUBTITLES_SUBTITLE_GENERATION_COMPLETED)"
     echo "=================================================="
-    echo "Project       : $project"
-    echo "MLT           : $mlt"
-    echo "WAV           : $wav"
-    echo "Original SRT  : $srt_new"
-    echo "Backup        : $srt_bak"
-    echo "Final SRT     : $srt_final"
-    echo "Original      : $original_count subtitles"
-    echo "Final         : $final_count subtitles"
-    echo "Exact repeats : $removed_count removed"
+    echo "$(t MP_GENERATE_SUBTITLES_PROJECT "$project")"
+    echo "$(t MP_GENERATE_SUBTITLES_MLT "$mlt")"
+    echo "$(t MP_GENERATE_SUBTITLES_WAV_2 "$wav")"
+    echo "$(t MP_GENERATE_SUBTITLES_ORIGINAL_SRT "$srt_new")"
+    echo "$(t MP_GENERATE_SUBTITLES_BACKUP "$srt_bak")"
+    echo "$(t MP_GENERATE_SUBTITLES_FINAL_SRT "$srt_final")"
+    echo "$(t MP_GENERATE_SUBTITLES_ORIGINAL_SUBTITLES "$original_count")"
+    echo "$(t MP_GENERATE_SUBTITLES_FINAL_SUBTITLES "$final_count")"
+    echo "$(t MP_GENERATE_SUBTITLES_EXACT_REPEATS_REMOVED "$removed_count")"
     echo "=================================================="
     echo
 
@@ -822,11 +822,11 @@ generate_subtitles() {
     log_project "$project" \
         "Subtitle generation completed: $final_count subtitles, $removed_count exact adjacent duplicates removed"
 
-    log_info "Generate subtitles completed"
+    log_info "$(t MP_GENERATE_SUBTITLES_GENERATE_SUBTITLES_COMPLETED)"
 
 
-    echo "[OK] subtitles generated"
-    echo "     Final: $srt_final"
+    echo "$(t MP_GENERATE_SUBTITLES_OK_SUBTITLES_GENERATED)"
+    echo "$(t MP_GENERATE_SUBTITLES_FINAL "$srt_final")"
     echo
 
     return 0

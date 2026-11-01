@@ -48,6 +48,11 @@ export JOURNAL="$MEDIAPANEL_VAR/media_journal.log"
 
 # определяем директорию текущего модуля
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# I18N: core/runtime_init.sh provides the shared translation API.
+# Register dictionaries before loading any MediaPanel components or UI.
+i18n_load "$MODULE_DIR/i18n" || return 1
+
 # UI SYSTEM
 SYSTEM_DEPS_PATH="${SYSTEM_DEPS_PATH:-$MODULE_DIR/core/system_deps.sh}"
 
