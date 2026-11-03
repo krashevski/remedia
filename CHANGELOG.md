@@ -6,6 +6,9 @@ The format is based on Keep a Changelog and semantic versioning.
 
 ## [Unreleased]
 
+### Fixed
+- **MediaPanel — export with Reframe:** fixed the `Missing timeline tractor0` error in `export_render.sh`. The main timeline is now identified by the `shotcut=1` property, regardless of its specific identifier (`tractor0`, `tractor1`, etc.). Successful export has been verified using the `021_VF Almaty 2026_map_short.mlt` project.
+
 
 ## [1.5.0] - 2026-11-01
 

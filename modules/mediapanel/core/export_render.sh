@@ -193,9 +193,19 @@ try:
         raise ValueError('Invalid Reframe crop')
 
     # Render the timeline, not the full duration of an underlying source clip.
-    timeline = root.find("./tractor[@id='tractor0']")
-    if timeline is None:
-        raise ValueError('Missing timeline tractor0')
+    # Shotcut may renumber tractors when transitions/tracks are edited.
+    # Select the editable timeline by its marker, never by a fixed id.
+    tractors = root.findall('tractor')
+    timelines = [tractor for tractor in tractors
+                 if (tractor.findtext("property[@name='shotcut']") or '').strip() == '1']
+    if len(timelines) == 1:
+        timeline = timelines[0]
+    elif not timelines and len(tractors) == 1:
+        # Support older/minimal MLT projects without the Shotcut marker.
+        timeline = tractors[0]
+    else:
+        raise ValueError('Cannot select timeline safely: '
+                         f'{len(timelines)} Shotcut timelines, {len(tractors)} tractors')
     end = timeline.get('out', '')
     if re.fullmatch(r'\d+:\d\d:\d\d\.\d+', end):
         hh, mm, ss = end.split(':')
