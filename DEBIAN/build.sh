@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PKG="remedia"
-VERSION="1.5.1"
+VERSION="1.5.2"
 ARCH="all"
 
 STAGE="build/${PKG}_${VERSION}_${ARCH}"

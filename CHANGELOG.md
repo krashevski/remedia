@@ -7,7 +7,21 @@ The format is based on Keep a Changelog and semantic versioning.
 ## [Unreleased]
 
 ### Fixed
+- MediaPanel Production: validate project frame rates when generating
+  VIDEO and SHORT MLT files in `production.sh`.
+- Reject implausible `r_frame_rate` values such as `90000/1`
+  and fall back to a valid `avg_frame_rate` within 1–240 FPS.
+- Preserve valid fractional frame rates.
+- Stop MLT creation if neither frame-rate value is usable,
+  while retaining protection against overwriting existing projects.
 - **MediaPanel — export with Reframe:** fixed the `Missing timeline tractor0` error in `export_render.sh`. The main timeline is now identified by the `shotcut=1` property, regardless of its specific identifier (`tractor0`, `tractor1`, etc.). Successful export has been verified using the `021_VF Almaty 2026_map_short.mlt` project.
+
+### Validation
+- Verified VIDEO and SHORT project generation and opening in Shotcut
+  using Fahrenheit footage.
+- Confirmed fast reopening after saving both projects in Shotcut.
+- Initial opening of generated projects remains slow;
+  this limitation requires separate optimization.
 
 
 ## [1.5.0] - 2026-11-01

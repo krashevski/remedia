@@ -180,6 +180,47 @@ audio_cleanup() {
     echo "$(t MP_PRODUCTION_OK_AUDIO_CLEANED)"
 }
 
+# Select a usable project rate without mistaking an FFmpeg timestamp-grid
+# estimate (for example r_frame_rate=90000/1 on VFR footage) for playback FPS.
+# Preserve a plausible r_frame_rate; fall back to avg_frame_rate otherwise.
+# Do not guess 30 FPS if neither value is usable: callers report the existing
+# translated invalid-frame-rate error before creating the MLT file.
+mediapanel_mlt_frame_rate() {
+    local probe_rates
+    probe_rates="$(
+        LC_ALL=C ffprobe -v error \
+            -select_streams v:0 \
+            -show_entries stream=r_frame_rate,avg_frame_rate \
+            -of default=noprint_wrappers=1 \
+            "$1"
+    )" || return 1
+
+    LC_ALL=C awk -F= '
+        function usable(rate, a, n, d) {
+            if (rate !~ /^[0-9]+\/[0-9]+$/) return 0
+            split(rate, a, "/")
+            n = a[1] + 0; d = a[2] + 0
+            # MLT profile fields are integers. Limit automatic detection to
+            # 1..240 FPS; absurd estimates must not become project profiles.
+            return n > 0 && d > 0 && n <= 2147483647 && d <= 2147483647 && n/d >= 1 && n/d <= 240
+        }
+        function normalized(rate, a, n, d, x, y, rem) {
+            split(rate, a, "/")
+            n = a[1] + 0; d = a[2] + 0
+            x = n; y = d
+            while (y != 0) { rem = x % y; x = y; y = rem }
+            return sprintf("%.0f/%.0f", n/x, d/x)
+        }
+        $1 == "r_frame_rate" { nominal = $2 }
+        $1 == "avg_frame_rate" { average = $2 }
+        END {
+            if (usable(nominal)) print normalized(nominal)
+            else if (usable(average)) print normalized(average)
+            else exit 1
+        }
+    ' <<< "$probe_rates"
+}
+
 # =========================
 # CREATE MLT FROM EDIT
 # =========================
@@ -281,13 +322,7 @@ audio_cleanup() {
             "$first_file"
     )"
 
-    first_fps="$(
-        ffprobe -v error \
-            -select_streams v:0 \
-            -show_entries stream=r_frame_rate \
-            -of default=noprint_wrappers=1:nokey=1 \
-            "$first_file"
-    )"
+    first_fps="$(mediapanel_mlt_frame_rate "$first_file")" || first_fps=""
 
     mlt_sar="$(
         ffprobe -v error \
@@ -799,13 +834,7 @@ create_mlt_from_scenes() {
     local mlt_fps_num
     local mlt_fps_den
 
-    first_fps="$(
-        ffprobe -v error \
-            -select_streams v:0 \
-            -show_entries stream=r_frame_rate \
-            -of default=noprint_wrappers=1:nokey=1 \
-            "$first_file"
-    )"
+    first_fps="$(mediapanel_mlt_frame_rate "$first_file")" || first_fps=""
 
     [[ "$first_fps" =~ ^[0-9]+/[0-9]+$ ]] || {
         echo "$(t MP_PRODUCTION_ERROR_INVALID_FRAME_RATE_DETECTED_2)"
