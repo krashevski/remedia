@@ -75,7 +75,6 @@ It ensures that the system does not rely on theoretical GPU availability, but on
 ## 📦 MediaPanel Delivery Layer
 
 ### Future Roadmap
-* Non-interactive metadata injection through CLI options and templates.
 * Support for animated Shotcut Output Reframe with keyframes in
   `export_render.sh`, extending the verified static Reframe export.
 * Automatic retry policies and failure classification, extending
@@ -94,29 +93,6 @@ It ensures that the system does not rely on theoretical GPU availability, but on
 
 Offline operation covers local preparation, metadata, queue management,
 and archiving; uploads and remote account checks require connectivity.
-
-## 📦 MediaPanel Project Recovery — Future Improvement
-
-### Restore Compact Project without an active project
-
-Compact archive restoration is implemented and verified.
-Its current menu entry remains under **Export → Archive Project**,
-where `archive_project()` requires an existing active project.
-
-Planned improvement:
-* Expose **Restore Compact Project** as a standalone entry in the
-  **Export** menu or a dedicated recovery menu.
-* Allow recovery when no project is active, including on a fresh
-  Remedia installation.
-* List available compact archives and allow destination selection
-  independently of `PROJECT_DIR` and the active project.
-* Preserve existing safety guarantees:
-  never overwrite an existing project; repair paths only in restored
-  MLT copies; verify stabilization and media references; keep
-  intermediate-file regeneration an explicit separate step.
-* Preserve dry-run support and the tested archive/restore workflow.
-
-**Priority:** Future release; independent of the current release preparation.
 
 ## 🌍 UI Internationalization (i18n)
 

@@ -154,9 +154,9 @@ delivery_manual() {
     local metadata_file
 
     echo
-    echo "=================================================="
-    echo "$(t MP_EXPORT_MANUAL_UPLOAD_MODE)"
-    echo "=================================================="
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}==================================================${COLOR_RESET}"
+    echo -e "$(t MP_EXPORT_MANUAL_UPLOAD_MODE "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}==================================================${COLOR_RESET}"
 
     for file in "$@"; do
         metadata_file="${file%.*}.youtube.json"
@@ -182,6 +182,7 @@ delivery_manual() {
     echo
     echo "$(t MP_EXPORT_OPEN)"
     echo "   https://studio.youtube.com/upload"
+    echo
     echo "=================================================="
 
     return 0
@@ -958,18 +959,9 @@ restore_compact_project_menu() {
     echo "$archive"
     echo
 
-    local destination
-    read -rp "$(t MP_EXPORT_RESTORE_DESTINATION_MNT_SHOTCUT_REMEDIA_RESTORE)" destination \
-        || return 0
-
-    destination="${destination:-/mnt/shotcut/remedia-restore}"
-
-    # Expand ~/ if entered by the user.
-    if [[ "$destination" == "~/"* ]]; then
-        destination="$HOME/${destination#~/}"
-    fi
-
-    local old_root="${PROJECT_DIR}/${project_name:-}"
+    # Publish a separately named copy alongside regular projects so existing
+    # project selection and deletion menus can manage it.
+    local destination="${PROJECT_DIR:?PROJECT_DIR not set}"
 
     echo
     echo "$(t MP_EXPORT_DESTINATION "$destination")"
@@ -990,7 +982,7 @@ restore_compact_project_menu() {
     mkdir -p -- "$destination" || return 1
 
     python3 "$worker" "$archive" \
-        --destination "$destination"
+        --projects-dir "$destination"
 }
 
 # Remedia MediaPanel: compact/full project archiving.
@@ -1039,7 +1031,7 @@ archive_project() {
     fi
     [[ -f "$checker" ]] || { log_error "$(t MP_EXPORT_MLT_CHECKER_MISSING "$checker")"; return 1; }
 
-    local -a keep_dirs=(video short edit subtitles)
+    local -a keep_dirs=(video short edit subtitles audio)
     if [[ "$mode" == 1 || "$mode" == 3 ]]; then
         if ! python3 "$checker" "$project_path" "${keep_dirs[@]}"; then
             echo "$(t MP_EXPORT_WARN_COMPACT_ARCHIVE_CANNOT_GUARANTEE_SHOTCUT_PROJECT_INTEGRITY)"
@@ -1061,6 +1053,7 @@ archive_project() {
     echo
     echo "$(t MP_EXPORT_TARGET "$archive")"
     [[ "$mode" == 1 ]] && echo "$(t MP_EXPORT_COMPACT_ARCHIVE_CONTAINS_ONLY_VIDEO_SHORT_EDIT_SUBTITLES_AND_AN_E)"
+    [[ "$mode" != 1 ]] || printf '    + audio/\n'
     [[ "$mode" == 2 ]] && echo "$(t MP_EXPORT_FULL_ARCHIVE_CONTAINS_THE_COMPLETE_PROJECT)"
     echo "$(t MP_EXPORT_ORIGINAL_PROJECT_WILL_NOT_BE_MODIFIED)"
     local confirm
@@ -1079,7 +1072,7 @@ archive_project() {
             [[ -d "$path" ]] || continue
             base="${path##*/}"
             case "$base" in
-                video|short|edit|subtitles|media) ;;
+                video|short|edit|subtitles|audio|media) ;;
                 *) exclusions+=("--exclude=$project_name/$base") ;;
             esac
         done

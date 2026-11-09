@@ -5,6 +5,7 @@ No pipeline execution and no mutation of the source project/archive.
 """
 from remedia_i18n import t, value_error, runtime_error, exception_text, ArgumentParser
 import argparse
+import json
 import os
 import shutil
 import sys
@@ -24,16 +25,21 @@ def safe_archive_members(tf):
     for m in members:
         raw = m.name
         p = PurePosixPath(raw)
-        if not raw or raw.startswith('/') or '..' in p.parts or not p.parts or p.parts[0] in ('', '.'):
+        if not raw or raw.startswith('/') or '..' in p.parts or not p.parts or p.parts[0] in ('', '.') or any(c in raw for c in '\r\n'):
             raise value_error('MP_PY_UNSAFE_PATH', repr(raw))
         if not (m.isfile() or m.isdir()):
             raise value_error('MP_PY_UNSUPPORTED_ARCHIVE_ENTRY_LINK_DEVICE', repr(raw))
-        if raw in names:
+        normalized = str(p)
+        if normalized in names:
             raise value_error('MP_PY_DUPLICATE_ARCHIVE_MEMBER', repr(raw))
-        names.add(raw)
+        names.add(normalized)
         top.add(p.parts[0])
     if len(top) != 1:
         raise value_error('MP_PY_ARCHIVE_MUST_CONTAIN_EXACTLY_ONE_PROJECT_DIRECTORY_FOUND', sorted(top))
+    # The sole top-level member must represent a project directory, not a file.
+    for m in members:
+        if len(PurePosixPath(m.name).parts) == 1 and not m.isdir():
+            raise value_error('MP_PY_UNSAFE_PATH', repr(m.name))
     return members, next(iter(top))
 
 def is_path_value(value):
@@ -129,41 +135,56 @@ def rewrite_mlt(mlt, root, old_root, stats, dry_run=False):
                 os.unlink(tmp)
     return changed
 
-def main():
-    ap = ArgumentParser(description=t('MP_PY_RESTORE_A_REMEDIA_COMPACT_TAR_GZ_SAFELY_REPAIR_PATHS_ONLY_IN_EXTR'))
-    ap.add_argument('archive', type=Path, help=t('MP_PY_COMPACT_TAR_GZ_ARCHIVE'))
-    ap.add_argument('--destination', required=True, type=Path, help=t('MP_PY_EXISTING_EMPTY_TEST_DIRECTORY'))
-    ap.add_argument('--old-root', type=Path, help=t('MP_PY_ORIGINAL_PROJECT_ROOT_IMPROVES_ABSOLUTE_PATH_RELOCATION'))
-    ap.add_argument('--dry-run', action='store_true', help=t('MP_PY_LIST_CHECK_ARCHIVE_ONLY_DO_NOT_EXTRACT'))
-    args = ap.parse_args()
-    archive = args.archive.expanduser().resolve()
-    dest = args.destination.expanduser().resolve()
-    old_root = args.old_root.expanduser().resolve() if args.old_root else None
-    if not archive.is_file():
-        ap.error(t('MP_PY_ARCHIVE_NOT_FOUND', archive))
+def publish_project(source, projects_dir, project_name):
+    """Reserve a fresh name exclusively, then publish the repaired directory.
+
+    Paths inside MLTs were made relative while the original archive name was
+    retained, so moving the whole project does not break repaired references.
+    """
+    index = 1
+    while True:
+        name = f'{project_name}_restored{index}'
+        target = projects_dir / name
+        try:
+            target.mkdir()
+        except FileExistsError:
+            index += 1
+            continue
+        try:
+            source.rename(target)
+        except BaseException:
+            # Only remove our own empty reservation, never an existing project.
+            target.rmdir()
+            raise
+        return target
+
+
+def restore_archive(archive, dest, old_root, dry_run=False, projects_dir=None, result_file=None):
     with tarfile.open(archive, 'r:gz') as tf:
         members, project_name = safe_archive_members(tf)
         project = dest / project_name
-        if args.dry_run:
+        if dry_run:
             print(t('MP_PY_DRY_RUN_PROJECT_ENTRIES_DESTINATION', project_name, len(members), project))
             return 0
         if project.exists():
-            ap.error(t('MP_PY_DESTINATION_PROJECT_ALREADY_EXISTS_NEVER_OVERWRITES', project))
+            raise value_error('MP_PY_DESTINATION_PROJECT_ALREADY_EXISTS_NEVER_OVERWRITES', project)
         if not dest.is_dir() or any(dest.iterdir()):
-            ap.error(t('MP_PY_DESTINATION_MUST_EXIST_AND_BE_EMPTY', dest))
+            raise value_error('MP_PY_DESTINATION_MUST_EXIST_AND_BE_EMPTY', dest)
         print(t('MP_PY_EXTRACT', archive.name, dest))
-        # PEP706 extraction_filter blocks special links as additional protection.
         try:
             tf.extractall(dest, members=members, filter='data')
         except (TypeError, tarfile.FilterError):
-            # Do not fall back to unsafe extraction.
             raise runtime_error('MP_PY_SAFE_TAR_EXTRACTION_REQUIRES_PYTHON_3_12_OR_BACKPORTED_EXTRACTION')
-    project = dest / project_name
     stats = Counter()
     mlts = sorted(project.rglob('*.mlt'))
     for mlt in mlts:
         rewrite_mlt(mlt, project, old_root, stats)
-    print(t('MP_PY_OK_EXTRACTED_PROJECT', project))
+    unresolved = stats['missing'] or stats['stab_missing'] or stats['external_unresolved']
+    if projects_dir is not None and not unresolved:
+        # No partially extracted or dependency-failed project is published.
+        project = publish_project(project, projects_dir, project_name)
+    if projects_dir is None or not unresolved:
+        print(t('MP_PY_OK_EXTRACTED_PROJECT', project))
     print(t('MP_PY_MLT_PROJECTS_REPAIRED_PROPERTIES', len(mlts), stats["rewritten"]))
     print(t('MP_PY_STAB_FOUND_MISSING', stats["stab_found"], stats["stab_missing"]))
     print(t('MP_PY_MEDIA_MISSING_NON_PIPELINE_REFERENCES', stats["missing"]))
@@ -173,12 +194,43 @@ def main():
     print(t('MP_PY_NEXT_INSPECT_EDITED_MLTS_IN_SHOTCUT_AND_CONFIRM_MEDIA_PATHS_ARE_U'))
     print(t('MP_PY_NEXT_TO_REGENERATE_PIPELINE_SCENES_FIRST_RESTORE_COPY_EDIT_MEDIA'))
     print(t('MP_PY_THEN_RUN_FULL_PIPELINE_ONLY_AFTER_REVIEWING_OUTPUTS_AND_PROTECTIN'))
-    if stats['missing'] or stats['stab_missing'] or stats['external_unresolved']:
+    if unresolved:
         print(t('MP_PY_WARN_RESTORED_PROJECT_HAS_UNRESOLVED_DEPENDENCIES'))
         return 1
     if stats['pipeline_scenes']:
         print(t('MP_PY_WARN_ORIGINAL_PIPELINE_PROJECTS_NEED_REGENERATION_OF_SCENES_FOR_D'))
+    if result_file is not None:
+        result_file.write_text(json.dumps({'project_name': project.name}, ensure_ascii=False) + '\n', encoding='utf-8')
     return 0
+
+
+def main():
+    ap = ArgumentParser(description=t('MP_PY_RESTORE_A_REMEDIA_COMPACT_TAR_GZ_SAFELY_REPAIR_PATHS_ONLY_IN_EXTR'))
+    ap.add_argument('archive', type=Path, help=t('MP_PY_COMPACT_TAR_GZ_ARCHIVE'))
+    destinations = ap.add_mutually_exclusive_group(required=True)
+    destinations.add_argument('--destination', type=Path, help=t('MP_PY_EXISTING_EMPTY_TEST_DIRECTORY'))
+    destinations.add_argument('--projects-dir', type=Path, help=argparse.SUPPRESS)
+    ap.add_argument('--result-file', type=Path, help=argparse.SUPPRESS)
+    ap.add_argument('--old-root', type=Path, help=t('MP_PY_ORIGINAL_PROJECT_ROOT_IMPROVES_ABSOLUTE_PATH_RELOCATION'))
+    ap.add_argument('--dry-run', action='store_true', help=t('MP_PY_LIST_CHECK_ARCHIVE_ONLY_DO_NOT_EXTRACT'))
+    args = ap.parse_args()
+    archive = args.archive.expanduser().resolve()
+    old_root = args.old_root.expanduser().resolve() if args.old_root else None
+    if not archive.is_file():
+        ap.error(t('MP_PY_ARCHIVE_NOT_FOUND', archive))
+    result_file = args.result_file.expanduser().absolute() if args.result_file else None
+    if args.projects_dir is not None:
+        projects_dir = args.projects_dir.expanduser().resolve()
+        if not projects_dir.is_dir():
+            ap.error(t('MP_EXPORT_PROJECT_DIRECTORY_NOT_FOUND', projects_dir))
+        if args.dry_run:
+            return restore_archive(archive, projects_dir, old_root, dry_run=True)
+        # Same filesystem for directory publication; always clean up failed work.
+        with tempfile.TemporaryDirectory(prefix='.remedia-restore-', dir=projects_dir) as stage:
+            return restore_archive(archive, Path(stage), old_root,
+                                   projects_dir=projects_dir, result_file=result_file)
+    dest = args.destination.expanduser().resolve()
+    return restore_archive(archive, dest, old_root, dry_run=args.dry_run, result_file=result_file)
 
 if __name__ == '__main__':
     try:

@@ -36,7 +36,11 @@ detect_phone() {
             "Internal shared storage/DCIM/Camera" \
             "Internal shared storage/DCIM" \
             "Internal shared storage/Movies" \
-            "Внутренняя память/DCIM"
+            "Внутренняя память/DCIM/Camera" \
+            "Внутренняя память/DCIM" \
+            "Внутренняя память/Movies" \
+            "Internal shared storage/Music/Recordings" \
+            "Внутренняя память/Music/Recordings"
         do
             if [[ -d "$dev/$base" ]]; then
                 echo "$dev/$base"
@@ -47,6 +51,50 @@ detect_phone() {
     done < <(find "$gvfs" -maxdepth 1 -type d -name "mtp:*" 2>/dev/null)
 
     return 1
+}
+
+# Scan only media folders on the selected device, never the entire phone.
+# Keep detect_phone's single-directory interface for existing callers.
+media_phone_files() {
+    local phone_dir="$1" storage="" candidate base
+    local -a roots=()
+
+    candidate="${phone_dir%/}"
+    while [[ -n "$candidate" && "$candidate" != / ]]; do
+        case "${candidate##*/}" in
+            "Internal shared storage"|"Внутренняя память")
+                storage="$candidate"
+                break
+                ;;
+        esac
+        [[ "$candidate" == */* ]] || break
+        candidate="${candidate%/*}"
+    done
+
+    if [[ -n "$storage" ]]; then
+        for base in DCIM Movies \
+            "Music/Recordings/Standard Recordings" \
+            "Music/Recordings/Meeting Recordings" \
+            "Music/Recordings/Interview Recordings"; do
+            [[ ! -d "$storage/$base" ]] || roots+=("$storage/$base")
+        done
+    else
+        # Explicit local/custom source directories remain supported.
+        roots=("$phone_dir")
+    fi
+
+    ((${#roots[@]} > 0)) || return 0
+    find "${roots[@]}" -type f \( \
+        -iname '*.mp4' -o -iname '*.mov' -o \
+        -iname '*.wav' -o -iname '*.mp3' -o \
+        -iname '*.aac' -o -iname '*.m4a' \) -print0
+}
+
+media_is_audio() {
+    case "${1,,}" in
+        *.wav|*.mp3|*.aac|*.m4a) return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
 ui_log() {
@@ -66,7 +114,7 @@ prepare_ingest_queue() {
     local phone_dir="$1"
 
     mapfile -d '' QUEUE < <(
-        find "$phone_dir" -type f -iname "*.mp4" -print0
+        media_phone_files "$phone_dir"
     )
 
     TOTAL_FILES="${#QUEUE[@]}"
@@ -179,7 +227,7 @@ media_import_phone() {
     media_index_load
 
     mapfile -d '' files < <(
-        find "$phone_dir" -type f \( -iname "*.mp4" -o -iname "*.mov" \) -print0
+        media_phone_files "$phone_dir"
     )
 
     echo "$(t MP_MEDIA_POOL_MEDIA_SCANNING_FILES "${#files[@]}")" >&2
@@ -306,7 +354,8 @@ ingest_to_raw() {
 ingest_from_phone_v3() {
     local start_ts end_ts runtime
     local phone_dir project queue_file previous_state final_state
-    local ok=0 fail=0 skip=0 total=0 existing=0 idx=0 error=""
+    local ok=0 fail=0 skip=0 total=0 idx=0 error=""
+    local video_ready=0
     local f name raw dst hash
     local -a QUEUE=()
 
@@ -347,7 +396,7 @@ ingest_from_phone_v3() {
         printf '%s\n' '{"ok":0,"fail":0,"skip":0,"total":0,"error":"queue_create_failed","runtime_ms":0}'
         return 0
     fi
-    if ! find "$phone_dir" -type f \( -iname "*.mp4" -o -iname "*.mov" \) -print0 > "$queue_file"; then
+    if ! media_phone_files "$phone_dir" > "$queue_file"; then
         rm -f "$queue_file"
         pipeline_set "$project" ingest failed >&2 || true
         printf '%s\n' '{"ok":0,"fail":0,"skip":0,"total":0,"error":"phone_scan_failed","runtime_ms":0}'
@@ -367,6 +416,9 @@ ingest_from_phone_v3() {
         name="$(basename "$f")"
         raw="$RAW_DIR/$name"
         dst="$PROJECT_DIR/$project/media/$name"
+        if media_is_audio "$name"; then
+            dst="$PROJECT_DIR/$project/recordings/$name"
+        fi
 
         if [[ "$name" == .trashed-* ]]; then
             ((++skip))
@@ -377,7 +429,9 @@ ingest_from_phone_v3() {
             # A name match alone cannot confirm an earlier successful copy.
             if [[ -s "$dst" ]] && cmp -s "$f" "$dst"; then
                 ((++skip))
-                ((++existing))
+                if ! media_is_audio "$name"; then
+                    ((++video_ready))
+                fi
             else
                 ui_log "$(t MP_MEDIA_POOL_EXISTING_FILE_DIFFERS_OR_IS_EMPTY "$name")"
                 ((++fail))
@@ -385,6 +439,10 @@ ingest_from_phone_v3() {
             continue
         fi
 
+        if ! mkdir -p "${dst%/*}"; then
+            ((++fail))
+            continue
+        fi
         if ! copy_with_retry "$f" "$raw"; then
             ((++fail))
             continue
@@ -413,16 +471,19 @@ ingest_from_phone_v3() {
         fi
         cleanup_raw "$raw" >&2
         ((++ok))
+        if ! media_is_audio "$name"; then
+            ((++video_ready))
+        fi
         ui_log "[$idx/$total] $name"
     done
 
     if (( fail > 0 )); then
         final_state=failed
         error="${error:-copy_or_verify_failed}"
-    elif (( ok + existing > 0 )); then
+    elif (( video_ready > 0 )); then
         final_state=done
     else
-        # Empty queue / trashed files do not prove ingest completion.
+        # Audio-only imports / empty queues do not complete the video pipeline.
         final_state="$previous_state"
         [[ "$final_state" != running ]] || final_state=pending
     fi

@@ -6,7 +6,36 @@ The format is based on Keep a Changelog and semantic versioning.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-09
+
+MediaPanel is ready for daily use.
+
+The video production workflow is complete, covering the import of video and voice recorder recordings, material preparation, creation of Shotcut projects, subtitling, rendering, uploading to YouTube, and project archiving and restoration.
+
+The interface is unified and supports Russian, English, and Kazakh. Key operational scenarios have been verified in practice.
+
+### Added
+- MediaPanel: support for importing voice recorder files (WAV, MP3, AAC, and M4A formats) from the "Standard Recordings," "Meeting Recordings," and "Interview Recordings" folders.
+- Processing of individual audio recordings: original files are preserved in the `recordings/` directory, while cleaned WAV files are saved to `audio/recordings/`.
+- The `audio/` directory is now included in the project’s compact archive and is accounted for during MLT dependency checks.
+
+### Changed
+- Restored projects are placed in the main projects directory with suffixes such as `_restored1`, `_restored2`, etc.;
+  they can be accessed via the standard project selection and deletion menus.
+- MediaPanel: The color scheme for headers, cancellation options, and YouTube queue status indicators has been unified.
+- In the disk usage menu, storage names are displayed immediately; a loading indicator appears while the size is being calculated.
+- MediaPanel: added color-coding for YouTube API status indicators:
+  green — dependencies are installed or the configuration is correct,
+  red — dependencies are missing or the configuration is incorrect,
+  yellow — a token is present, but its validity has not been verified.
+  This change is purely visual; the underlying logic for checks and authorization remains unchanged.
+
 ### Fixed
+- If an audio conversion fails, no output file is created, allowing the file to be processed again.
+- During re-import, duplicate files are skipped, and files with the same name but different content are not overwritten.
+- Restoring a compact archive creates a separate project in the projects directory and sets it as the active project upon successful completion.
+- If a name conflict occurs, an `_restored_N` suffix is ​​added; existing projects are not overwritten.
+- In the event of an error during extraction or dependency verification, temporary files are deleted, while the active project is preserved.
 - MediaPanel Production: validate project frame rates when generating
   VIDEO and SHORT MLT files in `production.sh`.
 - Reject implausible `r_frame_rate` values such as `90000/1`
@@ -23,6 +52,8 @@ The format is based on Keep a Changelog and semantic versioning.
 - Initial opening of generated projects remains slow;
   this limitation requires separate optimization.
 
+### Verified
+- Restoration of a compact project has been verified in Shotcut: the MLT edit file opens, and both video and audio play back just as in the original.
 
 ## [1.5.0] - 2026-11-01
 

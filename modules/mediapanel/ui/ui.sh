@@ -113,7 +113,10 @@ pause() {
 show_stabilization_guide() {
     clear || true
 
-    t MP_UI_GUIDE_STABILIZATION
+        printf '%b\n' "$(printf -- "$(t MP_UI_GUIDE_STABILIZATION)" \
+        "${COLOR_BOLD}" \
+        "${COLOR_CYAN}" \
+        "${COLOR_RESET}")"
 
     echo
     read -r -p "$(t MP_UI_PRESS_ENTER_TO_CONTINUE)"
@@ -125,7 +128,10 @@ show_stabilization_guide() {
 show_set_filters_guide() {
     clear || true
 
-    t MP_UI_GUIDE_FILTER_SETS
+    printf '%b\n' "$(printf -- "$(t MP_UI_GUIDE_FILTER_SETS)" \
+        "${COLOR_BOLD}" \
+        "${COLOR_CYAN}" \
+        "${COLOR_RESET}")"
 
     echo
     read -r -p "$(t MP_UI_PRESS_ENTER_TO_CONTINUE)"

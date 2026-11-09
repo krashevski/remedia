@@ -49,9 +49,9 @@ youtube_queue_status() {
     queue_dir="$(youtube_delivery_queue_dir)"
 
     echo
-    echo "===================================================="
-    echo "$(t MP_YOUTUBE_DELIVERY_YOUTUBE_QUEUE_STATUS)"
-    echo "===================================================="
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
+    echo -e "$(t MP_YOUTUBE_DELIVERY_YOUTUBE_QUEUE_STATUS "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
     echo
 
     if [[ ! -d "$queue_dir" ]]; then
@@ -69,6 +69,10 @@ youtube_queue_status() {
     MP_I18N_INVALID="$(t MP_QUEUE_INVALID)" \
     MP_I18N_OTHER="$(t MP_QUEUE_OTHER)" \
     MP_I18N_MORE="$(t MP_QUEUE_MORE)" \
+    MP_COLOR_GREEN="$(printf '%b' "${COLOR_GREEN}")" \
+    MP_COLOR_YELLOW="$(printf '%b' "${COLOR_YELLOW}")" \
+    MP_COLOR_RED="$(printf '%b' "${COLOR_RED}")" \
+    MP_COLOR_RESET="$(printf '%b' "${COLOR_RESET}")" \
     python3 - "$queue_dir" <<'PY'
 import os, re
 def ui_text(key, *args):
@@ -78,6 +82,13 @@ import json
 import sys
 from collections import Counter
 from pathlib import Path
+
+def colored_count(value, color):
+    return (
+        os.environ["MP_COLOR_" + color]
+        + str(value)
+        + os.environ["MP_COLOR_RESET"]
+    )
 
 queue = Path(sys.argv[1])
 jobs = sorted(queue.glob("*.json"))
@@ -125,9 +136,9 @@ for index, path in enumerate(jobs, start=1):
 
 print("-" * 52)
 print(ui_text("TOTAL", len(jobs)))
-print(ui_text("COMPLETED", summary['completed']))
-print(ui_text("QUEUED", summary['queued']))
-print(ui_text("FAILED", summary['failed']))
+print(ui_text("COMPLETED", colored_count(summary["completed"], "GREEN")))
+print(ui_text("QUEUED", colored_count(summary["queued"], "YELLOW")))
+print(ui_text("FAILED", colored_count(summary["failed"], "RED")))
 
 if summary["invalid"]:
     print(ui_text("INVALID", summary['invalid']))
@@ -241,9 +252,9 @@ PY
     fi
 
     echo
-    echo "===================================================="
-    echo "$(t MP_YOUTUBE_DELIVERY_PROCESS_YOUTUBE_QUEUE)"
-    echo "===================================================="
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
+    echo -e "$(t MP_YOUTUBE_DELIVERY_PROCESS_YOUTUBE_QUEUE "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
     echo
 
     for ((i=0; i<${#jobs[@]}; i++)); do
@@ -251,7 +262,7 @@ PY
     done
 
     echo
-    echo "$(t MP_SUB_CANCEL_OPTION)"
+    echo -e "$(t MP_YOUTUBE_QUEUE_CANCEL_OPTION "${COLOR_YELLOW}" "${COLOR_RESET}")"
     echo
 
     read -rp "$(t MP_YOUTUBE_DELIVERY_SELECT_JOB)" choice
@@ -326,9 +337,12 @@ archive_youtube_queue_job() {
 
     mapfile -d '' -t jobs < <(find "$queue_dir" -maxdepth 1 -type f ! -type l -name '*.json' -print0 | sort -z)
     ((${#jobs[@]})) || { t MP_QUEUE_NO_ARCHIVE_JOBS; return 0; }
-    printf '\n====================================================\n'
+    printf '\n%b%b====================================================\n' \
+        "${COLOR_BOLD}" "${COLOR_CYAN}"
     t MP_QUEUE_ARCHIVE_TITLE
-    printf '====================================================\n\n'
+    printf '====================================================%b\n\n' \
+        "${COLOR_RESET}"
+
     local i
     for i in "${!jobs[@]}"; do
         printf '%2d) ' "$((i+1))"
@@ -352,7 +366,7 @@ except (ValueError, OSError, TypeError):
     print('[INVALID] ' + Path(sys.argv[1]).name)
 PY
     done
-    t MP_QUEUE_CANCEL
+    printf '%b%s%b\n\n' "${COLOR_YELLOW}" "$(t MP_QUEUE_CANCEL)" "${COLOR_RESET}"
     read -r -p "$(t MP_YOUTUBE_DELIVERY_SELECT_JOB)" selection || return 0
     [[ "$selection" == 0 ]] && return 0
     [[ "$selection" =~ ^[0-9]+$ ]] && ((${#selection} < 10)) && ((10#$selection >= 1 && 10#$selection <= ${#jobs[@]})) || {

@@ -299,9 +299,10 @@ mediapanel_subtitle_languages_menu() {
     local -a selected=()
     while true; do
         echo
-        echo '===================================================='
-        echo "$(t MP_SYS_SUBTITLE_LANGUAGES)"
-        echo '===================================================='
+        clear
+        echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
+        echo -e "$(t MP_SYS_SUBTITLE_LANGUAGES "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
+        echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
         mediapanel_subtitle_languages_status || return 1
         echo
         echo "$(t MP_SYS_ENTER_1_4_LANGUAGE_CODES_IN_PREFERRED_ORDER)"
@@ -311,7 +312,8 @@ mediapanel_subtitle_languages_menu() {
         echo
         echo "$(t MP_SYS_L_LIST_SUPPORTED_LANGUAGES)"
         echo "$(t MP_SYS_R_RESTORE_DEFAULTS_RU_KK_EN)"
-        echo "$(t MP_SYS_0_BACK_WITHOUT_SAVING)"
+        echo
+        echo -e "$(t MP_SYS_0_BACK_WITHOUT_SAVING "${COLOR_YELLOW}" "${COLOR_RESET}")"
         echo
         read -r -p "$(t MP_SYS_LANGUAGES)" input || return 0
         input="${input,,}"
@@ -321,6 +323,9 @@ mediapanel_subtitle_languages_menu() {
                 for code in "${!MEDIAPANEL_SUBTITLE_LANGUAGE_NAMES[@]}"; do
                     printf ' %-3s  %s\n' "$code" "$(mediapanel_subtitle_language_name "$code")"
                 done | LC_ALL=C sort -k2
+
+                echo
+                read -r -p "$(t MP_SYS_PRESS_ENTER_TO_CONTINUE)" _ || return 0
                 continue
                 ;;
             r) selected=(ru kk en) ;;
@@ -337,6 +342,45 @@ mediapanel_subtitle_languages_menu() {
         return 0
     done
 }
+
+# Print the label before safe_du starts; command substitution otherwise hides
+# the entire row until directory traversal has finished. Keep counting in the
+# foreground and animate only on a terminal (never in redirected output).
+mediapanel_show_storage_usage() (
+    local label="$1" path="$2" value spinner_pid=""
+
+    trap 'if [[ -n "$spinner_pid" ]]; then
+        kill "$spinner_pid" 2>/dev/null || true
+        wait "$spinner_pid" 2>/dev/null || true
+    fi' EXIT
+    trap 'printf "\n"; exit 130' INT
+    trap 'printf "\n"; exit 143' TERM
+
+    printf '%-20s ' "$label"
+    if [[ -t 1 ]]; then
+        (
+            frames=('|' '/' '-' '\')
+            i=0
+            while :; do
+                printf '\r%-20s [%s]' "$label" "${frames[i % 4]}"
+                i=$((i + 1))
+                sleep 0.15
+            done
+        ) &
+        spinner_pid=$!
+    fi
+
+    value="$(safe_du "$path")" || true
+
+    if [[ -n "$spinner_pid" ]]; then
+        kill "$spinner_pid" 2>/dev/null || true
+        wait "$spinner_pid" 2>/dev/null || true
+        spinner_pid=""
+        printf '\r%-20s %s\033[K\n' "$label" "${value:-?}"
+    else
+        printf '%s\n' "${value:-?}"
+    fi
+)
 
 system_status() {
     while true; do
@@ -455,13 +499,13 @@ system_status() {
                 echo -e "$(t MP_SYS_STORAGE_USAGE "${COLOR_BOLD}" "${COLOR_RESET}")"
                 echo
 
-                printf "%-20s %s\n" " FAST_STORAGE:" "$(safe_du "$FAST_STORAGE")"
+                mediapanel_show_storage_usage " FAST_STORAGE:" "$FAST_STORAGE"
 
-                printf "%-20s %s\n" " SLOW_STORAGE:" "$(safe_du "$SLOW_STORAGE")"
+                mediapanel_show_storage_usage " SLOW_STORAGE:" "$SLOW_STORAGE"
 
-                printf "%-20s %s\n" " BACKUP_STORAGE:" "$(safe_du "$BACKUP_STORAGE")"
+                mediapanel_show_storage_usage " BACKUP_STORAGE:" "$BACKUP_STORAGE"
 
-                printf "%-20s %s\n" " PROJECT_DIR:" "$(safe_du "$PROJECT_DIR")"
+                mediapanel_show_storage_usage " PROJECT_DIR:" "$PROJECT_DIR"
 
                 echo
                 echo -e "$(t MP_SYS_PATHS "${COLOR_BOLD}" "${COLOR_RESET}")"

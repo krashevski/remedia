@@ -124,7 +124,8 @@ generate_subtitles() {
 
      echo "------------------------------------------------"
      echo "$(t MP_GENERATE_SUBTITLES_SELECT_ONE_PROJECT_FOR_SUBTITLE_GENERATION)"
-     echo "$(t MP_EXPORT_RENDER_ENTER_0_TO_RETURN)"
+     echo
+     echo -e "$(t MP_EXPORT_RENDER_ENTER_0_TO_RETURN "${COLOR_YELLOW}" "${COLOR_RESET}")"
      echo
 
      local choice=""

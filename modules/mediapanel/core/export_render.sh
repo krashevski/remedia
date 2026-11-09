@@ -362,7 +362,8 @@ export_render() {
     echo "------------------------------------------------"
     echo "$(t MP_EXPORT_RENDER_SELECT_ONE_OR_SEVERAL_PROJECTS)"
     echo "$(t MP_EXPORT_EXAMPLES_1_1_2_ALL)"
-    echo "$(t MP_EXPORT_RENDER_ENTER_0_TO_RETURN)"
+    echo
+    echo -e "$(t MP_EXPORT_RENDER_ENTER_0_TO_RETURN "${COLOR_YELLOW}" "${COLOR_RESET}")"
     echo
 
     local selection=""

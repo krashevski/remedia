@@ -126,19 +126,31 @@ audio_cleanup() {
     local project_path="$PROJECT_DIR/$project"
     local src="$project_path/media"
     local dst="$project_path/audio"
+    local recordings="$project_path/recordings"
+    local -a sources=() files=()
+    local queue_file file
 
-    mkdir -p "$dst"
+    mkdir -p "$dst" || return 1
 
-    mapfile -d '' files < <(
-        find "$src" -type f \( \
+    [[ ! -d "$src" ]] || sources+=("$src")
+    [[ ! -d "$recordings" ]] || sources+=("$recordings")
+    if (( ${#sources[@]} > 0 )); then
+        queue_file="$(mktemp)" || return 1
+        if ! find "${sources[@]}" -type f \( \
             -iname "*.mp4" -o \
             -iname "*.mov" -o \
             -iname "*.mkv" -o \
             -iname "*.wav" -o \
             -iname "*.mp3" -o \
+            -iname "*.aac" -o \
             -iname "*.m4a" \
-        \) -print0
-    )
+        \) -print0 > "$queue_file"; then
+            rm -f -- "$queue_file"
+            return 1
+        fi
+        mapfile -d '' files < "$queue_file"
+        rm -f -- "$queue_file"
+    fi
 
     local total=${#files[@]}
 
@@ -148,32 +160,51 @@ audio_cleanup() {
         return 1
     }
 
-    local count=1
+    local count=1 failed=0
 
     for file in "${files[@]}"; do
 
-        local name base output
+        local name base output temp_output
         name=$(basename "$file")
         base="${name%.*}"
         output="$dst/${base}_clean.wav"
+        if [[ "$file" == "$recordings/"* ]]; then
+            # Separate recorder takes from video audio. Keep the source suffix
+            # to distinguish, for example, speech.wav from speech.mp3.
+            output="$dst/recordings/${name}_clean.wav"
+        fi
 
         echo "[$count/$total] $name"
 
-        if [[ -f "$output" ]]; then
+        if [[ -s "$output" ]]; then
             echo "$(t MP_PRODUCTION_SKIP_EXISTS)"
-            ((count++))
+            ((++count))
             continue
         fi
 
-        ffmpeg -y -i "$file" \
-            -vn \
+        if ! mkdir -p "${output%/*}"; then
+            ((++failed))
+            ((++count))
+            continue
+        fi
+        temp_output="${output%.wav}.tmp.$$.wav"
+        # Publish only complete WAV files so a failed conversion can be retried.
+        if ffmpeg -nostdin -y -i "$file" \
+            -map 0:a:0 -vn -c:a pcm_s16le \
             -af "adeclip,adeclick,acompressor=threshold=-18dB:ratio=2:attack=20:release=250:makeup=3,loudnorm=I=-16:TP=-1.5:LRA=11" \
-            "$output"
+            "$temp_output" && [[ -s "$temp_output" ]] &&
+            mv -f -- "$temp_output" "$output"; then
+            log_project "$project" "Cleaning audio: $name"
+        else
+            rm -f -- "$temp_output"
+            ((++failed))
+            mediapanel_log_error "$project" "Audio cleanup failed: $name"
+        fi
 
-        ((count++))
-        log_project "$project" "Cleaning audio: $name"
+        ((++count))
     done
 
+    (( failed == 0 )) || return 1
     log_project "$project" "Audio cleanup completed ($total files)"
 
     echo
@@ -1534,9 +1565,9 @@ launch_shotcut() {
     # --------------------------------------------------------
 
     echo
-    echo "===================================================="
-    echo "$(t MP_PRODUCTION_LAUNCH_SHOTCUT)"
-    echo "===================================================="
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
+    echo -e "$(t MP_PRODUCTION_LAUNCH_SHOTCUT "${COLOR_BOLD}" "${COLOR_CYAN}" "${COLOR_RESET}")"
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}====================================================${COLOR_RESET}"
     echo
     echo "$(t MP_EXPORT_PROJECT "$project")"
     echo
@@ -1575,7 +1606,7 @@ launch_shotcut() {
     done
 
     echo
-    echo "$(t MP_PRODUCTION_0_BACK)"
+    echo -e "$(t MP_PRODUCTION_0_BACK "${COLOR_YELLOW}" "${COLOR_RESET}")"
     echo
 
     read -r -p "$(t MP_PRODUCTION_SELECT)" choice
