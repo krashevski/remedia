@@ -69,7 +69,14 @@ sha256sum path/to/remedia_1.2.0_all.deb
 ```
 
 Replace `path/to/` with the actual path after the build. If the name or architecture differs, use the actual values ​​and investigate the reason for the discrepancy before release. ## 5. Commit the release in Git
+- [ ] Backup files (with .bak-* or .back extensions) can be deleted once the corrected scripts have been verified.
 
+```bash
+cd ~/scripts/remedia
+find . -type f \( -name '*.bak' -o -name '*.bak2' -o -name '*.bak3' \) -print
+```
+
+## 5. Commit the release in Git
 - [ ] Check the current branch and ensure there are no uncommitted changes: `git status --short`, `git branch --show-current`, `git diff`.
 - [ ] Commit the prepared release; ensure `CHANGELOG.md` and all version numbers have been updated.
 ```bash
