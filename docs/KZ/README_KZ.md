@@ -79,6 +79,37 @@ sudo apt install remedia_1.3.0_all.deb
 * python3-venv
 * python3-pip
 
+## 🗑️ Жою (Uninstallation)
+
+Remedia бағдарламасын жою:
+
+```bash
+sudo apt remove remedia
+```
+
+Remedia бағдарламасын және оның жүйелік конфигурациясын жою:
+```bash
+sudo apt purge remedia
+```
+
+Ескертпе:
+- Пайдаланушы жобалары мен медиа файлдары сақталады.
+- Сыртқы жад каталогтары жойылмайды.
+- `purge` пәрменін қолданған кезде жүйелік конфигурация жойылады.
+
+Қажетсіз тәуелділіктерді жою:
+```bash
+sudo apt autoremove
+```
+
+## 🔄 Жаңарту
+
+Remedia бағдарламасының жаңа нұсқасын орнату:
+
+```bash
+sudo apt install ./remedia_VERSION_all.deb
+```
+
 ## 🖥 Пайдалану
 
 ### CLI

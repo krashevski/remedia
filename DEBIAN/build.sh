@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PKG="remedia"
-VERSION="1.6.0"
+VERSION="1.6.2"
 ARCH="all"
 
 STAGE="build/${PKG}_${VERSION}_${ARCH}"
@@ -32,6 +32,27 @@ cp DEBIAN/control "$STAGE/DEBIAN/"
 cp DEBIAN/postinst "$STAGE/DEBIAN/"
 cp DEBIAN/prerm "$STAGE/DEBIAN/"
 cp DEBIAN/postrm "$STAGE/DEBIAN/"
+
+echo "[BUILD] installing MediaPanel desktop integration..."
+
+# Desktop launcher
+DESKTOP_DEST="$STAGE/usr/share/applications"
+mkdir -p "$DESKTOP_DEST"
+
+cp modules/mediapanel/desktop/mediapanel.desktop \
+   "$DESKTOP_DEST/"
+
+# Application icons
+ICON_BASE="$STAGE/usr/share/icons/hicolor"
+
+for size in 48 64 128 256; do
+    ICON_SOURCE="modules/mediapanel/images/${size}x${size}/mediapanel.png"
+
+    if [[ -f "$ICON_SOURCE" ]]; then
+        mkdir -p "$ICON_BASE/${size}x${size}/apps"
+        cp "$ICON_SOURCE" "$ICON_BASE/${size}x${size}/apps/"
+    fi
+done
 
 echo "[BUILD] creating filter sets..."
 

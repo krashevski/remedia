@@ -84,6 +84,37 @@ Recommended:
 * python3-venv
 * python3-pip
 
+## 🗑️ Uninstallation
+
+Remove Remedia:
+
+```bash
+sudo apt remove remedia
+```
+
+Remove Remedia and its system configuration:
+```bash
+sudo apt purge remedia
+```
+
+Note:
+- User projects and media files are preserved.
+- External storage directories are not removed.
+- System configuration is removed when using purge.
+
+Remove unused dependencies:
+```bash
+sudo apt autoremove
+```
+
+## 🔄 Update
+
+Install a newer version of Remedia:
+
+```bash
+sudo apt install ./remedia_VERSION_all.deb
+```
+
 ## 🖥 Usage
 
 ### CLI

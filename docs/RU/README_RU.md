@@ -80,6 +80,37 @@ sudo apt install remedia_1.3.0_all.deb
 * python3-venv
 * python3-pip
 
+## 🗑️ Удаление
+
+Удаление Remedia:
+
+```bash
+sudo apt remove remedia
+```
+
+Удаление Remedia вместе с системными конфигурационными файлами:
+```bash
+sudo apt purge remedia
+```
+
+Примечание:
+- Пользовательские проекты и медиафайлы сохраняются.
+- Директории на внешних носителях не удаляются.
+- Системные конфигурационные файлы удаляются при использовании команды `purge`.
+
+Удаление неиспользуемых зависимостей:
+```bash
+sudo apt autoremove
+```
+
+## 🔄 Обновление
+
+Установите более новую версию Remedia:
+
+```bash
+sudo apt install ./remedia_VERSION_all.deb
+```
+
 ## 🖥 Использование
 
 ### CLI
