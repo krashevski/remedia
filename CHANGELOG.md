@@ -6,8 +6,12 @@ The format is based on Keep a Changelog and semantic versioning.
 
 ## [Unreleased]
 
-### Improved
+### Fixed
+- Remedia Core: added missing English, Russian, and Kazakh dictionaries for the shared help system.
+- Fixed the missing core i18n dictionary dependency in Remedia System Center.
+- Restored localized help output for the main CLI and nested modules.
 
+### Improved
 - MediaPanel: replaced line-by-line YouTube description input with an external text editor (`nano` by default).
 - Added support for convenient multiline description editing, including navigation, corrections, and blank lines.
 - Added configurable editor selection through the `VISUAL` and `EDITOR` environment variables.
