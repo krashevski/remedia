@@ -2,7 +2,12 @@
 # modules/system/module.sh 
 
 cmd_center_ui() {
-#    echo "[SYSTEM] running diagnostics..."
+    if [[ ! -t 0 || ! -t 1 ]]; then
+        echo "[ERROR] Remedia System Center requires an interactive terminal."
+        echo "Please launch it from a terminal."
+        return 1
+    fi
+
     main_menu
 }
 

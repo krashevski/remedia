@@ -7,6 +7,12 @@ The format is based on Keep a Changelog and semantic versioning.
 ## [Unreleased]
 
 ### Fixed
+- Added interactive terminal validation to Remedia System Center
+  to prevent headless launches without a valid stdin/stdout TTY.
+- Documented correct Desktop Entry configuration:
+  `Terminal=true` is required for terminal-based System Center.
+- Prevented repeated system journal pollution caused by
+  launching the interactive menu without a terminal.
 - Remedia Core: added missing English, Russian, and Kazakh dictionaries for the shared help system.
 - Fixed the missing core i18n dictionary dependency in Remedia System Center.
 - Restored localized help output for the main CLI and nested modules.
