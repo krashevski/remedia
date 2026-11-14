@@ -102,7 +102,7 @@ PATH="$saved_path"
 # Verify real dictionaries have matching keys and placeholder multiplicities.
 declare -A english=() translated=()
 i18n_read_file "$bundle/modules/mediapanel/i18n/en.env" english
-equal "${#english[@]}" 859
+equal "${#english[@]}" 916
 placeholder_signature() {
     local value="$1" prefix
     while [[ "$value" == *\{[1-9]\}* ]]; do

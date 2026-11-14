@@ -118,7 +118,7 @@ for lang in ('en','ru','kk'):
         if not line or line.startswith('#'): continue
         k,v=line.split('=',1); assert k not in data; data[k]=json.loads(v)
     catalogs[lang]=data
-assert len(catalogs['en'])==859
+assert len(catalogs['en'])==916
 for lang in ('ru','kk'):
     assert catalogs[lang].keys()==catalogs['en'].keys()
     for k,v in catalogs[lang].items():
