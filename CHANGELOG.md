@@ -6,6 +6,13 @@ The format is based on Keep a Changelog and semantic versioning.
 
 ## [Unreleased]
 
+### Improved
+
+- MediaPanel: replaced line-by-line YouTube description input with an external text editor (`nano` by default).
+- Added support for convenient multiline description editing, including navigation, corrections, and blank lines.
+- Added configurable editor selection through the `VISUAL` and `EDITOR` environment variables.
+- Preserved multiline descriptions when generating YouTube JSON metadata.
+
 ## [1.6.0] - 2026-11-09
 
 MediaPanel is ready for daily use.

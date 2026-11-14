@@ -189,11 +189,13 @@ audio_cleanup() {
         fi
         temp_output="${output%.wav}.tmp.$$.wav"
         # Publish only complete WAV files so a failed conversion can be retried.
+           
         if ffmpeg -nostdin -y -i "$file" \
             -map 0:a:0 -vn -c:a pcm_s16le \
-            -af "adeclip,adeclick,acompressor=threshold=-18dB:ratio=2:attack=20:release=250:makeup=3,loudnorm=I=-16:TP=-1.5:LRA=11" \
-            "$temp_output" && [[ -s "$temp_output" ]] &&
-            mv -f -- "$temp_output" "$output"; then
+            -af "adeclip,adeclick,acompressor=threshold=-18dB:ratio=2:attack=20:release=250:makeup=3,loudnorm=I=-14:TP=-1.5:LRA=7" \
+            -ar 48000 \
+            "$temp_output" && [[ -s "$temp_output" ]] && \
+            mv -f -- "$temp_output" "$output"; then 
             log_project "$project" "Cleaning audio: $name"
         else
             rm -f -- "$temp_output"

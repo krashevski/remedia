@@ -782,29 +782,44 @@ export_youtube() {
     echo "------------------------------------------------"
 
     read -rp "$(t MP_EXPORT_TITLE "$default_title")" title
-    title="${title:-$default_title}"
-
+    title="${title:-$default_title}"    
+    
     echo
     echo "$(t MP_EXPORT_DESCRIPTION)"
-    echo "$(t MP_EXPORT_ENTER_ONE_LINE_AT_A_TIME)"
-    echo "$(t MP_EXPORT_FINISH_WITH_A_SINGLE_DOT)"
+    echo "$(t MP_EXPORT_DESCRIPTION_EDIT_IN_EDITOR)"
     echo "------------------------------------------------"
 
-    while true; do
-        read -rp "> " line || {
-            echo
-            log_error "$(t MP_EXPORT_DESCRIPTION_INPUT_INTERRUPTED)"
-            return 1
-        }
+    local description_file
+    local editor="${VISUAL:-${EDITOR:-nano}}"
+    local -a editor_command=()
 
-        [[ "$line" == "." ]] && break
+    description_file="$(mktemp)" || {
+        log_error "$(t MP_EXPORT_DESCRIPTION_TEMP_FILE_FAILED)"
+        return 1
+    }
 
-        if [[ -n "$description" ]]; then
-            description+=$'\n'
-        fi
+    # Support editor commands with optional arguments.
+    read -r -a editor_command <<< "$editor"
 
-        description+="$line"
-    done
+    if (( ${#editor_command[@]} == 0 )) ||
+       ! command -v "${editor_command[0]}" >/dev/null 2>&1; then
+        rm -f -- "$description_file"
+        log_error "$(t MP_EXPORT_DESCRIPTION_EDITOR_NOT_FOUND "$editor")"
+        return 1
+    fi
+
+    if ! "${editor_command[@]}" "$description_file"; then
+        rm -f -- "$description_file"
+        log_error "$(t MP_EXPORT_DESCRIPTION_EDIT_FAILED)"
+        return 1
+    fi
+
+    # Preserve multiline text, including trailing newlines.
+    description="$(cat -- "$description_file"; printf '\034')"
+    description="${description%$'\034'}"
+
+    rm -f -- "$description_file"
+    
 
     read -rp \
         "$(t MP_EXPORT_TAGS_COMMA_SEPARATED)" \
