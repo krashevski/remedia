@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PKG="remedia"
-VERSION="1.6.4"
+VERSION="1.6.8"
 ARCH="all"
 
 STAGE="build/${PKG}_${VERSION}_${ARCH}"
@@ -33,16 +33,18 @@ cp DEBIAN/postinst "$STAGE/DEBIAN/"
 cp DEBIAN/prerm "$STAGE/DEBIAN/"
 cp DEBIAN/postrm "$STAGE/DEBIAN/"
 
-echo "[BUILD] installing MediaPanel desktop integration..."
+
+echo "[BUILD] installing desktop integration..."
 
 # Desktop launcher
 DESKTOP_DEST="$STAGE/usr/share/applications"
 mkdir -p "$DESKTOP_DEST"
 
+# Remedia MediaPanel launcher
 cp modules/mediapanel/desktop/mediapanel.desktop \
    "$DESKTOP_DEST/"
 
-# Application icons
+# Remedia MediaPanel icons
 ICON_BASE="$STAGE/usr/share/icons/hicolor"
 
 for size in 48 64 128 256; do
@@ -51,6 +53,23 @@ for size in 48 64 128 256; do
     if [[ -f "$ICON_SOURCE" ]]; then
         mkdir -p "$ICON_BASE/${size}x${size}/apps"
         cp "$ICON_SOURCE" "$ICON_BASE/${size}x${size}/apps/"
+    fi
+done
+
+# Remedia System Center launcher
+cp modules/system/desktop/remedia-system-center.desktop \
+   "$DESKTOP_DEST/"
+
+# Remedia Global Doctor icons
+ICON_BASE="$STAGE/usr/share/icons/hicolor"
+
+for size in 48 64 128 256; do
+    ICON_SOURCE="modules/system/images/${size}x${size}/remedia-global-doctor.png"
+
+    if [[ -f "$ICON_SOURCE" ]]; then
+        mkdir -p "$ICON_BASE/${size}x${size}/apps"
+        cp "$ICON_SOURCE" \
+           "$ICON_BASE/${size}x${size}/apps/"
     fi
 done
 
