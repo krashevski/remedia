@@ -189,13 +189,13 @@ audio_cleanup() {
         fi
         temp_output="${output%.wav}.tmp.$$.wav"
         # Publish only complete WAV files so a failed conversion can be retried.
-           
+
         if ffmpeg -nostdin -y -i "$file" \
             -map 0:a:0 -vn -c:a pcm_s16le \
             -af "adeclip,adeclick,acompressor=threshold=-18dB:ratio=2:attack=20:release=250:makeup=3,loudnorm=I=-14:TP=-1.5:LRA=7" \
             -ar 48000 \
             "$temp_output" && [[ -s "$temp_output" ]] && \
-            mv -f -- "$temp_output" "$output"; then 
+            mv -f -- "$temp_output" "$output"; then
             log_project "$project" "Cleaning audio: $name"
         else
             rm -f -- "$temp_output"
@@ -1359,11 +1359,59 @@ batch_scene_split() {
         printf '[%s/%s] %s\n' "$count" "$total" "$name"
 
         # Existing scenes may already be referenced by a Shotcut project.
-        # Refuse replacement, including files with the same stem/other extension.
+        # Skip valid existing results without replacing them.
         if [[ -e "$outdir" || -L "$outdir" ]]; then
-            printf '[ERROR] %s\n' "$outdir" >&2
-            log_project "$project" "Scene split refused: destination already exists: $outdir (move it before rerunning)"
-            failures=$((failures + 1))
+            local existing_valid=1
+            local scene probe duration
+            local -a existing_scenes=()
+
+            if [[ -d "$outdir" && ! -L "$outdir" ]]; then
+                mapfile -d '' -t existing_scenes < <(
+                find "$outdir" -maxdepth 1 -type f \
+                    -name "${base}_scene_*.mp4" -size +0c -print0
+                )
+
+                if ((${#existing_scenes[@]} == 0)); then
+                    existing_valid=0
+                else
+                    for scene in "${existing_scenes[@]}"; do
+                        probe="$(ffprobe -v error \
+                        -select_streams v:0 \
+                        -show_entries stream=codec_type:format=duration \
+                        -of default=noprint_wrappers=1 \
+                        "$scene" 2>/dev/null)" || {
+                            existing_valid=0
+                            break
+                         }
+
+                    if ! awk -F= '
+                        /^codec_type=video$/ { video=1 }
+                        /^duration=/ { duration=$2 }
+                        END { exit !(video && duration+0 > 0) }
+                    ' <<< "$probe"; then
+                        existing_valid=0
+                        break
+                    fi
+                    done
+                fi
+            else
+                existing_valid=0
+            fi
+
+            if (( existing_valid )); then
+                printf '[SKIP] Сцены уже существуют: %s (%s файлов)\n' \
+                    "$base" "${#existing_scenes[@]}"
+                log_project "$project" \
+                    "Scene split skipped: valid existing results in $outdir"
+                count=$((count + 1))
+            else
+                printf '[ERROR] Некорректный или неполный каталог сцен: %s\n' \
+                   "$outdir" >&2
+                log_project "$project" \
+                    "Scene split refused: existing destination is invalid or incomplete: $outdir"
+                failures=$((failures + 1))
+            fi
+
             continue
         fi
 
@@ -1423,6 +1471,8 @@ batch_scene_split() {
                 -force_key_frames "$cuts" -c:a aac -b:a 192k \
                 -f segment -segment_times "$cuts" -segment_time_delta "$delta" \
                 -reset_timestamps 1 -segment_format_options movflags=+faststart \
+                -fps_mode passthrough \
+                -enc_time_base demux \
                 "$work/${pattern_base}_scene_%03d.mp4" || rc=$?
         else
             # A continuous take stays whole; remux without generation loss.

@@ -7,6 +7,11 @@ The format is based on Keep a Changelog and semantic versioning.
 ## [Unreleased]
 
 ### Fixed
+- **MediaPanel / Scene Split:**
+  * Fixed the handling of existing scene directories during a re-run. Directories containing valid MP4 files are now skipped without incrementing the `failures` counter.
+  * Maintained protection against overwriting existing scenes that may be in use within Shotcut projects.
+  * Empty or invalid directories are still treated as errors.
+  * Added the FFmpeg parameters `-fps_mode passthrough` and `-enc_time_base demux` when encoding scenes. This preserves the VFR (variable frame rate) temporal structure and prevents issues such as non-monotonic timestamps or excessive frame duplication in tested scenarios.
 - Added interactive terminal validation to Remedia System Center
   to prevent headless launches without a valid stdin/stdout TTY.
 - Documented correct Desktop Entry configuration:
