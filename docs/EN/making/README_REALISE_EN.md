@@ -69,11 +69,27 @@ sha256sum path/to/remedia_1.2.0_all.deb
 ```
 
 Replace `path/to/` with the actual path after the build. If the name or architecture differs, use the actual values ​​and investigate the reason for the discrepancy before release. ## 5. Commit the release in Git
-- [ ] Backup files (with .bak-* or .back extensions) can be deleted once the corrected scripts have been verified.
 
+- [ ] Backup files (with `.bak`, `.bak-*`, `.bak2`, `.bak3`, or `.back` extensions) can be deleted once the corrected scripts have been verified.
+Check for backup files:
 ```bash
 cd ~/scripts/remedia
-find . -type f \( -name '*.bak' -o -name '*.bak2' -o -name '*.bak3' \) -print
+find . -type f \( \
+    -name '*.bak' -o \
+    -name '*.bak-*' -o \
+    -name '*.bak[0-9]*' -o \
+    -name '*.back' \
+\) -print
+```
+
+- [ ] Delete backup files after reviewing the list:
+```bash
+find . -type f \( \
+    -name '*.bak' -o \
+    -name '*.bak-*' -o \
+    -name '*.bak[0-9]*' -o \
+    -name '*.back' \
+\) -delete
 ```
 
 ## 5. Commit the release in Git

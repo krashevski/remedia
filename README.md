@@ -202,6 +202,15 @@ This brings the system closer to:
 * deployment simulation
 * reproducible environments
 
+## Development Philosophy
+
+General rule:
+First, diagnosis; then, an evidence-based decision; followed by action and the monitoring of results.
+1. Reliability is more important than the number of features. Clarity is more important than complexity. Documentation is more important than guesswork.
+2. If the cause of a malfunction has not been determined, the system should state this honestly, rather than presenting a conjecture as a diagnosis.
+3. The ability to avoid doing unnecessary work is a sign of maturity.
+4. Limited capabilities do not necessarily imply limited meaning or limited results.
+
 ## 🎬 Project Origins
 
 The project grew out of:
